@@ -1,0 +1,298 @@
+country,country_code,pop,loc
+Aruba,ABW,104822,NA
+Afghanistan,AFG,34656032,NA
+Angola,AGO,28813463,NA
+Albania,ALB,2876101,NA
+Andorra,AND,77281,NA
+Arab World,ARB,406452690,NA
+United Arab Emirates,ARE,9269612,NA
+Argentina,ARG,43847430,NA
+Armenia,ARM,2924816,NA
+American Samoa,ASM,55599,NA
+Antigua and Barbuda,ATG,100963,NA
+Australia,AUS,24127159,NA
+Austria,AUT,8747358,NA
+Azerbaijan,AZE,9762274,NA
+Burundi,BDI,10524117,NA
+Belgium,BEL,11348159,NA
+Benin,BEN,10872298,NA
+Burkina Faso,BFA,18646433,NA
+Bangladesh,BGD,162951560,NA
+Bulgaria,BGR,7127822,NA
+Bahrain,BHR,1425171,NA
+"Bahamas, The",BHS,391232,NA
+Bosnia and Herzegovina,BIH,3516816,NA
+Belarus,BLR,9507120,NA
+Belize,BLZ,366954,NA
+Bermuda,BMU,65331,NA
+Bolivia,BOL,10887882,NA
+Brazil,BRA,207652865,NA
+Barbados,BRB,284996,NA
+Brunei Darussalam,BRN,423196,NA
+Bhutan,BTN,797765,NA
+Botswana,BWA,2250260,NA
+Central African Republic,CAF,4594621,NA
+Canada,CAN,36286425,NA
+Central Europe and the Baltics,CEB,102974082,NA
+Switzerland,CHE,8372098,NA
+Channel Islands,CHI,164541,NA
+Chile,CHL,17909754,NA
+China,CHN,1378665000,NA
+Cote d'Ivoire,CIV,23695919,NA
+Cameroon,CMR,23439189,NA
+"Congo, Dem. Rep.",COD,78736153,NA
+"Congo, Rep.",COG,5125821,NA
+Colombia,COL,48653419,NA
+Comoros,COM,795601,NA
+Cabo Verde,CPV,539560,NA
+Costa Rica,CRI,4857274,NA
+Caribbean small states,CSS,7245472,NA
+Cuba,CUB,11475982,NA
+Curacao,CUW,159999,NA
+Cayman Islands,CYM,60765,NA
+Cyprus,CYP,1170125,NA
+Czech Republic,CZE,10561633,NA
+Germany,DEU,82667685,NA
+Djibouti,DJI,942333,NA
+Dominica,DMA,73543,NA
+Denmark,DNK,5731118,NA
+Dominican Republic,DOM,10648791,NA
+Algeria,DZA,40606052,NA
+East Asia & Pacific (excluding high income),EAP,2051452657,NA
+Early-demographic dividend,EAR,NA,NA
+East Asia & Pacific,EAS,NA,NA
+Europe & Central Asia (excluding high income),ECA,417424643,NA
+Europe & Central Asia,ECS,911995305,NA
+Ecuador,ECU,16385068,NA
+"Egypt, Arab Rep.",EGY,95688681,NA
+Euro area,EMU,340894606,NA
+Eritrea,ERI,NA,NA
+Spain,ESP,46443959,NA
+Estonia,EST,1316481,NA
+Ethiopia,ETH,102403196,NA
+European Union,EUU,511497415,NA
+Fragile and conflict affected situations,FCS,496575241,NA
+Finland,FIN,5495096,NA
+Fiji,FJI,898760,NA
+France,FRA,66896109,NA
+Faroe Islands,FRO,49117,NA
+"Micronesia, Fed. Sts.",FSM,104937,NA
+Gabon,GAB,1979786,NA
+United Kingdom,GBR,65637239,NA
+Georgia,GEO,3719300,NA
+Ghana,GHA,28206728,NA
+Gibraltar,GIB,34408,NA
+Guinea,GIN,12395924,NA
+"Gambia, The",GMB,2038501,NA
+Guinea-Bissau,GNB,1815698,NA
+Equatorial Guinea,GNQ,1221490,NA
+Greece,GRC,10746740,NA
+Grenada,GRD,107317,NA
+Greenland,GRL,56186,NA
+Guatemala,GTM,16582469,NA
+Guam,GUM,162896,NA
+Guyana,GUY,773303,NA
+High income,HIC,1190029421,NA
+"Hong Kong SAR, China",HKG,7346700,NA
+Honduras,HND,9112867,NA
+Heavily indebted poor countries (HIPC),HPC,744602976,NA
+Croatia,HRV,4170600,NA
+Haiti,HTI,10847334,NA
+Hungary,HUN,9817958,NA
+IBRD only,IBD,NA,NA
+IDA & IBRD total,IBT,NA,NA
+IDA total,IDA,1574345975,NA
+IDA blend,IDB,521159393,NA
+Indonesia,IDN,261115456,NA
+IDA only,IDX,1053186582,NA
+Isle of Man,IMN,83737,NA
+India,IND,1324171354,NA
+Ireland,IRL,4773095,NA
+"Iran, Islamic Rep.",IRN,80277428,NA
+Iraq,IRQ,37202572,NA
+Iceland,ISL,334252,NA
+Israel,ISR,8547100,NA
+Italy,ITA,60600590,NA
+Jamaica,JAM,2881355,NA
+Jordan,JOR,9455802,NA
+Japan,JPN,126994511,NA
+Kazakhstan,KAZ,17797032,NA
+Kenya,KEN,48461567,NA
+Kyrgyz Republic,KGZ,6082700,NA
+Cambodia,KHM,15762370,NA
+Kiribati,KIR,114395,NA
+St. Kitts and Nevis,KNA,54821,NA
+"Korea, Rep.",KOR,51245707,NA
+Kuwait,KWT,4052584,NA
+Latin America & Caribbean (excluding high income),LAC,610136397,NA
+Lao PDR,LAO,6758353,NA
+Lebanon,LBN,6006668,NA
+Liberia,LBR,4613823,NA
+Libya,LBY,6293253,NA
+St. Lucia,LCA,178015,NA
+Latin America & Caribbean,LCN,637664490,NA
+Least developed countries: UN classification,LDC,980609415,NA
+Low income,LIC,659272676,NA
+Liechtenstein,LIE,37666,NA
+Sri Lanka,LKA,21203000,NA
+Lower middle income,LMC,NA,NA
+Low & middle income,LMY,NA,NA
+Lesotho,LSO,2203821,NA
+Late-demographic dividend,LTE,NA,NA
+Lithuania,LTU,2872298,NA
+Luxembourg,LUX,582972,NA
+Latvia,LVA,1960424,NA
+"Macao SAR, China",MAC,612167,NA
+St. Martin (French part),MAF,31949,NA
+Morocco,MAR,35276786,NA
+Monaco,MCO,38499,NA
+Moldova,MDA,3552000,NA
+Madagascar,MDG,24894551,NA
+Maldives,MDV,417492,NA
+Middle East & North Africa,MEA,436720722,NA
+Mexico,MEX,127540423,NA
+Marshall Islands,MHL,53066,NA
+Middle income,MIC,NA,NA
+"Macedonia, FYR",MKD,2081206,NA
+Mali,MLI,17994837,NA
+Malta,MLT,436947,NA
+Myanmar,MMR,52885223,NA
+Middle East & North Africa (excluding high income),MNA,373719055,NA
+Montenegro,MNE,622781,NA
+Mongolia,MNG,3027398,NA
+Northern Mariana Islands,MNP,55023,NA
+Mozambique,MOZ,28829476,NA
+Mauritania,MRT,4301018,NA
+Mauritius,MUS,1263473,NA
+Malawi,MWI,18091575,NA
+Malaysia,MYS,31187265,NA
+North America,NAC,359479269,NA
+Namibia,NAM,2479713,NA
+New Caledonia,NCL,278000,NA
+Niger,NER,20672987,NA
+Nigeria,NGA,185989640,NA
+Nicaragua,NIC,6149928,NA
+Netherlands,NLD,17018408,NA
+Norway,NOR,5232929,NA
+Nepal,NPL,28982771,NA
+Nauru,NRU,13049,NA
+New Zealand,NZL,4692700,NA
+OECD members,OED,1289937319,NA
+Oman,OMN,4424762,NA
+Other small states,OSS,29983809,NA
+Pakistan,PAK,193203476,NA
+Panama,PAN,4034119,NA
+Peru,PER,31773839,NA
+Philippines,PHL,103320222,NA
+Palau,PLW,21503,NA
+Papua New Guinea,PNG,8084991,NA
+Poland,POL,37948016,NA
+Pre-demographic dividend,PRE,879292453,NA
+Puerto Rico,PRI,3411307,NA
+"Korea, Dem. People’s Rep.",PRK,25368620,NA
+Portugal,PRT,10324611,NA
+Paraguay,PRY,6725308,NA
+West Bank and Gaza,PSE,4551566,NA
+Pacific island small states,PSS,2388875,NA
+Post-demographic dividend,PST,1102730983,NA
+French Polynesia,PYF,280208,NA
+Qatar,QAT,2569804,NA
+Romania,ROU,19705301,NA
+Russian Federation,RUS,144342396,NA
+Rwanda,RWA,11917508,NA
+South Asia,SAS,1766383450,NA
+Saudi Arabia,SAU,32275687,NA
+Sudan,SDN,39578828,NA
+Senegal,SEN,15411614,NA
+Singapore,SGP,5607283,NA
+Solomon Islands,SLB,599419,NA
+Sierra Leone,SLE,7396190,NA
+El Salvador,SLV,6344722,NA
+San Marino,SMR,33203,NA
+Somalia,SOM,14317996,NA
+Serbia,SRB,7057412,NA
+Sub-Saharan Africa (excluding high income),SSA,1033011458,NA
+South Sudan,SSD,12230730,NA
+Sub-Saharan Africa,SSF,1033106135,NA
+Small states,SST,39618156,NA
+Sao Tome and Principe,STP,199910,NA
+Suriname,SUR,558368,NA
+Slovak Republic,SVK,5428704,NA
+Slovenia,SVN,2064845,NA
+Sweden,SWE,9903122,NA
+Swaziland,SWZ,1343098,NA
+Sint Maarten (Dutch part),SXM,40005,NA
+Seychelles,SYC,94677,NA
+Syrian Arab Republic,SYR,18430453,NA
+Turks and Caicos Islands,TCA,34900,NA
+Chad,TCD,14452543,NA
+East Asia & Pacific (IDA & IBRD countries),TEA,2026028438,NA
+Europe & Central Asia (IDA & IBRD countries),TEC,455372659,NA
+Togo,TGO,7606374,NA
+Thailand,THA,68863514,NA
+Tajikistan,TJK,8734951,NA
+Turkmenistan,TKM,5662544,NA
+Latin America & the Caribbean (IDA & IBRD countries),TLA,621534921,NA
+Timor-Leste,TLS,1268671,NA
+Middle East & North Africa (IDA & IBRD countries),TMN,369167489,NA
+Tonga,TON,107122,NA
+South Asia (IDA & IBRD),TSA,1766383450,NA
+Sub-Saharan Africa (IDA & IBRD countries),TSS,1033106135,NA
+Trinidad and Tobago,TTO,1364962,NA
+Tunisia,TUN,11403248,NA
+Turkey,TUR,79512426,NA
+Tuvalu,TUV,11097,NA
+Tanzania,TZA,55572201,NA
+Uganda,UGA,41487965,NA
+Ukraine,UKR,45004645,NA
+Upper middle income,UMC,NA,NA
+Uruguay,URY,3444006,NA
+United States,USA,323127513,NA
+Uzbekistan,UZB,31848200,NA
+St. Vincent and the Grenadines,VCT,109643,NA
+"Venezuela, RB",VEN,31568179,NA
+British Virgin Islands,VGB,30661,NA
+Virgin Islands (U.S.),VIR,102951,NA
+Vietnam,VNM,92701100,NA
+Vanuatu,VUT,270402,NA
+World,WLD,NA,NA
+Samoa,WSM,195125,NA
+Kosovo,XKX,1816200,NA
+"Yemen, Rep.",YEM,27584213,NA
+South Africa,ZAF,55908865,NA
+Zambia,ZMB,16591390,NA
+Zimbabwe,ZWE,16150362,NA
+China,NA,19612368,Beijing
+China,NA,12938693,Tianjing
+China,NA,71854210,Hebei
+China,NA,35712101,Shanxi
+China,NA,24706291,Nei Mongol
+China,NA,43746323,Liaoning
+China,NA,27452815,Jilin
+China,NA,38313991,Heilongjiang
+China,NA,23019196,Shanghai
+China,NA,78660941,Jiangsu
+China,NA,54426891,Zhejiang
+China,NA,59500468,Anhui
+China,NA,36894217,Fujian
+China,NA,44567797,Jiangxi
+China,NA,95792719,Shandong
+China,NA,94029939,Henan
+China,NA,57237727,Hubei
+China,NA,65700762,Hunan
+China,NA,104320459,Guangdong
+China,NA,46023761,Guangxi
+China,NA,8671485,Hainan
+China,NA,28846170,Chongqing
+China,NA,80417528,Sichuan
+China,NA,34748556,Guizhou
+China,NA,45966766,Yunnan
+China,NA,3002165,Tibet
+China,NA,37327379,Shaanxi
+China,NA,25575263,Gansu
+China,NA,5626723,Qinghai
+China,NA,6301350,Ningxia
+China,NA,21815815,Xinjiang
+China,NA,7024000,Hongkong
+China,NA,536969,Macao
+China,NA,23187551,Taiwan

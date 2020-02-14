@@ -1,0 +1,35 @@
+---
+title: "nCoV risk to Refugee Camps like the Rohingya"
+author: "Shaun Truelove"
+date: "1/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+In August 2017, a military crackdown on Rohingya Muslims living in Myanmar resulted in a rapid mass migration of nearly hundreds of thousands of Rohingya to Bangladesh, where they now now largely live in refugee settlements, the largest of which is home to more than 600,000 refugees. In the months following this rapid influx of refugees, several outbreaks occurred among these refugee camps, the largest largest of which was the diphtheria outbreak, which has now caused almost 9,000 cases and 45 deaths. 
+
+
+
+```{r cars}
+#Diphtheria median R0:
+R0diph_median <- 2.6
+R0diph_rohing <- 4.3
+R0_ratio <- R0diph_rohing/R0diph_median
+
+print(R0_ratio)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
