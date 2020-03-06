@@ -321,7 +321,7 @@ shenzhen_data <- shenzhen_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep Sta
 
 
 
-# Aggregate to province (China) or state (US) or country (all others) for source
+# Aggregate SOURCE/Departure Location to province (China) or state (US) or country (all others) for source
 shenzhen_data <- shenzhen_data %>% rename(dep_airport = `Dep Airport Code`,
                                   dep_state = `Dep State Code`,
                                   dep_country = `Dep Country Code`,
@@ -334,11 +334,14 @@ shenzhen_data <- shenzhen_data %>% rename(dep_airport = `Dep Airport Code`,
                                   travelers = `Total Est. Pax`,
                                   yr_month = `Time Series`,
                                   dep_province = Province)
-# Get aggr location
+
+# Get Aggr Departure location
 shenzhen_data_aggr <- shenzhen_data %>%
     mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
 shenzhen_data_aggr <- shenzhen_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
     summarise(travelers = sum(travelers, na.rm=TRUE))
+
+
 
 # Get Monthly means across the 3 year (will do geometric means)
 shenzhen_data_aggr <- shenzhen_data_aggr %>% 

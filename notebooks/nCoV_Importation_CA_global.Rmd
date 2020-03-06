@@ -278,8 +278,14 @@ We will update this with travel forecasts eventually.
 source("R/setup_travel_data.R")
 #source("R/oag_data_cleaning.R")
 
-if(get_travel)  travel_data_monthly <- get_oag_travel(destination="CA", destination_type="state")
+if(get_travel)  travel_data_monthly <- get_oag_travel(destination="CA", destination_type="state", dest_aggr_level="city")
 travel_data_monthly <- read_csv("data/CA_oag_20172019_aggr.csv", na=c(""," ","NA"))
+
+# Save CA cities
+ca_cities <- travel_data_monthly %>% group_by(arr_city, arr_state, arr_country) %>% summarise(n_occur = n())
+write_csv(ca_cities, "data/CA_cities.csv")
+
+dest_data_aggr
 
 # Increase travel for Chinese New Year
 travel_data_monthly <- travel_data_monthly %>% 

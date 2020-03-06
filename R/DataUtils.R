@@ -211,10 +211,11 @@ make_meanD <- function(input_data, n_sim,
 ##'
 ##' Get subsetted and cleaned OAG data for a specific destination
 ##' 
-##' @param destination destination of interest
-##' @param destination_type options: "state", "airport", "city", "country"
+##' @param destination destination of interest; can be a vector
+##' @param destination_type options: "airport", "city", "state", "country"
+##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country"
 
-get_oag_travel <- function(destination="CA", destination_type="city"){
+get_oag_travel <- function(destination="CA", destination_type="state", dest_aggr_level="city"){
     
     # Read full data
     # these data are clean in  `oag_data_cleaning.R`
@@ -232,13 +233,13 @@ get_oag_travel <- function(destination="CA", destination_type="city"){
                                     `Time Series` = col_double()))
     
     if (destination_type=="city"){
-        dest_data <- data_travel_all %>% filter(`Arr City Name`==destination)
+        dest_data <- data_travel_all %>% filter(`Arr City Name` %in% destination)
     } else if (destination_type=="airport"){
-        dest_data <- data_travel_all %>% filter(`Arr Airport Code`==destination)
+        dest_data <- data_travel_all %>% filter(`Arr Airport Code` %in% destination)
     } else if (destination_type=="state"){
-        dest_data <- data_travel_all %>% filter(`Arr State Code`==destination)
+        dest_data <- data_travel_all %>% filter(`Arr State Code` %in% destination)
     } else if (destination_type=="country"){
-        dest_data <- data_travel_all %>% filter(`Arr Country Code`==destination)
+        dest_data <- data_travel_all %>% filter(`Arr Country Code` %in% destination)
     }
         
 
@@ -255,7 +256,6 @@ get_oag_travel <- function(destination="CA", destination_type="city"){
     airport_data <- read_csv("data/airport-codes.csv")
     airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
                                                                  countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
-    
     airport_data_us <- airport_data %>% filter(iso_country=="USA")
     
     dest_data <- left_join(dest_data,
@@ -265,7 +265,7 @@ get_oag_travel <- function(destination="CA", destination_type="city"){
     dest_data <- dest_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
     
     
-    # Aggregate to province (China) or state (US) or country (all others) for source
+    # Aggregate SOURCE LOCATION to province (China) or state (US) or country (all others) for source
     dest_data <- dest_data %>% rename(dep_airport = `Dep Airport Code`,
                                       dep_state = `Dep State Code`,
                                       dep_country = `Dep Country Code`,
@@ -279,22 +279,33 @@ get_oag_travel <- function(destination="CA", destination_type="city"){
                                       yr_month = `Time Series`,
                                       dep_province = Province)
     
-    # Get aggr departure location
+    # Fix US cities with "(US) [STATE]" in name
+    dest_data <- dest_data %>% mutate(arr_city = gsub(" \\(US\\).*", "", arr_city))
+
+
+    # Aggregate to dest_aggr_level, then get mean across 3 years ...................
+
     dest_data_aggr <- dest_data %>%
-        mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
-    dest_data_aggr <- dest_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
-        summarise(travelers = sum(travelers, na.rm=TRUE))
+        mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
+               t_year = substr(yr_month, 1,4), 
+               t_month = as.character(substr(yr_month, 5,6)))    # Get year and month variables
+    
+    # aggregation levels for destination
+    aggr_levels <- factor(c("airport", "city", "state", "country"), levels=c("airport", "city", "state", "country"), ordered = TRUE)
+    loc_vars_aggr <- c("arr_airport", "arr_city", "arr_state", "arr_country")[aggr_levels>=dest_aggr_level]
+    other_vars_aggr <- c("yr_month", "t_year", "t_month", "dep_loc_aggr", "dep_country")
+    
+    dest_data_aggr <- dest_data_aggr %>% group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
+        summarise(travelers = sum(travelers, na.rm = TRUE))
     
     # Get Monthly means across the 3 year (using geometric means)
-    dest_data_aggr <- dest_data_aggr %>% 
-        mutate(t_year = substr(yr_month, 1,4), t_month = as.character(substr(yr_month, 5,6)))
+    other_vars_aggr <- c("t_month", "dep_loc_aggr", "dep_country")
     dest_data_aggr <- dest_data_aggr %>%
-        group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, t_month) %>% 
+        group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
         summarise(travelers_sd = sd(travelers),
                   travelers_mean = exp(mean(log(travelers+1)))-1)
     
     dest_data_aggr <- dest_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
-    
     
     # Save it
     write_csv(dest_data_aggr, paste0("data/", destination, "_oag_20172019_aggr.csv"))
@@ -302,5 +313,10 @@ get_oag_travel <- function(destination="CA", destination_type="city"){
 }
 
 
+
+# # Save CA cities
+# dest_data_aggr <- get_oag_travel(destination="CA", destination_type="state", dest_aggr_level="airport")
+# ca_airports <- dest_data_aggr %>% group_by(arr_airport, arr_city, arr_state, arr_country) %>% summarise(n_occur = n())
+# write_csv(ca_airports, "data/ca_airports.csv")
 
 
