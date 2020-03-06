@@ -7,11 +7,15 @@ if (!exists("version") | is.list(version)){     version <- "1"                  
 if (!exists("batch") | is.list(batch)){         batch <- "1st"                    }
 if (!exists("project_name")){                   project_name <- "shenzhen_import" }
 if (!exists("start_date")){                   start_date <- "2020-01-21" }
+if (!exists("na_to_zero")){                   na_to_zero <- TRUE }
 
 dir.create(file.path("results", project_name), recursive = TRUE)
 import_detect_file <- file.path("output",project_name, sprintf("nCoV_importation_detect_%s_batch_v%s.RData", batch, version))
 
-
+# 
+# print(project_name)
+# print(version)
+# print(batch)
 
 # SETUP -------------------------------------------------------------------
 
@@ -65,6 +69,10 @@ format(object.size(import_data_long), "Mb")
 # # Add reported
 # import_data_long <- left_join(import_data_long, imports_reported_bydestination)
 
+# Make NAs into 0 if desired
+if (na_to_zero){
+    import_data_long <- import_data_long %>% mutate(imports = ifelse(is.na(imports), 0, imports))
+}
 
 
 # ~ Summarize imporations in long data ------------------------------------
@@ -91,7 +99,7 @@ write_csv(import_data_long, file.path("results", project_name, sprintf("import_d
 
 
 # # Load it
-import_data_long <- read_csv(file.path("results", project_name, sprintf("import_data_detected_long_v%s.csv", version))) %>% as.data.frame()
+#import_data_long <- read_csv(file.path("results", project_name, sprintf("import_data_detected_long_v%s.csv", version))) %>% as.data.frame()
 
 cols.numeric <- c("mean_sim", "RR.vs.sim.mean", "RR.vs.sim.median", "destination_sim_mean", "RR.vs.destination.mean")
 cols.integer <- c("imports", "sim", "median_sim")
@@ -242,6 +250,125 @@ import_results_desttime_cum <- import_results_desttime_cum %>% dplyr::select(1,2
 rm(prob_any_import)
 
 write_csv(import_results_desttime_cum, file.path("results",project_name,sprintf("import_results_desttime_cumulative_detect_v%s.csv", version)))
+
+
+
+
+
+
+# ~ import_results_desttime_overall --------------------------------------------------------
+
+
+# Get RR mean and CIs
+import_results_desttime_overall <- import_data_long %>% group_by(t, sim) %>% 
+    mutate(imports = sum(imports, na.rm = TRUE)) %>% ungroup() %>% group_by(t) %>%
+    summarize(
+        import_mean=mean(imports, na.rm=T),
+        import_sd=sd(imports, na.rm=T),
+        import_ll=quantile(imports, probs=.025, na.rm=T),
+        import_ul=quantile(imports, probs=.975, na.rm=T),
+        import_median=median(imports, na.rm=T),
+        import_min=min(imports, na.rm=T),
+        import_max=max(imports, na.rm=T),
+        import_25pt=quantile(imports, probs=.25, na.rm=T),
+        import_75pt=quantile(imports, probs=.75, na.rm=T),
+        
+        RR_mean=mean(RR.vs.sim.mean, na.rm=T),
+        RR_ll=quantile(RR.vs.sim.mean, probs=.025, na.rm=T),
+        RR_ul=quantile(RR.vs.sim.mean, probs=.975, na.rm=T),
+        RR_sd=sd(RR.vs.sim.mean, na.rm=T),
+        RR_median=median(RR.vs.sim.mean, na.rm=T),
+        
+        RR_destination_mean=mean(RR.vs.destination.mean, na.rm=T),
+        RR_destination_ll=quantile(RR.vs.destination.mean, probs=.025, na.rm=T),
+        RR_destination_ul=quantile(RR.vs.destination.mean, probs=.975, na.rm=T),
+        RR_destination_sd=sd(RR.vs.destination.mean, na.rm=T),
+        RR_destination_median=median(RR.vs.destination.mean, na.rm=T)#,
+        #rep_imports = mean(rep_imports, na.rm = T)
+    )
+
+# Get the probability of >0 imports
+prob_any_import <- import_data_long %>% group_by(t, sim) %>% 
+    summarise(imports = sum(imports)) %>% group_by(t) %>%
+    summarize(n_import = sum(imports>0)) %>% mutate(prob_import=n_import/(n_sim))
+
+# Add Probability
+import_results_desttime_overall$prob_any_import <- prob_any_import$prob_import
+import_results_desttime_overall <- import_results_desttime_overall %>% dplyr::select(1,2,prob_any_import, everything())
+rm(prob_any_import)
+
+write_csv(import_results_desttime_overall, file.path("results",project_name,sprintf("import_results_desttime_overall_detect_v%s.csv", version)))
+
+
+# # ADD REPORTED TO ESTIMATED
+# #source("Source/clean_reported_importations.R")
+# reported_file_path <- paste0("Results/",results_folder,"/import_reported_long_matched.csv")
+# 
+# if (file.exists(reported_file_path)){
+#     # load reported imports summed by destination
+#     imports_reported_long <- read_csv(reported_file_path) %>% as.data.frame() %>%
+#         rename(rep_imports=imports)
+# 
+#     # merge with import_results
+#     import_results <- left_join(import_results, imports_reported_long)
+#     import_data_long <- left_join(import_data_long, imports_reported_long)
+#     
+# } else {
+#     import_results$rep_imports <- NA
+#     import_data_long$rep_imports <- NA
+# }
+
+
+
+
+
+
+
+# ~ import_results_desttime_overall_cum --------------------------------------------------------
+# Cumulate importations into overall destination (i.e., a state)
+
+# Add up importations by location by simulation
+import_data_overall_long <- import_data_long %>% group_by(sim, source) %>%
+    mutate(imports_cum = cumsum(imports)) %>% ungroup()
+
+# Get RR mean and CIs
+import_results_desttime_overall_cum <- import_data_overall_long %>% group_by(t, sim) %>% 
+    mutate(imports_cum = sum(imports_cum, na.rm = TRUE)) %>% ungroup() %>% group_by(t) %>%
+    summarize(
+        cum_import_mean=mean(imports_cum, na.rm=T),
+        cum_import_sd=sd(imports_cum, na.rm=T),
+        cum_import_ll=quantile(imports_cum, probs=.025, na.rm=T),
+        cum_import_ul=quantile(imports_cum, probs=.975, na.rm=T),
+        cum_import_median=median(imports_cum, na.rm=T),
+        cum_import_min=min(imports_cum, na.rm=T),
+        cum_import_max=max(imports_cum, na.rm=T),
+        cum_import_25pt=quantile(imports_cum, probs=.25, na.rm=T),
+        cum_import_75pt=quantile(imports_cum, probs=.75, na.rm=T),
+    )
+
+# Get the probability of >0 imports
+prob_any_import <- import_data_overall_long %>% group_by(t, sim) %>% 
+    summarise(imports_cum = sum(imports_cum)) %>% group_by(t) %>%
+    summarize(n_import = sum(imports_cum>0)) %>% mutate(prob_import=n_import/(n_sim))
+
+# Add Probability
+import_results_desttime_overall_cum$cum_prob_any_import <- prob_any_import$prob_import
+import_results_desttime_overall_cum <- import_results_desttime_overall_cum %>% dplyr::select(1,2,cum_prob_any_import, everything())
+rm(prob_any_import)
+
+write_csv(import_results_desttime_overall_cum, file.path("results",project_name,sprintf("import_results_desttime_overall_cumulative_detect_v%s.csv", version)))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

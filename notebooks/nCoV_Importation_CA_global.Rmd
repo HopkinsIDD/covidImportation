@@ -1,0 +1,731 @@
+---
+title: "COVID-19 Importation - California"
+author: "Shaun Truelove"
+date: "`r Sys.time()`"
+output:
+  word_document: default
+  html_document: default
+geometry: margin=.5in
+email: shauntruelove@jhu.edu
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+
+options(scipen = 999)
+knitr::opts_knit$set(root.dir = "..")
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!require('knitr')) install.packages('knitr'); library(knitr)
+if(!require('tidyverse')) install.packages('tidyverse'); library(tidyverse)
+if(!require('gridExtra')) install.packages('gridExtra'); library(gridExtra)
+if(!require('grid')) install.packages('grid'); library(grid)
+if(!require('viridis')) install.packages('viridis'); library(viridis)
+
+library(globaltoolbox)
+
+# Packages
+# if(!require('stringr')) install.packages('stringr'); library(stringr)
+# if(!require('lettercase')) install.packages('lettercase'); library(lettercase)
+# if(!require('fields')) install.packages('fields'); library(fields)
+# if(!require('pracma')) install.packages('pracma'); library(pracma)
+# if(!require('msm')) install.packages('msm'); library(msm)
+# if(!require('countrycode')) install.packages('countrycode'); library(countrycode)
+# if(!require('tools')) install.packages('tools'); library(tools)
+select <- dplyr::select
+
+```
+
+```{r sourcefiles, echo=FALSE, message=FALSE, warning=FALSE}
+source("R/DataLoadUtils.R")
+source("R/BasicEpiAnalyses.R")
+source("R/DataUtils.R")
+```
+
+
+This document details the full analysis process for estimating the COVID-19 importation risk and numbers into the U.S. from other countries. This work is an adaptation of work done for measles importation for the manuscript titled "Epidemics, Air Travel, and Elimination in a Globalized World: The Case of Measles".  
+
+The components of the model are detailed below, with all R scripts or functions included or sourced. The model requires a set of epidemiological parameters (incubation period, infectious period, proportion of cases reported), which currently come from data on Chinese cases and cases that have traveled from China. Case data on cases in source locations comes from publicly reported cases. We are using a smoothing technique to make these more uniform, and have location and time-specific assumptions about what proportion of cases are currently being reported. Travel data with full trip iteneraries is required, and currently we are using data provided by the U.S. CDC obtained from OAG. Unfortunately, these data publicly available and need express permissions to share.
+
+Alterations can be done in this R markdown file to explore scenarios, do sensitivity analyses, or update assumptions and data. Data changes should be done in the **DATA** block below or the sourced scripts. Parameter changes should be done in the **COVID-19 CHARACTERISTICS** section. Results tables are saved as CSV files and then used to produce the figures below.
+    
+The current analysis includes estimates of importation into California via air travel up to `r as.Date(Sys.time())`. On January 23, Hubei was put under quarantine, after which flights from Hubei were cancelled, though we allow a couple extra days for travel due to time to travel and layovers.
+
+    
+    
+# MODEL SETUP
+
+### Project Options
+
+```{r projoptions, echo=TRUE}
+# Analysis Options
+location_name <- "California"
+project_name <- "ca_global_import"
+version <- "global"
+batch <- "1st"
+n_sim <- 100
+get_travel <- FALSE
+
+# End date of estimation
+start_date <- as.Date("2020-01-01")
+end_date <- as.Date("2020-04-01")
+
+# Hubei Travel shutdown
+hubei_shutdown <- c("2020-01-24", "2020-04-01") # it might have been Jan 23, but we will give it 1 day for people already departed.
+
+
+# Create needed directories
+dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("data",project_name), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("figures",project_name), recursive = TRUE, showWarnings = FALSE)
+
+```
+
+    
+# ASSUMPTIONS AND CAVEATS
+    
+Travel    
+- Travel is based off previous years' data and may not reflect current travel.    
+- Travel data are monthly; we use imputation to stochastically produce daily travel for each simulation iteration.    
+- Travel does not include ground travel (i.e., car, bus, train, etc.).    
+- Travel from Hubei was dropped to 0 after 23 January 2020.    
+- Travel from other provinces of China was dropped to 20% of normal levels.    
+    
+Incidence
+- Incidence is based on reported, confirmed case data (via JHU CSSE Dashboard).    
+- Case counts were assumed to only reflect a portion of true infection incidence; we assumed 5% of cases in Hubei and 25% of cases elsewhere are being reported.    
+- To allign incidence with travel, we shifted incidence dates back by 10 days to account for the incubation period (5 days), time from onset to hospitalization (3 days), and time from hospitalization to confirmation/reporting (2 days).    
+
+
+
+            
+# COVID-19 CHARACTERISTICS    
+    
+    
+### Incubation period
+We are assuming the incubation follows a lognormal distribution that follows estimates from Lauer et al. 2020 (mean = 5.2 days (95% CI 2.5-10.5)). Source: https://www.medrxiv.org/content/10.1101/2020.02.02.20020016v1.
+
+```{r incub, echo=FALSE}
+
+# Incubation
+# mean: 5.2 days (95% CI 2.5-10.5) Lauer et al. 2020
+# incub_mean_log <- log(5.2)
+# incub_sd_log   <- log(1.43)
+
+# Shenzhen
+# Mean: 5.9 days (95% CI 2.0-17.5)
+incub_mean_log <- log(5.89)
+incub_sd_log   <- log(1.74)
+
+samp_incub <- exp(rnorm(10000, incub_mean_log, incub_sd_log))
+#quantile(samp_incub, probs=c(0.025, .50,  0.975))
+
+```
+
+### Infectious period
+We are using different infectious periods for those detected and hospitalized and those not.
+These estimates are based off a combination of anecdotal evidence and estimates from SARS. This will be updated using data from COVID-19 soon.
+
+##### Infectious period - not hospitalized
+```{r infectperiod_nohosp, echo=FALSE}
+inf_period_nohosp_mean <- 15  # needs revision
+inf_period_nohosp_sd   <- 5
+
+#inf_nohosp <- exp(MCMCglmm::rtnorm(10000, log(inf_period_nohosp_mean), log(inf_period_nohosp_sd), lower=0))
+inf_nohosp <- (MCMCglmm::rtnorm(10000, inf_period_nohosp_mean, inf_period_nohosp_sd, lower=0))
+quantile(inf_nohosp, probs=c(0.025, .5, 0.975))
+print(paste0("Mean time to recovery: ", round(mean(inf_nohosp),1), " days"))
+```
+We are currently assuming a mean time to recovery of `r round(mean(inf_nohosp),1)` days.
+    
+    
+##### Infectious period - hospitalized (time to hospitalization)
+```{r infectperiod_hosp, echo=FALSE}
+
+inf_period_hosp_shape <- 0.75 # increased based on Shenzhen (this is going to be a bit fluid)
+inf_period_hosp_scale <- 5.367
+
+inf_hosp <- rgamma(1000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+quantile(inf_hosp, probs=c(0.025, .5,  0.975))
+print(paste0("Mean time to hospitalization: ", round(mean(inf_hosp),1), " days"))
+
+```
+We are currently assuming a mean time to hospitalization of `r round(mean(inf_hosp),1)` days.
+    
+    
+Visually, these are the distributions that we are drawing from to inform these time period:
+
+```{r plot_params, echo=FALSE, fig.width=8, fig.height=4}
+par(mfrow=c(1,3))
+plot(density(samp_incub), type="l", main="Incubation Period", xlab="Days")
+plot(density(inf_nohosp), type="l", col="blue", ylim=c(0,.3), xlim=c(0, 30), 
+     main="Time to recovery", xlab="days")
+plot(density(inf_hosp), type="l", col="red", ylim=c(0,.35), xlim=c(0, 30), 
+        main="Time to hospitalization", xlab="days")
+par(mfrow=c(1,1))
+```
+
+
+    
+### Proportion cases reported
+```{r, echo=FALSE}
+p_report_source <- c(0.05, 0.25)
+```
+Currently the model is set up to take both time- and location-varying proportion of cases reported. For now, we are using `r p_report_source[1]*100`% reported for Hubei, and `r p_report_source[2]*100`% reported elsewhere, constant over time.  
+   
+     
+     
+### Shift in incidence date
+```{r, echo=FALSE}
+shift_incid_incub <- -5
+shift_incid_detect <- -3
+shift_incid_report <- -2
+shift_incid_days <- shift_incid_incub + shift_incid_detect + shift_incid_report
+```
+To appropriately allign reported cases of COVID-19 in source locations with the time during which they might be traveling, we shift case reporting dates by `r shift_incid_days` days (i.e., backward). This is a crude adjustment for now that will be improved.
+
+
+  
+    
+    
+# DATA
+
+Here we describe where we get data and do necessary formatting and cleaning of the data.
+
+Three major sets of data are required for this importation estimation model: incidence in source locations, mobility or travel volume from source locations in to destination locations, and population of source locations. Data processing is done within separate R scripts for each. These each are setup to process and save the files in the correct formats for running the model.
+**To run these source scripts within this Rmd file, make sure to change `eval=FALSE` to `eval=TRUE`. 
+
+
+## Incidence data
+Cases count data is acquired from the JHU CSSE COVID-19 Dashboard in real time  (https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6). We pull the data each time the analysis is run, and then use spline fitting to estimate the incidence from these reported case counts. Smoothing is done to adjust for case reporting timing inconsistencies. 
+
+    
+```{r incid, echo=FALSE, message=FALSE, eval=TRUE, message=FALSE, warning=FALSE, fig.height=4}
+# All the data pulling, processing, and cleaning is now done in the function below to keep it universal
+# source("R/DataUtils.R")
+incid_data_list <- get_incidence_data(first_date = ISOdate(2019,12,1), 
+                                      last_date = Sys.time(), 
+                                      pull_github_data=TRUE)
+
+incid_data <- incid_data_list$incid_data
+jhucsse    <- incid_data_list$jhucsse
+
+```
+    
+    
+### Confirmed Cases in China
+China remains the largest source of confirmed cases of COVID-19, though cases have decreased strikingly since the widespread lockdowns. The largest burden of disease is overwhelmingly in Hubei Province. These are the reported case counts by date of confirmation. 
+    
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5}
+source("R/Plots_ConfirmedCases.R")
+plot_conf_china(df = jhucsse)
+```
+    
+### Confirmed Cases, Outside of China
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=7}
+plot_conf_notchina(df = jhucsse)
+```
+
+### Confirmed Cases, Largest Outbreaks outside of China
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=12}
+plot_conf_largestnotchina(df = jhucsse)
+```
+
+    
+### Estimated Cases, Hubei and Global
+
+```{r incid_fits, echo=FALSE, message=FALSE, eval=TRUE, message=FALSE, warning=FALSE, fig.height=3}
+#source("R/BasicEpiAnalyses.R")
+## Plot incidence fits - Hubei
+plot_incidence_ests_report(conf_cases=jhucsse, 
+                           incid_ests=incid_data %>% rename(Incidence = cases_incid, Province_State=source),
+                           locations="Hubei") +
+  ggtitle("Hubei Corrected Incidence Estimates")
+```
+
+```{r, echo=FALSE, message=FALSE, eval=TRUE, message=FALSE, warning=FALSE, fig.height=3}
+## Plot incidence fits - Global
+plot_incidence_ests_report(conf_cases=jhucsse, 
+                           incid_ests=incid_data %>% rename(Incidence = cases_incid, Province_State=source),
+                           locations="All") +
+  ggtitle("Global Corrected Incidence Estimates")
+```
+
+```{r, echo=FALSE, message=FALSE, eval=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8}
+## Plot incidence fits - Largest
+plot_incidence_ests_report(conf_cases=jhucsse, 
+                           incid_ests=incid_data %>% rename(Incidence = cases_incid, Province_State=source_orig),
+                           locations=unique(get_global_cum(df = jhucsse, case_limit=100)$Province_State)) +
+  ggtitle("Global Corrected Incidence Estimates")
+```
+
+
+We corrected for the large spike of cases on 13-14 February and smoothed over some of the heterogeneity that comes from reporting. These incidence estimates will be used in the importation model.
+
+
+    
+      
+
+## Travel Data    
+    
+Travel data are currently provided by the U.S. CDC through from OAG. These are monthly passenger volumes of complete iterneraries (i.e., airport of departure to final destination), which we then do some sampling with in the model to distribute volume to individual days.
+
+We will update this with travel forecasts eventually.
+ 
+```{r travel, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, fig.height=5}
+
+source("R/setup_travel_data.R")
+#source("R/oag_data_cleaning.R")
+
+if(get_travel)  travel_data_monthly <- get_oag_travel(destination="CA", destination_type="state")
+travel_data_monthly <- read_csv("data/CA_oag_20172019_aggr.csv", na=c(""," ","NA"))
+
+# Increase travel for Chinese New Year
+travel_data_monthly <- travel_data_monthly %>% 
+  mutate(travelers=travelers_mean, t_year=2020,) %>%
+  mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN", travelers*1.6, travelers)) 
+travel_data_monthly <- travel_data_monthly %>% rename(source = dep_loc_aggr)
+
+## Travel data
+#  - Get daily for merging purposes
+travel_data <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
+
+
+
+```
+   
+    
+          
+## Population Data
+Population data are data for each province or country where transmission is currently occurring and from where importations could occur.
+
+```{r pop, echo=FALSE, message=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+
+source("R/setup_pop_data.R")
+pop_data_file   <- file.path("data","pop_data.csv")
+pop_data <- readr::read_csv(pop_data_file) %>% as.data.frame() %>%
+  rename(source = location, population=pop) %>% 
+  filter(!(source %in% c("CHN", "USA")))  # Get rid for full country populations for those with subnational
+
+```
+    
+        
+### Merge Input Data
+Merge all of the input data into a single data.frame for inputting into the model.
+```{r, echo=FALSE, message=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+source("R/DataUtils.R")
+
+input_data <- make_input_data(incid_data, travel_data, pop_data, 
+                              shift_incid_days=shift_incid_days)
+
+# Summarize the data
+summ_dat_dest <- input_data %>% 
+  filter(t<=end_date) %>%
+  group_by(destination, t) %>% 
+  summarise(travel_sum=sum(travelers, na.rm = TRUE),
+            cases_incid_sum=sum(cases_incid, na.rm = TRUE))
+summ_dat_source <- input_data %>% 
+  filter(t<=end_date) %>%
+  group_by(source, destination) %>% 
+  summarise(travel_sum=sum(travelers, na.rm = TRUE),
+            cases_incid_sum=sum(cases_incid, na.rm = TRUE))
+
+```
+
+
+    
+
+# MODEL
+
+Here we set up anything else for the model and running the simulations.    
+    
+
+
+### Model Setup
+
+```{r modelsetup, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+
+# PARAMETERS -------------------------------------------------------------
+
+# For first pass, reporting rate is just Hubei/not Hubei
+input_data <- input_data %>% 
+  mutate(p_report_source = ifelse(source=="Hubei", p_report_source[1], p_report_source[2]))
+
+# Add time unit to input data
+# ~ delta: days per time period
+delta <- 1
+input_data$days_per_t <- delta
+
+
+# PARAMETER SAMPLING ------------------------------------------------------
+
+meanD_mat <- make_meanD(input_data, n_sim, 
+                        incub_mean_log, incub_sd_log,
+                        inf_period_hosp_shape, inf_period_hosp_scale,
+                        inf_period_nohosp_mean, inf_period_nohosp_sd)
+
+par(mfrow=c(2,2))
+hist(as.numeric(meanD_mat), breaks=100)
+
+
+# ~ Time to detect importations -------------------------------------------
+# -- If we assume people generally depart at some point during their incubation period, 
+#     or very early in the symptomatic phase, 
+#     we can generate a distribution of time from travel to detection.
+# -- because we are only worried about those who are detected, we can ignore time to recover
+
+time_inftodetect <- exp(rnorm(10000, mean = incub_mean_log, sd = incub_sd_log)) + 
+  rgamma(10000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+hist(time_inftodetect, breaks=100)
+
+# We assume people can and do travel during their incubation period and 
+#  during that period during which symptoms are still minor. 
+#  There are reports of travelers taking fever-reducers and a portion dont show fever
+# We assume this is uniform
+time_inftotravel <- sapply(time_inftodetect, runif, n=1, min=0)
+hist(time_inftotravel, breaks=100)
+
+time_traveltodetect <- time_inftodetect - time_inftotravel
+hist(time_traveltodetect, breaks=100)
+par(mfrow=c(1,1))
+
+
+# ~ Travel reductions -----------------------------------------------------
+t_red <- rep(1, n_sim)
+
+
+# ~ Destination reporting rate --------------------------------------------
+u_destination <- rep(1, n_sim)
+
+
+# ~ Origin reporting rate -------------------------------------------------
+u_origin <- matrix(rep(input_data$p_report_source, n_sim), nrow=n_sim, byrow = TRUE)
+
+# Restrict forecast dates
+input_data <- input_data %>% filter(t<as.Date(end_date))
+
+# save final input data
+readr::write_csv(input_data, file.path("data", project_name, 
+                                       sprintf("input_data_%s_batch_v%s.RData", batch, version)))
+
+
+
+# Travel restrictions -----------------------------------------------------
+trav_ <- data.frame(loc=unique((input_data %>% filter(dep_country=="CHN"))$source), 
+                    min=hubei_shutdown[1], max=hubei_shutdown[2], 
+                    p_travel=.2) # Reduce travel from all chinese sources to 20%
+travel_restrictions <- bind_rows(trav_ %>% filter(loc!="Hubei"),
+                                 data.frame(loc="Hubei", min=hubei_shutdown[1], max=hubei_shutdown[2], p_travel=0))
+
+travel_data_monthly <- travel_data_monthly %>% 
+  dplyr::select(source, destination=arr_city, t_month, t_year, travelers)
+
+```
+    
+The "meanD_mat" here is the distribution of time during which an infected indivudal could potentially travel from a source to a sink/destination. This distribution includes the time from infection to isolation/quarantine for detected cases (typically hospitalized/reported), travel restriction or a decision not to travel, or for cases with asymptomatic or very mild illness, until recovery. This value is drawn from a combination of the other distributions show here.    
+    
+
+
+
+### Run the Model
+
+```{r modelrun, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+source("R/import_model_source.R")
+print(paste0("Proportion Reported in the sources: ",p_report_source))
+
+# ~ Run the simulation ----------------------------------------------------
+t.start <- proc.time() # start timer to measure this
+input_data <- readr::read_csv(file.path("data", project_name, 
+                                        sprintf("input_data_%s_batch_v%s.RData", batch, version)))
+
+# Limit to sources with case
+source_w_cases <- input_data %>% filter(!duplicated(paste0(source, t))) %>% 
+  group_by(source) %>% 
+  summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
+  filter(cum_cases>0)
+input_data_cases <- input_data %>% filter(source %in% source_w_cases$source)
+travel_data_monthly <- travel_data_monthly %>% filter(source %in% source_w_cases$source)
+
+# Run the model
+importation_sim <- run_daily_import_model_timeloc_withdailyest(
+  input_data = input_data_cases, 
+  travel_data_monthly = travel_data_monthly, 
+  travel_dispersion=3, 
+  travel_restrictions=travel_restrictions, 
+  n_sim=n_sim, allow_travel_variance=FALSE,
+  meanD_mat, t_red, u_origin, time_inftotravel, time_inftodetect,
+  project_name, batch, version, print_progress=FALSE)
+
+# print time required
+print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
+
+```
+
+    
+    
+# RESULTS
+
+### Analysis of Model Simulations     
+Clean, aggregate, and produce summary stats for importation simulation results.
+
+```{r model_res, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+
+t.start <- proc.time() # start timer to measure this
+source("R/importation_analysis.R")
+source("R/importation_analysis_detection.R")
+
+# print time required
+print(paste0('Analysis required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
+
+```
+
+
+
+
+## Figures: Heatmaps of Risk of Importation into California Airport.
+    
+```{r plot_heatmapsA, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8}
+# Requires: `R/ggheat_func_source.R` and `R/heatmaps_exportation.R`    
+# source("R/heatmaps_importation.R")
+
+
+source("R/ggheat_func_source.R")
+t_limits <- as.Date(c("2020-01-01","2020-04-01"))
+
+# LOAD SIMULATED DATA ---------------------------------------------------------------
+# dest by time, single destination 
+import_results_desttime <- read_csv(file.path("results",project_name,sprintf("import_results_desttime_v%s.csv", version)))
+import_results_desttime$t <- as.Date(import_results_desttime$t)
+t_values <- sort(unique(import_results_desttime$t))
+import_results_desttime <- import_results_desttime %>% 
+    mutate(t = factor(as.character(t))) %>% mutate(t_num = as.integer(t))
+
+# # Subset to 20 locations with highest risk
+# cum_risk <- (import_results_desttime %>% group_by(destination) %>% summarise(cum_imports = sum(import_mean)) %>% 
+#   arrange(desc(cum_imports)))[1:25,]
+# import_results_desttime_top25 <- import_results_desttime %>% filter(destination %in% cum_risk$destination)
+# data <- import_results_desttime_top25
+
+data <- import_results_desttime
+coord_ratio <- length(unique(data$destination)) / (length(unique(data$t))) /.001
+dest_names <- unique(import_results_desttime$destination)
+
+# PLOTS -------------------------------------------------------------------
+# RR importATION HEATMAP
+summary(data$RR_mean)
+quantile(data$RR_mean, probs=seq(0,1,.1), na.rm=TRUE)
+maxval_ <- ceiling(max(data$RR_mean, na.rm=TRUE))
+#zcuts_ <- c(0,.01,.2,.5,.8,1.25,2,10,20,50,100,200,500, ceiling(max(data$RR_mean, na.rm=TRUE)))
+zcuts_ <- c(0,.01,.2,.5,.8,1.25,(2^(1:20)),maxval_)
+zcuts_ <- zcuts_[zcuts_<=maxval_]
+
+p_rr <- ggheat_import(data=data %>% select(t, destination, value=RR_mean) %>% 
+                       rowwise %>% filter(as.Date(t) >= as.Date(t_limits[1]) &
+                                            as.Date(t) <= as.Date(t_limits[2])),
+                       zCuts=zcuts_,
+                       x.size=8, y.size=8, 
+                       title=paste0('Daily RR\nCase\nimported\ninto ',dest_names), 
+                       labCol='t', na.value="grey75",
+                       aspect_ratio = coord_ratio, t.skip=3)
+ggsave(file.path("figures",project_name,sprintf("heatmap_RR_importation_v%s.png", version)), plot=p_rr, width = 8, height = 4, dpi=600)
+
+
+# PROB importATION HEATMAP
+summary(data$prob_any_import)
+quantile(data$prob_any_import, probs=seq(0,1,.1), na.rm=TRUE)
+p_prob <- ggheat_import(data=data %>% select(t, destination, value=prob_any_import) %>%
+                        rowwise %>% filter(as.Date(t) >= as.Date(t_limits[1]) & 
+                                             as.Date(t) <= as.Date(t_limits[2])), 
+                        zCuts=seq(0,1,.1), x.size=8, y.size=8, 
+                        title=paste0('Daily\nProbability\nCase\nimported\ninto ',dest_names), 
+                        labCol='t', na.value="grey85", pal_colors=c("lightgoldenrod1","darkorange1","darkred"),
+                        aspect_ratio = coord_ratio, t.skip=3)
+ggsave(file.path("figures",project_name,sprintf("heatmap_PROB_importation_v%s.png", version)),plot=p_prob, width = 8, height = 4, dpi=600)
+
+
+# Mean Number importation Heatmap
+summary(data$import_mean)
+quantile(data$import_mean, probs=seq(0,1,.1), na.rm=TRUE)
+max_val_ <-  max(data$import_mean, na.rm=TRUE)
+max_val_ <- ifelse(max_val_>=10, ceiling(max_val_/10)*10, ceiling(max_val_))        
+        
+if(max_val_>10) {  zcuts_ <- c(0, .2, .5, 1, 3, 5, seq(10, max_val_, 5))
+} else {           zcuts_ <- c(0, .2, .5, seq(1, max_val_, 2))  }
+
+p_mean <- ggheat_import(data=data %>% select(t, destination, value=import_mean) %>% 
+                       rowwise %>% filter(as.Date(t) >= as.Date(t_limits[1]) & as.Date(t) <= as.Date(t_limits[2])),
+                   zCuts=zcuts_,
+                   x.size=8, y.size=8, 
+                   title=paste0('Mean\nCases\nimported\ninto ',dest_names),
+                   labCol='t', na.value="grey75", pal_colors=c("seashell","magenta4"),
+                   aspect_ratio = coord_ratio, t.skip=3)
+ggsave(file.path("figures",project_name,sprintf("heatmap_MEANNUMBER_importation_v%s.png", version)), 
+       plot=p_mean, width=8, height=4, dpi=600)
+rm(max_val_, zcuts_)
+
+# gridExtra::grid.arrange(p_rr, p_prob, p_mean, 
+#                         layout_matrix=rbind(c(1,1,1,1), c(1,1,1,1), c(1,1,1,1), c(1,1,1,1),
+#                                             c(2,2,3,3), c(2,2,3,3), c(2,2,3,3)))
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4}
+plot(p_rr)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4}
+plot(p_prob)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4}
+plot(p_mean)
+```
+
+We can see very clearly that the majority of risk coming from Hubei was into LAX and SFO, with some risk to SAN and SJC. This risk ends when flight restrictions are put into place. However, this analysis only includes flights from Hubei, so there still is risk from other locations in China.
+
+    
+    
+
+## Figures: Estimated Importations into California
+
+```{r plot_importsA, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8}
+# plotting functions and data loading
+source("R/plot_importation_estimates.R")
+source("R/plot_importation_estimates_detection.R")
+
+# Date limits of plots
+t_limits <- as.Date(c("2020-01-01","2020-04-01"))
+
+
+# Daily importations, Overall (all of the US)
+p_total <- plot_imports(data=import_results_desttime_overall, region_ = "All", t_limits=t_limits, 
+                       y.size = 9, x.size = 9, leg.text.size = 12, leg.title.size = 14,
+                       rep_col = "indianred2", 
+                       est_col = "blue3", 
+                       est_ribbon_col = "blue3", 
+                       est_ribbon_alpha=0.25,
+                       plot_legend=TRUE)
+# Barchart version
+p_total_barchart <- plot_imports_barchart(data=import_results_desttime_overall, region_ = "All", t_limits=t_limits,
+                        y.size = 9, x.size = 9, leg.text.size = 12, leg.title.size = 14,
+                        rep_col = "indianred2",
+                        est_col = "blue3",
+                        plot_legend=TRUE)
+
+# Cumulative importations, Overall (all of the US)
+p_cum <- plot_cum_imports(data=import_results_desttime_overall_cum, region_ = "All", t_limits=t_limits, 
+                          y.size = 9, x.size = 9, leg.text.size = 12, leg.title.size = 14,
+                          rep_col = "indianred2", 
+                          est_col = "blue3", 
+                          est_ribbon_col = "blue3", 
+                          est_ribbon_alpha=0.25,
+                          plot_legend=TRUE)
+
+# Stacked barchart of daily importations by source (Currenty only source is Hubei)
+p_stackedsource_barchart <- plot_imports_stackedsource(data=import_results_sourcetime, t_limits=t_limits, 
+                                          y.size = 8, x.size = 8, leg.text.size = 6, leg.title.size = 8,
+                                          est_col = "blue3")
+
+gridExtra::grid.arrange(p_total, p_cum, nrow=2)
+
+```
+
+These figures show the total estimated number of importations into California (top: daily, bottom: cumulative). Overall, we se that about 5 infections might have been imported prior to the flight restrictions from Hubei, with a wide range of possibilities. These are infections being imported, not necessarily cases. 
+
+Of note, because the airline travel data we are using are monthly aggregates, rather than daily, it is difficult to pinpoint actual risk on individual days. Right now we are imputing daily travel randomly from monthly numbers, which leads to our reliance on means and confidence bounds. However, the cumulative plot demonstrates the overall risk is somewhat in line with what we have seen. Going forward, particularly once we are out of the explosive period of the outbreak, these daily counts likely will not have as big of impact.
+    
+    
+    
+```{r plot_importsA2, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4.25}
+
+# Stacked barchart of daily importations by destination (US Airports)
+p_stackeddest_barchart <- plot_imports_stackeddest(data=import_results_desttime, t_limits=t_limits, 
+                                                   y.size = 8, x.size = 8, leg.text.size = 6, leg.title.size = 8,
+                                                   est_col = "blue3")+ 
+  theme(legend.position = "none")
+plot(p_stackeddest_barchart)
+
+```
+    
+Here we see mean numbers of travelers are increasing with the increasing incidence in China. As the current analysis only includes travel from Wuhan (direct or indirect), the importation stops on January 24 (this was set to allow a day or two of travel after restrictions were put in place). These are mean importations, so because the actual numbers are so low, they are less than whole persons. As we see in the above plots, this is due to quite a bit of heterogeneity, and gives a general sense of the risk of importations.
+           
+           
+## Figures: Detected Importations
+    
+    
+```{r plot_importsB, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, eval=FALSE}
+#### Detected Estimated Importations into California Airport, Daily Totals.
+
+t_limits <- as.Date(c("2020-01-01","2020-04-01"))
+source("R/plot_importation_estimates_detection.R")
+
+# Importation 
+p_stackeddest_barchart_detect <- plot_imports_stackeddest(
+  data=import_results_desttime_detect, t_limits=t_limits,   
+  y.size = 8, x.size = 8, leg.text.size = 6, leg.title.size = 8,
+  est_col = "royalblue3") + 
+  theme(legend.position = "none")
+
+plot(p_stackeddest_barchart_detect)
+
+```
+
+#### Detected Estimated Importations into California Airport, by source. 
+
+This figure represents the dates on which cases are likely to be (or to have been detected) if they were detected at all. We see these are delayed from the above figures, as most cases would be traveling before symptoms or during early phases of illness. Only sources that had at least 1 day with a mean importation number of 0.1 are included in the figure.
+
+  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6}
+# limit to those with at least .1 mean on a single day
+sources_ <- unique((import_results_sourcetime_detect %>% filter(import_mean>=0.1))$source)
+
+p_stackedsource_barchart <- plot_imports_stackedsource(
+  data=import_results_sourcetime_detect %>% filter(source %in% sources_), 
+  t_limits=t_limits, 
+  y.size = 8, x.size = 8, 
+  leg.text.size = 8, leg.title.size = 8,
+  ncol_legend=1) +
+  theme(legend.position = c(.9,.55))
+
+plot(p_stackedsource_barchart)
+
+```
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6}
+# limit to those with at least .1 mean on a single day
+sources_ <- unique((import_results_sourcetime_detect %>% filter(import_mean>=0.1))$source)
+
+p_stackedsource_barchart <- plot_imports_facetsource(
+  data=import_results_sourcetime_detect %>% 
+    filter(source %in% sources_) %>% 
+    mutate(source=relevel(as.factor(source), "Hubei")), 
+  t_limits=t_limits, 
+  y.size = 8, x.size = 8, 
+  leg.text.size = 8, leg.title.size = 8,
+  rep_col = "indianred2", est_col = "blue3", ncol_legend=1, ncol_facet=2) +
+  theme(legend.position = "none")
+
+plot(p_stackedsource_barchart)
+
+```
+
+
+We can see that importation risk, at least through air travel, has reduced to essentially 0 from other provinces in China, while risk from elsewhere, notably from South Korea. Interestingly, Italy and Iran are not expected to be producing substantial importation risk.
+
+These estimates are based on the current reported cases, thus are only reporting the risk up to now. Work is in development to produce near-term projections of cases in source locations, from which projected importation can then be estimated.
+
+
+
+
+
+
+
+
+
+
+           
+
+    

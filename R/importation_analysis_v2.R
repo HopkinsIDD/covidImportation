@@ -30,56 +30,86 @@ if(!require('abind')) install.packages('abind'); library(abind)
 # IMPORT DATA -------------------------------------------------------------
     
 load(import_sim_file) # load importation_sim
-Sys.sleep(5) # pause to let the computer catch up
+Sys.sleep(2) # pause to let the computer catch up
 #format(object.size(importation_sim),"Mb")
+
+# quick check
+importation_sim[1,1,1:10,1:10]
+sum(is.na(importation_sim))
+sum(!is.na(importation_sim))
+
+
+#dimnames(importation_sim)
+##' Array dimensions: 
+##' 1. sources
+##' 2. destination
+##' 3. date
+##' 4. sim number
 
 sources_ <- dimnames(importation_sim)[[1]]
 dests_ <- dimnames(importation_sim)[[2]]
-t_ <- dimnames(importation_sim)[[3]]
-sims_ <- dimnames(importation_sim)[[4]]
+t_ <- as.Date(dimnames(importation_sim)[[3]])
+sims_ <- as.integer(dimnames(importation_sim)[[4]])
 
 
 # Check range of sims
-range(sims_)
-tmp <- apply(importation_sim, c(3,4), sum, na.rm=TRUE)
-rowMeans(tmp)
+# range(sims_)
+# tmp <- apply(importation_sim, c(3,4), sum, na.rm=TRUE)
+# rowMeans(tmp)
+
+
+# Remove time prior to start_date
+importation_sim <- importation_sim[,,t_>=start_date,]
+t_ <- as.Date(dimnames(importation_sim)[[3]])
 
 
 
 # ~ Convert to Long Form --------------------------------------------------
+# --> lets try to do this without converting to long (that makes it huge and slow)
 
-# Convert raw data array into long format
-import_data_long <- arrayhelpers::array2df(importation_sim)
-Sys.sleep(5) # pause to let the computer catch up
 
-colnames(import_data_long) <- c("imports","source","destination","t","sim")
-import_data_long <- import_data_long %>% mutate(t = lubridate::ymd(t)) %>% as.data.frame()
+# # Convert raw data array into long format
+# import_data_long <- arrayhelpers::array2df(importation_sim)
+# Sys.sleep(5) # pause to let the computer catch up
+# 
+# colnames(import_data_long) <- c("imports","source","destination","t","sim")
+# import_data_long <- import_data_long %>% mutate(t = lubridate::ymd(t)) %>% as.data.frame()
 
-# Remove time prior to start_date
-min((import_data_long %>% filter(!is.na(imports)))$t)
-import_data_long <- import_data_long %>% filter(t>=start_date)
 
 
 #write_csv(import_data_long, paste0("data/est_imports_long_ver",version,".csv"))
-import_data_long$imports <- as.integer(as.character(import_data_long$imports))
+#import_data_long$imports <- as.integer(as.character(import_data_long$imports))
 dims_import_data <- dim(importation_sim)
 n_sim <- dims_import_data[4]
-format(object.size(import_data_long), "Mb")
+#format(object.size(import_data_long), "Mb")
+
 
 # # Add reported
 # import_data_long <- left_join(import_data_long, imports_reported_bydestination)
 
 # Make NAs into 0 if desired
 if (na_to_zero){
-    import_data_long <- import_data_long %>% mutate(imports = ifelse(is.na(imports), 0, imports))
+    #import_data_long <- import_data_long %>% mutate(imports = ifelse(is.na(imports), 0, imports))
+    importation_sim[is.na(importation_sim)] <- 0
 }
+
+
 
 # ~ Summarize imporations in long data ------------------------------------
 
-# Get mean and medians for ea/ch sim
+# Get mean and medians for each sim
 import_data_long <- import_data_long %>% group_by(sim) %>% 
     mutate(mean_sim=mean(imports, na.rm=T),
            median_sim=median(imports, na.rm=T)) %>% ungroup()
+
+sim_mean <- apply(importation_sim, 4, mean, na.rm=TRUE) 
+sim_median <- apply(importation_sim, 4, median, na.rm=TRUE) 
+
+RR.vs.sim.mean <- importation_sim / sim_mean
+
+sim_mean[1:10]
+importation_sim[38,45,20:30,1:10]
+RR.vs.sim.mean[38,45,20:30,1:10]
 
 # Get RR compared to the mean and median
 import_data_long$RR.vs.sim.mean <- import_data_long$imports / import_data_long$mean_sim

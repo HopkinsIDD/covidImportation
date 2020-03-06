@@ -1,0 +1,129 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Use Travel Data from past 3 years to estimate travel during 2020
+We will smooth across the years to account for random fluctuations
+
+
+```{r setup}
+options(scipen = 999)
+#knitr::opts_knit$set(root.dir = "..")
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!require('knitr')) install.packages('knitr'); library(knitr)
+if(!require('tidyverse')) install.packages('tidyverse'); library(tidyverse)
+if(!require('gridExtra')) install.packages('gridExtra'); library(gridExtra)
+if(!require('grid')) install.packages('grid'); library(grid)
+if(!require('viridis')) install.packages('viridis'); library(viridis)
+
+```
+
+
+## DATA
+
+```{r data, message=FALSE}
+# DATA --------------------------------------------------------------------
+
+## Full travel data
+#travel_data <- read(file.path("data", "complete_OAG_data.csv"))
+
+## California travel data (we will start with this)
+travel_data <- read_csv("data/cali_oag_20172019.csv")
+travel_data <- travel_data %>% rename(dest_city=`Arr City Name`, dest_airport=`Arr Airport Code`,dest_state=`Arr State Code`, dest_country=`Arr Country Code`,
+                                      source_city=`Dep City Name`, source_airport=`Dep Airport Code`, source_state=`Dep State Code`, source_country=`Dep Country Code`,
+                                      travelers = `Total Est. Pax`, yr_month=`Time Series`) %>%
+    mutate(source=source_airport, destination=dest_airport) %>%
+    mutate(t_year = substr(yr_month, 1,4),
+           t_month = substr(yr_month, 5,6),
+           yr_month = factor(yr_month, levels=sort(unique(yr_month)), ordered = TRUE))
+
+```
+
+
+### SFO Testing
+Lets work on a single destination (SFO)
+
+```{r}
+sfo_data <- travel_data %>% filter(dest_airport == "SFO")
+```
+
+Plot a couple source locations to look at the variations
+```{r}
+
+#sample of sources
+samp <- sample(unique(sfo_data$source_airport), 20)
+ggplot(sfo_data %>% filter(source_airport %in% samp), aes(t_month, travelers, group=t_year, color=t_year)) +
+    geom_line() + geom_point() +
+    facet_wrap(vars(source_airport), nrow=5, ncol=4)
+
+```
+
+Let's make sure there are no weird things for low, mid, and high travel sources.
+
+```{r}
+## Get annual total and mean annual total
+sfo_data <- sfo_data %>% group_by(source_airport, t_year) %>% mutate(year_total=sum(travelers)) %>% 
+    group_by(source_airport) %>% mutate(yeartot_mean = round(mean(year_total))) %>% ungroup()
+
+# total number of sources
+length(unique(sfo_data$source_airport))
+hist((sfo_data %>% filter(!duplicated(source_airport)))$yeartot_mean, breaks=100, main="Distribution of total annual travelers")
+hist((sfo_data %>% filter(!duplicated(source_airport)))$yeartot_mean,  breaks=10000, xlim=c(0,10000),main="Distribution of total annual travelers")
+hist((sfo_data %>% filter(!duplicated(source_airport)))$yeartot_mean,  breaks=10000, xlim=c(0,1000),main="Distribution of total annual travelers")
+quantile((sfo_data %>% filter(!duplicated(source_airport)))$yeartot_mean, probs = seq(0,1,.1))
+
+
+#sample of sources 
+sampvhigh <- sample(unique((sfo_data %>% filter(yeartot_mean>100000))$source_airport), 20)
+samphigh <- sample(unique((sfo_data %>% filter(yeartot_mean<=100000 & yeartot_mean>10000))$source_airport), 20)
+sampmid <- sample(unique((sfo_data %>% filter(yeartot_mean<=10000 & yeartot_mean>1000))$source_airport), 20)
+samplow <- sample(unique((sfo_data %>% filter(yeartot_mean<=1000))$source_airport), 20)
+
+
+# Very high travel
+ggplot(sfo_data %>% filter(source_airport %in% sampvhigh), aes(t_month, travelers, group=t_year, color=t_year)) +
+    geom_line() + geom_point() +
+    facet_wrap(vars(source_airport), nrow=5, ncol=4)
+
+# High travel
+ggplot(sfo_data %>% filter(source_airport %in% samphigh), aes(t_month, travelers, group=t_year, color=t_year)) +
+    geom_line() + geom_point() +
+    facet_wrap(vars(source_airport), nrow=5, ncol=4)
+
+# Mid travel
+ggplot(sfo_data %>% filter(source_airport %in% sampmid), aes(t_month, travelers, group=t_year, color=t_year)) +
+    geom_line() + geom_point() +
+    facet_wrap(vars(source_airport), nrow=5, ncol=4)
+
+# Low travel
+ggplot(sfo_data %>% filter(source_airport %in% samplow), aes(t_month, travelers, group=t_year, color=t_year)) +
+    geom_line() + geom_point() +
+    facet_wrap(vars(source_airport), nrow=5, ncol=4)
+
+
+
+```
+
+Generally speaking, flight volume looks relatively consistent across the various levels. We will do estimation using the 3 years.
+
+
+
+
+```{r}
+
+
+m1 <- glm(travelers ~ t_month*source_airport, family="poisson", data=sfo_data) #data=sfo_data %>% filter(source_airport=="WUH"))
+
+
+
+
+```
+
+
+
+
+
+
