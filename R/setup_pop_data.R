@@ -9,10 +9,10 @@ if(!require('tidyverse')) install.packages('tidyverse'); library(tidyverse)
 make_all_pop_data <- function(){
     
     
-    china_pop_data <- read_csv("data/China_popsize_census_2010.csv")
+    china_pop_data <- read_csv("data_raw/China_popsize_census_2010.csv")
     china_pop_data <- china_pop_data %>% rename(loc = province, population=pop)
     china_pop_data <- china_pop_data %>% mutate(country = "China", country_code="CHN") %>% rename(pop = population)
-    write_csv(china_pop_data, "data/china_province_pop_data.csv")
+    write_csv(china_pop_data, "data_raw/china_province_pop_data.csv")
     
     
     # COUNTRY DATA -----------------------------------------------------------
@@ -33,7 +33,7 @@ make_all_pop_data <- function(){
     
     # US STATE DATA
     # - source: https://www.census.gov/data/tables/time-series/demo/popest/2010s-state-total.html
-    us_state_pop <- readr::read_csv("data/us_state_pop.csv") %>% rename(state_name=state)
+    us_state_pop <- readr::read_csv("data_raw/us_state_pop.csv") %>% rename(state_name=state)
     us_state_pop <- full_join(us_state_pop, 
                               data.frame(state=state.abb, state_name=state.name)) %>%
         mutate(state = as.character(state))
@@ -63,7 +63,7 @@ make_all_pop_data <- function(){
                               rename(location = state))
     
     # fix some randoms 
-    other_pops <- read_csv("data/other_locations_pop.csv")
+    other_pops <- read_csv("data_raw/other_locations_pop.csv")
     pop_data <- bind_rows(pop_data, other_pops)
     pop_data <- pop_data %>% rename(source = location)
     

@@ -1,0 +1,508 @@
+"Province","airport_iata","attribution"
+"Anhui Province","HIA",0.000614364253495951
+"Anhui Province","JUH",0.0717667363252652
+"Anhui Province","YTY",0.011067459227314
+"Anhui Province","WUH",0.00453216014191369
+"Anhui Province","JNG",0.00897152465114942
+"Anhui Province","AQG",0.138458634784854
+"Anhui Province","BFU",0.14183730251487
+"Anhui Province","CZX",0.000876757264485936
+"Anhui Province","FUG",0.172795389992396
+"Anhui Province","HGH",0.00110122398218374
+"Anhui Province","JDZ",0.0169470105159646
+"Anhui Province","JIU",0.017582118398672
+"Anhui Province","NKG",0.0392588708189909
+"Anhui Province","HFE",0.135258728138508
+"Anhui Province","SZV",0.00256358965781172
+"Anhui Province","TXN",0.0776119596247376
+"Anhui Province","WHU",0.0928549318740035
+"Anhui Province","XUZ",0.0659011983356941
+"Anhui Province","YTY",0.011067459227314
+"Beijing Municipality","TVS",0.0000499140036218536
+"Beijing Municipality","ZQZ",0.00785361444648712
+"Beijing Municipality","PEK",0.586510584791364
+"Beijing Municipality","PKX",0.0703056993926835
+"Beijing Municipality","CDE",0.00600273328753793
+"Beijing Municipality","NAY",0.32927739541302
+"Chongqing Municipality","DZU",0.100533557686672
+"Chongqing Municipality","JIQ",0.17780582664247
+"Chongqing Municipality","ENH",0.0516328320055419
+"Chongqing Municipality","HPG",0.0531862955101182
+"Chongqing Municipality","AKA",0.0361808273891151
+"Chongqing Municipality","CKG",0.232875390214193
+"Chongqing Municipality","DAX",0.0000719428041766412
+"Chongqing Municipality","LIA",0.115307079103382
+"Chongqing Municipality","LZO",0.0109026045580396
+"Chongqing Municipality","WMT",0.0117460253586412
+"Chongqing Municipality","NAO",0.0090109277052147
+"Chongqing Municipality","TEN",0.0306815925797464
+"Chongqing Municipality","WXN",0.170065062643503
+"Fujian Province","SQD",0.00740043993059598
+"Fujian Province","SQJ",0.225071416597334
+"Fujian Province","MXZ",0.0390272120647533
+"Fujian Province","SWA",0.0211211691619474
+"Fujian Province","XMN",0.110114106409208
+"Fujian Province","FOC",0.14883943449935
+"Fujian Province","JUZ",0.000346649655240753
+"Fujian Province","LCX",0.187936699721554
+"Fujian Province","JJN",0.0767842013889695
+"Fujian Province","WUS",0.161265192712776
+"Fujian Province","WNZ",0.0220934521312599
+"Gansu province","AHJ",0.00754802709293212
+"Gansu province","AXF",0.00277196045265707
+"Gansu province","THQ",0.0668204947946267
+"Gansu province","YZY",0.056245963465367
+"Gansu province","EJN",0.00320563463822876
+"Gansu province","GMQ",0.00922108427857006
+"Gansu province","JIC",0.0782593738544458
+"Gansu province","RHT",0.0036629275566162
+"Gansu province","DNH",0.20338900992088
+"Gansu province","HXD",0.00848233533491489
+"Gansu province","GYU",0.0341858182330469
+"Gansu province","HZG",0.0000293617665869765
+"Gansu province","JGN",0.175741149464208
+"Gansu province","LHW",0.0972417070723724
+"Gansu province","LNL",0.0457582683215173
+"Gansu province","IQN",0.0654934594466084
+"Gansu province","GXH",0.0771791801037182
+"Gansu province","XNN",0.00817602786321966
+"Gansu province","XIY",0.000386112032086788
+"Gansu province","ENY",0.000678678166679882
+"Gansu province","ZHY",0.0149037239409129
+"Gansu province","GYS",0.0110617413558478
+"Gansu province","JZH",0.0248592583350822
+"Gansu province","HMI",0.00469909042272048
+"Guangdong Province","FUO",0.0949222801417618
+"Guangdong Province","HUZ",0.112373678278573
+"Guangdong Province","HSC",0.152574585780709
+"Guangdong Province","BHY",0.00368207153935018
+"Guangdong Province","CAN",0.0968091327640077
+"Guangdong Province","MXZ",0.047062988963407
+"Guangdong Province","SWA",0.0724959134497029
+"Guangdong Province","ZUH",0.0489850681027696
+"Guangdong Province","SZX",0.0280037987352537
+"Guangdong Province","WUZ",0.117321786703188
+"Guangdong Province","XIN",0.0925306071288844
+"Guangdong Province","ZHA",0.114361065716487
+"Guangdong Province","HAK",0.0101551809649914
+"Guangdong Province","KOW",0.00872183279621496
+"Guangxi Zhuang Autonomous Region","HSC",0.0000153871594162774
+"Guangxi Zhuang Autonomous Region","AEB",0.151850700028295
+"Guangxi Zhuang Autonomous Region","BHY",0.0698294396906083
+"Guangxi Zhuang Autonomous Region","HCJ",0.0932061750769341
+"Guangxi Zhuang Autonomous Region","KWL",0.119857340386665
+"Guangxi Zhuang Autonomous Region","LLF",0.0162989270188076
+"Guangxi Zhuang Autonomous Region","NNG",0.168434860385078
+"Guangxi Zhuang Autonomous Region","WGN",0.00927311845133646
+"Guangxi Zhuang Autonomous Region","WUZ",0.133712579586278
+"Guangxi Zhuang Autonomous Region","LZH",0.146669352682532
+"Guangxi Zhuang Autonomous Region","ZHA",0.0120281635255879
+"Guangxi Zhuang Autonomous Region","WNH",0.00127318818198317
+"Guangxi Zhuang Autonomous Region","AVA",0.00000846324888446331
+"Guangxi Zhuang Autonomous Region","LLB",0.0265103223286227
+"Guangxi Zhuang Autonomous Region","HZH",0.01255738662707
+"Guangxi Zhuang Autonomous Region","ACX",0.0384744549564366
+"Guizhou Province","JIQ",0.0230657215181132
+"Guizhou Province","HJJ",0.0050735644546696
+"Guizhou Province","HCJ",0.00800273912806625
+"Guizhou Province","ZAT",0.0316948597611219
+"Guizhou Province","AVA",0.104081427884677
+"Guizhou Province","BFJ",0.0520667004232138
+"Guizhou Province","CKG",0.0116599583223524
+"Guizhou Province","KWE",0.0982936233274901
+"Guizhou Province","KJH",0.116405155996095
+"Guizhou Province","LLB",0.0733335773134091
+"Guizhou Province","LZO",0.0081364456606121
+"Guizhou Province","WMT",0.0620685209637267
+"Guizhou Province","HZH",0.0716706158535564
+"Guizhou Province","LPF",0.0730316103320383
+"Guizhou Province","TEN",0.0641127524526145
+"Guizhou Province","ACX",0.0866484803341893
+"Guizhou Province","ZYI",0.110654367789661
+"Hainan Province","HAK",0.268942748295794
+"Hainan Province","BAR",0.294732278355513
+"Hainan Province","SYX",0.436324974401911
+"Hebei Province","TVS",0.0562779132545329
+"Hebei Province","ZQZ",0.184206444097757
+"Hebei Province","PEK",0.0500091112602867
+"Hebei Province","PKX",0.0776391709972769
+"Hebei Province","CDE",0.151486248853134
+"Hebei Province","CIF",0.00894815980066115
+"Hebei Province","CIH",0.00463277754225097
+"Hebei Province","BPE",0.0617568071081882
+"Hebei Province","DAT",0.00869945871143109
+"Hebei Province","HDG",0.0350225897890011
+"Hebei Province","NAY",0.00613177499256011
+"Hebei Province","SJW",0.181827653809444
+"Hebei Province","TSN",0.0399870642412488
+"Hebei Province","UCB",0.00494010362758603
+"Hebei Province","XNT",0.0832896252164955
+"Hebei Province","WUT",0.0103235178081296
+"Hebei Province","AYN",0.00913739309063867
+"Hebei Province","TNA",0.0256852953611304
+"Heilongjiang Province","DBC",0.00290075829941435
+"Heilongjiang Province","DQA",0.0550479666041898
+"Heilongjiang Province","JGD",0.0541468334744361
+"Heilongjiang Province","HLH",0.0000667465752813997
+"Heilongjiang Province","NZL",0.010728621089076
+"Heilongjiang Province","DTU",0.103030265914553
+"Heilongjiang Province","FYJ",0.0210451799746189
+"Heilongjiang Province","HRB",0.0813810168535645
+"Heilongjiang Province","HEK",0.0800417694782618
+"Heilongjiang Province","JIL",0.00997393775932378
+"Heilongjiang Province","JMU",0.0762469976307243
+"Heilongjiang Province","JSJ",0.0826088497584514
+"Heilongjiang Province","JXA",0.0629762172163274
+"Heilongjiang Province","LDS",0.128955511241418
+"Heilongjiang Province","MDG",0.0959976741596263
+"Heilongjiang Province","OHE",0.0717208191524623
+"Heilongjiang Province","NDG",0.0503137524715124
+"Heilongjiang Province","YSQ",0.0101663119024079
+"Heilongjiang Province","YNJ",0.00265068277791447
+"Henan Province","HSJ",0.0663586308593613
+"Henan Province","CIH",0.00465685861567065
+"Henan Province","HDG",0.000239882517224889
+"Henan Province","YCU",0.0571445907861172
+"Henan Province","AYN",0.0872728644426616
+"Henan Province","CGO",0.186611756639068
+"Henan Province","LHK",0.0291158991610706
+"Henan Province","WUH",0.0430033588263751
+"Henan Province","LYA",0.107307120388772
+"Henan Province","NNY",0.179662938613917
+"Henan Province","WDS",0.0309051541382766
+"Henan Province","XFN",0.00948957174531364
+"Henan Province","JNG",0.0380482782648071
+"Henan Province","FUG",0.156116083805944
+"Henan Province","XUZ",0.00406703567974315
+"Hong Kong Special Administrative Region","SZX",1
+"Hubei Province","JIQ",0.0312873126353881
+"Hubei Province","YYA",0.0579301974611562
+"Hubei Province","DYG",0.00761553014762776
+"Hubei Province","ENH",0.0795478603667688
+"Hubei Province","LHK",0.040465223686004
+"Hubei Province","WUH",0.215187418102982
+"Hubei Province","NNY",0.00550442070781462
+"Hubei Province","HPG",0.0981424071922098
+"Hubei Province","SHS",0.106809822170889
+"Hubei Province","WDS",0.0736195932807135
+"Hubei Province","XFN",0.0962375539368878
+"Hubei Province","YIH",0.101485401177708
+"Hubei Province","AKA",0.0123054444855629
+"Hubei Province","AQG",0.0048464261897666
+"Hubei Province","JIU",0.0601409346680538
+"Hubei Province","WXN",0.00887445211411167
+"Hunan Province","HSC",0.0576178411331835
+"Hunan Province","JGS",0.00926955382266322
+"Hunan Province","JIQ",0.0120734602202754
+"Hunan Province","YYA",0.0592313496490494
+"Hunan Province","CGD",0.130017744426702
+"Hunan Province","HJJ",0.0641101153872474
+"Hunan Province","DYG",0.110806586022368
+"Hunan Province","CSX",0.0926766002308534
+"Hunan Province","HNY",0.139525719712201
+"Hunan Province","KWL",0.00404357955324238
+"Hunan Province","LLF",0.121296494377895
+"Hunan Province","WGN",0.0991066810784163
+"Hunan Province","WUZ",0.00341607662128485
+"Hunan Province","ENH",0.00282112615407978
+"Hunan Province","SHS",0.00573681178635152
+"Hunan Province","YIH",0.0110372799754042
+"Hunan Province","KOW",0.00872700057388627
+"Hunan Province","YIC",0.0130431128854004
+"Hunan Province","HZH",0.0223620233450296
+"Hunan Province","TEN",0.0330808940436085
+"Inner Mongolia Autonomous Region","AEQ",0.0351443086506832
+"Inner Mongolia Autonomous Region","AXF",0.0402521276275025
+"Inner Mongolia Autonomous Region","INC",0.00962737318256846
+"Inner Mongolia Autonomous Region","ZQZ",0.00860894497117228
+"Inner Mongolia Autonomous Region","YZY",0.00604757359738432
+"Inner Mongolia Autonomous Region","DBC",0.00184546447364974
+"Inner Mongolia Autonomous Region","EJN",0.062332158827763
+"Inner Mongolia Autonomous Region","JGD",0.0508056851695225
+"Inner Mongolia Autonomous Region","JIC",0.0152690391503395
+"Inner Mongolia Autonomous Region","RHT",0.0324301502165492
+"Inner Mongolia Autonomous Region","WZQ",0.0254997409223871
+"Inner Mongolia Autonomous Region","PEK",0.000000293757953118275
+"Inner Mongolia Autonomous Region","CDE",0.00325002168860291
+"Inner Mongolia Autonomous Region","CIF",0.0308485741074916
+"Inner Mongolia Autonomous Region","DSN",0.0185008558662519
+"Inner Mongolia Autonomous Region","DAT",0.00279734973139396
+"Inner Mongolia Autonomous Region","ERL",0.055712764188541
+"Inner Mongolia Autonomous Region","YIE",0.0271898861894232
+"Inner Mongolia Autonomous Region","HET",0.0302727965657268
+"Inner Mongolia Autonomous Region","HUO",0.0513147587136509
+"Inner Mongolia Autonomous Region","HLD",0.0574848158329477
+"Inner Mongolia Autonomous Region","NZH",0.031887901760592
+"Inner Mongolia Autonomous Region","BAV",0.0282251486567943
+"Inner Mongolia Autonomous Region","TGO",0.0322287164139738
+"Inner Mongolia Autonomous Region","UCB",0.0281263302036301
+"Inner Mongolia Autonomous Region","WUA",0.044420320287258
+"Inner Mongolia Autonomous Region","HLH",0.0273437682320618
+"Inner Mongolia Autonomous Region","XIL",0.089847067362427
+"Inner Mongolia Autonomous Region","RLK",0.032654677688689
+"Inner Mongolia Autonomous Region","NZL",0.0339902771620313
+"Inner Mongolia Autonomous Region","JGN",0.0215361201508026
+"Inner Mongolia Autonomous Region","LHW",0.000795200852467379
+"Inner Mongolia Autonomous Region","UYN",0.0136005647684245
+"Inner Mongolia Autonomous Region","ZHY",0.0128135522617654
+"Inner Mongolia Autonomous Region","CHG",0.00694123677882623
+"Inner Mongolia Autonomous Region","DTU",0.000429606534009822
+"Inner Mongolia Autonomous Region","HEK",0.000390537258845101
+"Inner Mongolia Autonomous Region","OHE",0.0264977994081851
+"Inner Mongolia Autonomous Region","NDG",0.0029985345975607
+"Inner Mongolia Autonomous Region","SHE",0.0000375085979708025
+"Jiangsu Province","NTG",0.0547139503031657
+"Jiangsu Province","HIA",0.173456565029402
+"Jiangsu Province","YTY",0.0937270223932456
+"Jiangsu Province","JNG",0.020933759958177
+"Jiangsu Province","BFU",0.0127552941616019
+"Jiangsu Province","CZX",0.0764284790149456
+"Jiangsu Province","LYG",0.0839056970337241
+"Jiangsu Province","LYI",0.00304588766411496
+"Jiangsu Province","NKG",0.0926737060988711
+"Jiangsu Province","PVG",0.00417550579304944
+"Jiangsu Province","RUG",0.0633520868308636
+"Jiangsu Province","RIZ",0.00179180320554357
+"Jiangsu Province","SHA",0.0125157737011937
+"Jiangsu Province","SZV",0.0490478887767214
+"Jiangsu Province","WHU",0.00204164939177471
+"Jiangsu Province","WUX",0.0404743247547464
+"Jiangsu Province","XUZ",0.0968411589805274
+"Jiangsu Province","YTY",0.0937270223932456
+"Jiangsu Province","YNZ",0.118119347773404
+"Jiangxi Province","HSC",0.0086788905896043
+"Jiangxi Province","JGS",0.157021737756267
+"Jiangxi Province","SQD",0.0764371760045991
+"Jiangxi Province","SQJ",0.00563835733582122
+"Jiangxi Province","YYA",0.0140357805722986
+"Jiangxi Province","CSX",0.000681077769218921
+"Jiangxi Province","MXZ",0.0101081334454938
+"Jiangxi Province","XIN",0.0171103823112882
+"Jiangxi Province","AQG",0.00212016823399815
+"Jiangxi Province","KHN",0.169947992994538
+"Jiangxi Province","KOW",0.150759120505715
+"Jiangxi Province","JDZ",0.0881544284152577
+"Jiangxi Province","JIU",0.0694432459299101
+"Jiangxi Province","LCX",0.0586603190402305
+"Jiangxi Province","TXN",0.00874780268021368
+"Jiangxi Province","WUS",0.0342633094240407
+"Jiangxi Province","YIC",0.128192072942247
+"Jilin Province","DBC",0.116390947886541
+"Jilin Province","NBS",0.14162801573038
+"Jilin Province","TGO",0.0195487327346876
+"Jilin Province","HLH",0.0118711152621017
+"Jilin Province","CGQ",0.10783477059117
+"Jilin Province","HRB",0.0268193559554993
+"Jilin Province","JIL",0.131221437970847
+"Jilin Province","JXA",0.0000648537777731766
+"Jilin Province","MDG",0.0261661028427313
+"Jilin Province","NDG",0.000919235510372436
+"Jilin Province","YSQ",0.134652642211098
+"Jilin Province","TNH",0.138303090903114
+"Jilin Province","SHE",0.0000602437058932355
+"Jilin Province","YNJ",0.144519547220015
+"Liaoning Province","XEN",0.0519582173367923
+"Liaoning Province","DDG",0.107624086781139
+"Liaoning Province","CDE",0.0103771696662248
+"Liaoning Province","CIF",0.0228661278146829
+"Liaoning Province","BPE",0.0161957344371472
+"Liaoning Province","TGO",0.0356479297605314
+"Liaoning Province","AOG",0.109498348564139
+"Liaoning Province","CGQ",0.000370812851005836
+"Liaoning Province","CNI",0.0379169711069282
+"Liaoning Province","CHG",0.108858755870232
+"Liaoning Province","JNZ",0.0862989389496441
+"Liaoning Province","YSQ",0.0000321030022515727
+"Liaoning Province","DLC",0.0292898262525587
+"Liaoning Province","TNH",0.087280505689315
+"Liaoning Province","SHE",0.221384303471482
+"Liaoning Province","YKH",0.0743999990669903
+"Macao Special Administrative Region","ZUH",1
+"Ningxia Hui Autonomous Region","AXF",0.0239563983793325
+"Ningxia Hui Autonomous Region","INC",0.377038381538705
+"Ningxia Hui Autonomous Region","THQ",0.000195051909665678
+"Ningxia Hui Autonomous Region","WUA",0.0271411923881789
+"Ningxia Hui Autonomous Region","GYU",0.359933048839035
+"Ningxia Hui Autonomous Region","IQN",0.00211355447210815
+"Ningxia Hui Autonomous Region","ZHY",0.209622487550329
+"Qinghai Province","AHJ",0.00625851005099742
+"Qinghai Province","RKZ",0.000836080824924488
+"Qinghai Province","YZY",0.0359348240425593
+"Qinghai Province","GMQ",0.127276782952367
+"Qinghai Province","JIC",0.000655496187889893
+"Qinghai Province","DNH",0.0346287664615482
+"Qinghai Province","HXD",0.142545003735004
+"Qinghai Province","GOQ",0.257689566332569
+"Qinghai Province","HTT",0.144728052118002
+"Qinghai Province","JGN",0.0171865226940566
+"Qinghai Province","LHW",0.000777407518694669
+"Qinghai Province","GXH",0.0149299422069371
+"Qinghai Province","XNN",0.0623174940175317
+"Qinghai Province","BPX",0.0001952417883041
+"Qinghai Province","LXA",0.0156528565528294
+"Qinghai Province","LZY",0.00370651326840784
+"Qinghai Province","YUS",0.13468084206048
+"Shaanxi Province","INC",0.0146012950816096
+"Shaanxi Province","THQ",0.0243789925713215
+"Shaanxi Province","DSN",0.034206700656106
+"Shaanxi Province","LLV",0.0235824472856422
+"Shaanxi Province","YCU",0.0320534263014767
+"Shaanxi Province","HPG",0.00260100846904943
+"Shaanxi Province","WDS",0.0306391315219371
+"Shaanxi Province","AKA",0.123768475717798
+"Shaanxi Province","HZG",0.132752441400188
+"Shaanxi Province","LNL",0.0193866200271427
+"Shaanxi Province","IQN",0.0580905252311051
+"Shaanxi Province","SIA",0.115352305522671
+"Shaanxi Province","XIY",0.10303330739408
+"Shaanxi Province","ENY",0.179024320447892
+"Shaanxi Province","UYN",0.095437371004082
+"Shaanxi Province","DAX",0.0000701586441897919
+"Shaanxi Province","GYS",0.0110215383173321
+"Shandong Province","DOY",0.0750591384716271
+"Shandong Province","HDG",0.0129257024686332
+"Shandong Province","TSN",0.00212421139654616
+"Shandong Province","XNT",0.00378646764033631
+"Shandong Province","AYN",0.00717159446839454
+"Shandong Province","CGO",0.00140016778008716
+"Shandong Province","JNG",0.196840012220525
+"Shandong Province","TNA",0.228811125579312
+"Shandong Province","LYG",0.00228210999285735
+"Shandong Province","LYI",0.112422835127784
+"Shandong Province","TAO",0.0777400891843711
+"Shandong Province","RIZ",0.0537774625470514
+"Shandong Province","WEF",0.109452827671314
+"Shandong Province","WEH",0.0241418425598797
+"Shandong Province","XUZ",0.020320227219383
+"Shandong Province","YNT",0.0717441964167167
+"Shanghai Municipality","NTG",0.0378087902563979
+"Shanghai Municipality","PVG",0.240774452161028
+"Shanghai Municipality","SHA",0.719954088493432
+"Shanghai Municipality","SZV",0.00146216714235889
+"Shanxi Province","ZQZ",0.00299686624818925
+"Shanxi Province","HSJ",0.00749039323514607
+"Shanxi Province","CIH",0.112422854138783
+"Shanxi Province","DSN",0.00452831486295949
+"Shanxi Province","DAT",0.118668135592593
+"Shanxi Province","HET",0.0244036889841891
+"Shanxi Province","LFQ",0.141556449833369
+"Shanxi Province","LLV",0.160672338595119
+"Shanxi Province","SJW",0.00820469531909449
+"Shanxi Province","XNT",0.0166082446379601
+"Shanxi Province","WUT",0.151971365800903
+"Shanxi Province","YCU",0.0912795165879837
+"Shanxi Province","TYN",0.128533680399671
+"Shanxi Province","LYA",0.0205325844580387
+"Shanxi Province","ENY",0.0101308998612479
+"Sichuan Province","AHJ",0.101291101499285
+"Sichuan Province","YUA",0.000542982909432827
+"Sichuan Province","DZU",0.0103478491152867
+"Sichuan Province","PZI",0.0318191417836907
+"Sichuan Province","ZKL",0.0315077901020707
+"Sichuan Province","BZX",0.0307114987623919
+"Sichuan Province","GMQ",0.019623051257978
+"Sichuan Province","NLH",0.0263825331695069
+"Sichuan Province","AKA",0.00259423101659995
+"Sichuan Province","HZG",0.0052378791881897
+"Sichuan Province","GXH",0.00890179837455998
+"Sichuan Province","DIG",0.00515170020851618
+"Sichuan Province","ZAT",0.0118543319115277
+"Sichuan Province","BPX",0.00807535120850264
+"Sichuan Province","BFJ",0.00326108958576872
+"Sichuan Province","CKG",0.0042215826655869
+"Sichuan Province","DCY",0.111384852093959
+"Sichuan Province","DAX",0.0295078597517806
+"Sichuan Province","GHN",0.0257813630580573
+"Sichuan Province","GYS",0.029541317131011
+"Sichuan Province","JZH",0.0550647519775179
+"Sichuan Province","KGT",0.120519127366441
+"Sichuan Province","LIA",0.00420293808151776
+"Sichuan Province","LZO",0.0226220943336677
+"Sichuan Province","WMT",0.00650430984819951
+"Sichuan Province","MIG",0.0355613476442337
+"Sichuan Province","NAO",0.0329561438541326
+"Sichuan Province","CTU",0.0549218598975714
+"Sichuan Province","WXN",0.00279847583977199
+"Sichuan Province","XIC",0.0746357503186345
+"Sichuan Province","YBP",0.0347938418959644
+"Sichuan Province","YUS",0.0576800533816084
+"Taiwan Province","XMN",0.00302630138128836
+"Taiwan Province","FOC",0.513188657301169
+"Taiwan Province","JJN",0.483785011252056
+"Tianjin Municipality","TVS",0.184761221920124
+"Tianjin Municipality","PEK",0.0382170891506408
+"Tianjin Municipality","PKX",0.0485134251398256
+"Tianjin Municipality","TSN",0.728508005285909
+"Tibet Autonomous Region","RKZ",0.284421539550548
+"Tibet Autonomous Region","HTT",0.0327421998972404
+"Tibet Autonomous Region","DIG",0.00556079222911384
+"Tibet Autonomous Region","NGQ",0.232507208578421
+"Tibet Autonomous Region","BPX",0.0861950823077341
+"Tibet Autonomous Region","DCY",0.00881704311999362
+"Tibet Autonomous Region","LXA",0.119550324035111
+"Tibet Autonomous Region","LZY",0.092225506684937
+"Tibet Autonomous Region","IQM",0.098252652138067
+"Tibet Autonomous Region","HTN",0.021650304477927
+"Tibet Autonomous Region","YUS",0.0180772949881029
+"Xinjiang Uygur Autonomous Region","AAT",0.0189292253043786
+"Xinjiang Uygur Autonomous Region","SHF",0.0245616510595092
+"Xinjiang Uygur Autonomous Region","DNH",0.0106559818658889
+"Xinjiang Uygur Autonomous Region","HTT",0.0835189566144296
+"Xinjiang Uygur Autonomous Region","AKU",0.0574502232498416
+"Xinjiang Uygur Autonomous Region","BPL",0.0143299912095468
+"Xinjiang Uygur Autonomous Region","IQM",0.129157250694336
+"Xinjiang Uygur Autonomous Region","FYN",0.0358753624014016
+"Xinjiang Uygur Autonomous Region","HMI",0.07355388560868
+"Xinjiang Uygur Autonomous Region","KCA",0.0528912537831787
+"Xinjiang Uygur Autonomous Region","KRL",0.0606853697919639
+"Xinjiang Uygur Autonomous Region","KRY",0.028523287571673
+"Xinjiang Uygur Autonomous Region","KJI",0.0196529007242748
+"Xinjiang Uygur Autonomous Region","NLT",0.0261414652286986
+"Xinjiang Uygur Autonomous Region","QSZ",0.0643773066427963
+"Xinjiang Uygur Autonomous Region","KHG",0.0444434240208942
+"Xinjiang Uygur Autonomous Region","SXJ",0.0581696136181468
+"Xinjiang Uygur Autonomous Region","TCG",0.0125024135405277
+"Xinjiang Uygur Autonomous Region","HTN",0.0954477727050407
+"Xinjiang Uygur Autonomous Region","TLQ",0.0366159214561146
+"Xinjiang Uygur Autonomous Region","URC",0.0309636234613032
+"Xinjiang Uygur Autonomous Region","YIN",0.0215531506902471
+"Yunnan Province","YUA",0.0616649860693178
+"Yunnan Province","BSD",0.0509119697279615
+"Yunnan Province","LNJ",0.0632252174949934
+"Yunnan Province","PZI",0.0142742362821123
+"Yunnan Province","AEB",0.00858180396097344
+"Yunnan Province","NLH",0.0182025514814653
+"Yunnan Province","CWJ",0.0222512295374431
+"Yunnan Province","DLU",0.0623589212524777
+"Yunnan Province","DIG",0.0752714729070168
+"Yunnan Province","JHG",0.0401869297773994
+"Yunnan Province","JMJ",0.0271938537957352
+"Yunnan Province","LJG",0.0530775700517914
+"Yunnan Province","LUM",0.0288468715076864
+"Yunnan Province","KMG",0.116194747143286
+"Yunnan Province","SYM",0.0918674084656733
+"Yunnan Province","WNH",0.115850410391931
+"Yunnan Province","ZAT",0.0551888828052681
+"Yunnan Province","BFJ",0.0111066363879921
+"Yunnan Province","DCY",0.0045392130258351
+"Yunnan Province","LZO",0.000208002087523565
+"Yunnan Province","LPF",0.0135936306454685
+"Yunnan Province","TCZ",0.0276862192050631
+"Yunnan Province","YBP",0.00846387962891178
+"Yunnan Province","ACX",0.0292533074565959
+"Zhejiang Province","SQD",0.00932028231564534
+"Zhejiang Province","CZX",0.000022446247525472
+"Zhejiang Province","HGH",0.138889778093537
+"Zhejiang Province","JUZ",0.199978166488004
+"Zhejiang Province","HYN",0.0771104047137688
+"Zhejiang Province","NGB",0.0998538261568632
+"Zhejiang Province","NKG",0.0000360163894085903
+"Zhejiang Province","PVG",0.0000739618316386197
+"Zhejiang Province","SHA",0.00974216871121015
+"Zhejiang Province","SZV",0.0348881019221111
+"Zhejiang Province","TXN",0.0523573613952942
+"Zhejiang Province","WHU",0.000700222742479251
+"Zhejiang Province","WUS",0.0269254987707838
+"Zhejiang Province","WNZ",0.148712096039913
+"Zhejiang Province","YIW",0.195322910963352
+"Zhejiang Province","HSN",0.00606678367679654
