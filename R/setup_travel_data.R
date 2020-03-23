@@ -109,7 +109,7 @@ expand_travel_restrict <- function(travel_restrictions){
 ##' 
 apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
 
-    travel_data <- full_join(travel_data, travel_restrictions_long, by=c("t","source"="loc")) %>% 
+    travel_data <- left_join(travel_data, travel_restrictions_long, by=c("t","source"="loc")) %>% 
         replace_na(list(p_travel=1)) %>%
         mutate(travelers=travelers*p_travel)
     
