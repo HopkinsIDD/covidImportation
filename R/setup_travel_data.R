@@ -6,80 +6,9 @@ library(lubridate)
 
 
 
-# CDC Data Cleaning -------------------------------------------------------
-
-
-## Wuhan to US Airports
-wuhan_us_travel <- read_csv("data/CDC_travel_data/OAG PAX WUH to US with Point Of Sale Oct 2018-Nov 2019 ID analysis.csv")
-wuhan_us_travel <- wuhan_us_travel %>% 
-    mutate(t_month = substr(`Time Series`, 5,6), 
-           t_year = substr(`Time Series`,1,4)) %>%
-    mutate(destination = FinalArrival,
-           source = `Dep Airport Code`,
-           travelers = Pax) %>% 
-    rename(dest_state = `Arr State Name`) %>% 
-    dplyr::select(t_month, t_year, source, destination, dest_state, travelers)
-
-# Sum up all iteneraries
-wuhan_us_travel <- wuhan_us_travel %>% group_by(t_month, t_year, source, destination, dest_state) %>% summarise(travelers = sum(travelers))
-wuhan_us_travel$source <- "Hubei"
-write_csv(wuhan_us_travel, "data/wuhan_us_travel_monthly.csv")
-
-
-
-
-# FIX CHINESE NEW YEAR PROBLEM --------------------------------------------
-
-# # Look at the travel ------------------------------------------------------
-# wuhan_us_travel_tmp <- wuhan_us_travel %>% mutate(month_yr = paste0(t_month,"-",t_year)) %>%
-#     mutate(month_yr = factor(month_yr, levels=paste0(c("10","11","12", "01","02","03","04","05","06","07","08","09","10","11"), "-", c(rep(2018, 3), rep(2019,11))),  ordered = TRUE))
-# 
-# wuhan_us_travel_tmp <- wuhan_us_travel_tmp %>% mutate(color=ifelse(month_yr=="01-2019" | month_yr=="02-2019", "red", "black"))
-# dest_locs <- unique(wuhan_us_travel_tmp$destination)
-# 
-# 
-# ggplot(wuhan_us_travel_tmp %>% filter(destination=="LAX") , aes(month_yr, travelers, color=color, group=1)) + geom_point() + geom_line() +
-#     theme(axis.text.x = element_text(angle = 90))
-# ggplot(wuhan_us_travel_tmp %>% filter(destination=="SFO") , aes(month_yr, travelers, color=color, group=1)) + geom_point() + geom_line() +
-#     theme(axis.text.x = element_text(angle = 90))
-# ggplot(wuhan_us_travel_tmp %>% filter(destination=="SAN") , aes(month_yr, travelers, color=color, group=1)) + geom_point() + geom_line() +
-#     theme(axis.text.x = element_text(angle = 90))
-# 
-# 
-# wuhan_us_travel_tmp <- wuhan_us_travel_tmp %>% mutate(month = as.integer(month_yr)) %>% arrange(source, destination, month)
-# 
-# for (d in 1:length(dest_locs)){
-#     fit_dat <- wuhan_us_travel_tmp %>% filter(destination==dest_locs[d])
-#     fit_dat2 <- fit_dat %>% filter(month!=4 & month!=5)
-#     sm <- smooth.spline(fit_dat$month, fit_dat$travelers)
-#     predict(sm, x=1:14)$y
-#     plot(predict(sm, x=1:14))
-#     # difference
-#     (wuhan_us_travel_tmp %>% filter(destination=="SFO"))$travelers - predict(sm, x=1:14)$y
-# }
-# 
-# fit_dat <- wuhan_us_travel_tmp %>% filter(destination=="SFO" & month!=4 & month!=5)
-# sm <- smooth.spline(fit_dat$month, fit_dat$travelers)
-# predict(sm, x=1:14)$y
-# plot(predict(sm, x=1:14))
-# 
-# ggplot(wuhan_us_travel_tmp %>% filter(destination=="SFO") , aes(month_yr, travelers, group=1)) + geom_point() + geom_line() +
-#     theme(axis.text.x = element_text(angle = 90)) +
-#     geom_point(data=as.data.frame(predict(sm, x=1:14)), aes(x, y), color="red")
-# 
-# # difference
-# (wuhan_us_travel_tmp %>% filter(destination=="SFO"))$travelers - predict(sm, x=1:14)$y
-# 
-
-
-
-
 # Distribute travelers over days ------------------------------------------
 
-
-
-# Create Daily 
-
+# Create Daily Travel
 ##'
 ##' Function to extract approximate epidemic curves
 ##' from the cumulative case data.
@@ -93,37 +22,24 @@ write_csv(wuhan_us_travel, "data/wuhan_us_travel_monthly.csv")
 ##'
 ##' @return a data frame with randomly distributed travel into days
 ##'
-make_daily_travel_SLOW <- function(travel_data=wuhan_us_travel, travel_dispersion=10){
+make_daily_travel <- function(travel_data, travel_dispersion=10){
     
     travel_data <- travel_data %>% 
         rename(travelers_month = travelers) %>% 
-        mutate(days_month = days_in_month(as.integer(t_month)))
-    
-    data_daily <- list()
-    for (m in 1:nrow(travel_data)){
-        x <- as.integer(rmultinom(1, travel_data$travelers_month[m], rgamma(travel_data$days_month[m], 1/travel_dispersion)))
-        data_daily_ <- data.frame(travel_data[m, ], t_day = 1:travel_data$days_month[m], travelers = x)
-        data_daily[[m]] <- data_daily_
-    }
-    data_daily <- rbindlist(data_daily)
-    data_daily <- data_daily %>% mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
-    return(data_daily)
-}
-
-
-make_daily_travel <- function(travel_data=wuhan_us_travel, travel_dispersion=10){
-    
-    travel_data <- travel_data %>% 
-        rename(travelers_month = travelers) %>% 
-        mutate(days_month = days_in_month(as.integer(t_month)))
+        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
     
     rows_ <- nrow(travel_data)
     
-    # Sample travlers across full dataset
-    x <- as.integer(unlist(lapply(X=1:rows_, FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x], 
-                                                                         rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+    # First sample out the monthly travelers into days
+    x <- as.integer(unlist(lapply(X=1:rows_, 
+                                  FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x], 
+                                                    rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+    
+    # get an indicator for day of the month
     t_day <- unlist(lapply(X=1:rows_, FUN=function(x=X) 1:travel_data$days_month[x]))
+    # generate a daily dataset
     data_daily <- as.data.frame(lapply(travel_data, rep, travel_data$days_month))
+    # Add new daily travel volume to it
     data_daily <- data.frame(data_daily, t_day=t_day, travelers=x)
 
     data_daily <- data_daily %>% mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
@@ -134,12 +50,74 @@ make_daily_travel <- function(travel_data=wuhan_us_travel, travel_dispersion=10)
 
 
 
-
-
-wuhan_us_travel_daily <- make_daily_travel(travel_data=wuhan_us_travel)
+##'
+##' Convert monthly travel to daily travel data -- fast
+##' - When we have already built the daily data, we reuse that and just fill in the new daily volume each time
+##' 
+##' @param travel_data Data.frame. Monthly travel data with columns travelers, t_month, and days_month
+##' @param travel_data_daily Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
+##' @param travel_dispersion Numeric. Value defining how evenly distributed daily travel is across a month. 
+##' 
+make_daily_travel_faster <- function(travel_data, travel_data_daily, travel_dispersion=10){
     
-# Save a sample. This should be generated in each simulation
-write_csv(wuhan_us_travel_daily, "data/wuhan_us_travel_daily.csv")
+    travel_data <- travel_data %>% 
+        rename(travelers_month = travelers) %>% 
+        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
+    
+    rows_ <- nrow(travel_data)
+    
+    # First sample out the monthly travelers into days
+    x <- as.integer(unlist(lapply(X=1:rows_, 
+                                  FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x], 
+                                                              rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+    
+    travel_data_daily$travelers <- x 
+    
+    return(travel_data_daily)
+}
+
+
+
+
+##'
+##' Expand the travel restrictions to include every date, to allow for merging with travel data. 
+##' 
+##' @param travel_restrictions data.frame of travel restrictions with columns loc, min, max, p_travel
+##' 
+##' 
+expand_travel_restrict <- function(travel_restrictions){
+    
+    travel_restrictions <- travel_restrictions %>% mutate(min=as.Date(min), 
+                                                          max=as.Date(max))
+    travel_restrict_ <- list()
+    for (r in 1:nrow(travel_restrictions)){
+        travel_restrict_[[r]] <- data.frame(loc=travel_restrictions$loc[r], 
+                                            p_travel=travel_restrictions$p_travel[r], 
+                                            t = seq(travel_restrictions$min[r], travel_restrictions$max[r], by="days"))
+    }
+    travel_restrict_ <- data.table::rbindlist(travel_restrict_)
+}
+
+
+
+
+##'
+##' Apply a set of travel restrictions to the travel data, reducing or increasing to a proportion of the average travel.
+##'
+##' @param travel_data Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
+##' @param travel_restrictions_long Data.frame. Daily travel restrictions, including dates, source location, and proportion of cases.
+##' 
+apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
+
+    travel_data <- full_join(travel_data, travel_restrictions_long, by=c("t","source"="loc")) %>% 
+        replace_na(list(p_travel=1)) %>%
+        mutate(travelers=travelers*p_travel)
+    
+    return(travel_data)
+}
+
+
+
 
 
 
