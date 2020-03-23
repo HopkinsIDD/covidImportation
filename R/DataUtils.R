@@ -418,6 +418,34 @@ make_input_data <- function(incid_data, travel_data, pop_data,
     incid_data_  <- incid_data %>% mutate(source = as.character(source)) %>%
         dplyr::select(source, t, incid_est, dep_country=country)
     
+    
+    
+    # ~~  Check that the variables match up
+    
+    duplicates <- c(
+        # Check that incidence data does not have duplicates
+        sum(incid_data %>% mutate(source_t = paste(source, t)) %>% 
+                mutate(dup_entry=duplicated(source_t)) %>% pull(dup_entry)),
+        ## --> no duplicates at the moment...
+        
+        # Check travel data
+        sum(travel_data %>% mutate(source_dest_t = paste(source, arr_airport, t)) %>% 
+                mutate(dup_entry=duplicated(source_dest_t)) %>% pull(dup_entry)),
+        ## --> no duplicates at the moment...
+        
+        # Check Population data
+        sum(pop_data %>% mutate(dup_entry=duplicated(source)) %>% pull(dup_entry))
+        ## --> no duplicates at the moment...
+    )
+    
+    if (sum(duplicates)>0){
+        return(paste0("Error: There were ", 
+                            duplicates[1], " in incidence data, ",
+                            duplicates[2], " in travel data, and ",
+                            duplicates[3], " in population data."))
+    }
+    
+    
     # aggregation levels for destination
     arr_vars <- c("arr_airport", "arr_city","arr_metro", "arr_state", "arr_country")
     other_vars <- c("source", "dep_country", "t", "t_day", "t_month", "t_year", "travelers", "travelers_month")
