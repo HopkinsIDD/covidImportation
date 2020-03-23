@@ -15,7 +15,7 @@ make_all_pop_data <- function(){
     write_csv(china_pop_data, "data_raw/china_province_pop_data.csv")
     
     
-    # COUNTRY DATA -----------------------------------------------------------
+    # COUNTRY DATA
     
     country_pop_url <- "https://pkgstore.datahub.io/JohnSnowLabs/population-figures-by-country/population-figures-by-country-csv_csv/data/630580e802a621887384f99527b68f59/population-figures-by-country-csv_csv.csv"
     country_pop_data <- readr::read_csv(country_pop_url)
@@ -43,8 +43,7 @@ make_all_pop_data <- function(){
     
     
     
-    # MERGE  ----------------------------------------
-    
+    # MERGE
     
     colnames(country_pop_data)
     colnames(china_pop_data)
