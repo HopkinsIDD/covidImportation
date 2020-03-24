@@ -24,10 +24,10 @@ est_imports_base <- function(input_data,
 
   # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
   if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
-    Travelers_over_Population_and_days <- MCMCglmm::rtnorm(dim(input_data_sim)[1],
+    Travelers_over_Population_and_days <- truncnorm::rtruncnorm(dim(input_data_sim)[1],
                                                            mean = input_data_sim$travelers,
                                                            sd = input_data_sim$travelers_SE,
-                                                           lower = 0) / input_data_sim$days_per_t / input_data_sim$population
+                                                           a = 0) / input_data_sim$days_per_t / input_data_sim$population
   } else {
     Travelers_over_Population_and_days <- input_data_sim$travelers / input_data_sim$days_per_t / input_data_sim$population
   }

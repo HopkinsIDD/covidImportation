@@ -125,8 +125,8 @@ samp_incub <- exp(rnorm(10000, incub_mean_log, incub_sd_log))
 inf_period_nohosp_mean <- 15  # needs revision
 inf_period_nohosp_sd   <- 5
 
-#inf_nohosp <- exp(MCMCglmm::rtnorm(10000, log(inf_period_nohosp_mean), log(inf_period_nohosp_sd), lower=0))
-inf_nohosp <- (MCMCglmm::rtnorm(10000, inf_period_nohosp_mean, inf_period_nohosp_sd, lower=0))
+#inf_nohosp <- exp( truncnorm::rtruncnorm((10000, log(inf_period_nohosp_mean), log(inf_period_nohosp_sd), lower=0))
+inf_nohosp <- truncnorm::rtruncnorm(10000, mean=inf_period_nohosp_mean, sd=inf_period_nohosp_sd, a=0)
 quantile(inf_nohosp, probs=c(0.025, .5, 0.975))
 print(paste0("Mean time to recovery: ", round(mean(inf_nohosp),1), " days"))
 

@@ -18,13 +18,14 @@ Depends:
     globaltoolbox,
     doParallel,
     fitdistrplus,
-    MCMCglmm,
     data.table,
     abind,
     reshape2,
     arrayhelpers,
     R (>= 3.5)
+Imports:
+    
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0

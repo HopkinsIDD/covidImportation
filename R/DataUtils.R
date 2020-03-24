@@ -644,7 +644,7 @@ make_meanD <- function(input_data,
     meanD_mat_ <- cbind(
         exp(rnorm(n_sim, mean = incub_mean_log, sd = incub_sd_log)),
         rgamma(n_sim, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale),
-        MCMCglmm::rtnorm(n_sim, inf_period_nohosp_mean, inf_period_nohosp_sd, lower=0))
+        truncnorm::rtruncnorm(n_sim, mean=inf_period_nohosp_mean, sd=inf_period_nohosp_sd, a=0))
 
     # Apply p_report_source by location and time to get the meanD matrix, where each simulation run has a pre-sampled set of D for each time/location combination
     meanD_mat <- meanD_mat_[,1] +
