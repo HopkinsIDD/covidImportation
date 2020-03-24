@@ -10,6 +10,10 @@
 ##' 
 pull_JHUCSSE_github_data <- function(){
 
+    library(httr)
+    library(tidyverse)
+    library(lubridate)
+    
     # First get a list of files so we can get the latest one
     req <- GET("https://api.github.com/repos/CSSEGISandData/COVID-19/git/trees/master?recursive=1")
 
@@ -67,28 +71,29 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
     file_list <- rev(file_list)
 
     ##Now combine them into one data frame
-    rc <- NULL
+    rc <- list()
 
-    for (file in file_list) {
-        if(print_file_path) print(file)
-        tmp <- read_csv(file)%>%
-            rename(Province_State=`Province/State`)%>%
-            rename(Update = `Last Update`) %>%
-            mutate(Update=lubridate::parse_date_time(Update,
-                                                     c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
-
-        if("Country"%in%colnames(tmp)) {
-            tmp <- rename(tmp, Country_Region=Country)
-        } else {
-            tmp <- rename(tmp, Country_Region=`Country/Region`)
-        }
-
-        if ("Demised"%in% colnames(tmp)) {
-            tmp <- rename(tmp, Deaths=Demised)
-        }
-
-        rc <-bind_rows(rc,tmp)
+    for (f in seq_along(file_list)) {
+        if(print_file_path) print(file_list[f])
+        tmp <- read_csv(file_list[f])
+        
+        # Fix the different file column names
+        colnames_ <- colnames(tmp)
+        colnames_[grepl("Province", colnames_)] <- "Province_State"
+        colnames_[grepl("Country", colnames_)] <- "Country_Region"
+        colnames_[grepl("Demised", colnames_)] <- "Deaths"
+        colnames_[grepl("Update", colnames_)] <- "Update"
+        colnames_[grepl("Lat", colnames_)] <- "Latitude"
+        colnames_[grepl("Long", colnames_)] <- "Longitude"
+        
+        colnames(tmp) <- colnames_
+        
+        tmp <- tmp %>% mutate(Update=lubridate::parse_date_time(Update,
+                                 c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
+        rc[[f]] <- tmp
     }
+    rc <- data.table::rbindlist(rc, fill = TRUE)
+    
 
     rc <- rc %>% as.data.frame() %>% mutate(Update = lubridate::ymd_hms(Update)) %>%
         filter(Update <= last_time)
@@ -101,7 +106,7 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
         mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
         mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
 
-    if (append_wiki) {w
+    if (append_wiki) {
         wiki <- read_csv("data/case_data/WikipediaWuhanPre1-20-2020.csv",
                          col_types=cols(Update = col_datetime("%m/%d/%Y")))
         rc <- bind_rows(rc,wiki)
