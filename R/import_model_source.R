@@ -13,7 +13,7 @@
 ##'
 ##' @return
 ##'
-##' @importFrom MCMCglmm rtnorm
+##' @importFrom truncnorm rtruncnorm
 est_imports_base <- function(input_data,
                              tr_inf_redux = 0,
                              meanD,
@@ -34,9 +34,23 @@ est_imports_base <- function(input_data,
         Travelers_over_Population_and_days <- input_data_sim$travelers / input_data_sim$days_per_t / input_data_sim$population
     }
 
-    # adjust probability by travel probability reduction
-    prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
+  cases <- input_data_sim$cases_incid
+  this.sim <- rep(0, length(cases))
+
+
+  # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
+  if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
+      Travelers_over_Population_and_days <- rtruncnorm(dim(input_data_sim)[1],
+                                                       mean = input_data_sim$travelers,
+                                                       sd = input_data_sim$travelers_SE,
+                                                       a = 0) / input_data_sim$days_per_t / input_data_sim$population
+  } else {
+      Travelers_over_Population_and_days <- input_data_sim$travelers / input_data_sim$days_per_t / input_data_sim$population
+  }
+
+  # adjust probability by travel probability reduction
+  prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
     for (c in 1:length(cases)){
