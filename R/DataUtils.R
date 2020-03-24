@@ -6,7 +6,8 @@
 ##' Eventually, we would like automate this.
 ##'
 ##' @return NA (saves a CSV of the current data to the data directory)
-##'
+##' @export
+##' 
 pull_JHUCSSE_github_data <- function(){
     require(tidyverse)
     require(httr)
@@ -58,7 +59,7 @@ pull_JHUCSSE_github_data <- function(){
 ##' @param print_file_path logical whether or not to print the file path
 ##'
 ##' @return a data frame with the basic data.
-##'
+##' @export
 read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
 
     ## first get a list of all of the files in the directory
@@ -104,7 +105,7 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
         mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
 
     if (append_wiki) {
-        wiki <- read_csv("data/WikipediaWuhanPre1-20-2020.csv",
+        wiki <- read_csv("data/case_data/WikipediaWuhanPre1-20-2020.csv",
                          col_types=cols(Update = col_datetime("%m/%d/%Y")))
         rc <- bind_rows(rc,wiki)
     }
@@ -112,11 +113,16 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
     return(rc)
 }
 
+
 ##' Get airport city
 ##'
 ##' These functions are all vectorized
 ##'
 ##' @param airport_code character, airport code
+##' 
+##' @return City of the aiport
+##' @export
+##' 
 get_airport_city <- function(airport_code = "ORD"){
     data(airport_data)
     return((airport_data %>%
@@ -128,7 +134,7 @@ get_airport_city <- function(airport_code = "ORD"){
 #'
 #' @param airport_code character, airport code
 #'
-#' @return
+#' @return State/province of the airport
 #' @export
 get_airport_state <- function(airport_code = "ORD"){
     data(airport_data)
@@ -141,14 +147,16 @@ get_airport_state <- function(airport_code = "ORD"){
 #'
 #' @param airport_code character, airport code
 #'
-#' @return
+#' @return ISO3 code for the country where the airport is
 #' @export
 #'
 #' @examples
+#' 
 get_airport_country <- function(airport_code = "ORD"){
     airport_data <- read_csv("data/airport-codes.csv")
     return((airport_data %>% filter(iata_code %in% airport_code))$iso_country)
 }
+
 
 #' Get incidence data from JHUCSSE
 #'
@@ -160,6 +168,7 @@ get_airport_country <- function(airport_code = "ORD"){
 #' @export
 #'
 #' @examples
+#' 
 get_incidence_data <- function(first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
                                pull_github_data=TRUE){
@@ -294,6 +303,8 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     return(list(incid_data=incid_data, jhucsse=jhucsse))
 }
+
+
 
 ##' Get OAG travel data
 ##'
@@ -463,7 +474,7 @@ get_oag_travel <- function(destination=c("CA"),
 ##'  define metropolitan areas
 ##'
 ##' @param data
-get_metro_labels <- function(data){
+get_CA_metro_labels <- function(data){
 
     LA <- c('06037', '06059', '06065', '06071', '06111')
     SF <- c('06001', '06013', '06075', '06081', '06041', '06085', '06069',
@@ -495,7 +506,7 @@ get_metro_labels <- function(data){
     return(data)
 }
 
-# Produce Combined Input Data ---------------------------------------------
+
 
 
 #' Make input data
@@ -606,6 +617,8 @@ make_input_data <- function(incid_data,
     return(input_data)
 }
 
+
+
 #' Make MeanD Matrix
 #'
 #' @param input_data
@@ -643,3 +656,123 @@ make_meanD <- function(input_data,
 
     return(meanD_mat)
 }
+
+
+
+
+
+
+
+##' Create Daily Travel
+##'
+##' Function to extract approximate epidemic curves
+##' from the cumulative case data.
+##'
+##' @param travel_data monthly travel data
+##' @param travel_dispersion How dispersed daily travel should be. 
+##'  -- Set to 10 for very (i.e., most of travel on a couple days)
+##'  -- Set to 3  for moderate
+##'  -- Set to .01 for none (evenly mixed across days)
+##' 
+##'
+##' @return a data frame with randomly distributed travel into days
+##'
+make_daily_travel <- function(travel_data, travel_dispersion=10){
+    
+    travel_data <- travel_data %>% 
+        rename(travelers_month = travelers) %>% 
+        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
+    
+    rows_ <- nrow(travel_data)
+    
+    # First sample out the monthly travelers into days
+    x <- as.integer(unlist(lapply(X=1:rows_, 
+                                  FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x], 
+                                                              rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+    
+    # get an indicator for day of the month
+    t_day <- unlist(lapply(X=1:rows_, FUN=function(x=X) 1:travel_data$days_month[x]))
+    # generate a daily dataset
+    data_daily <- as.data.frame(lapply(travel_data, rep, travel_data$days_month))
+    # Add new daily travel volume to it
+    data_daily <- data.frame(data_daily, t_day=t_day, travelers=x)
+    
+    data_daily <- data_daily %>% mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
+    return(data_daily)
+}
+
+
+
+
+
+##'
+##' Convert monthly travel to daily travel data -- fast
+##' - When we have already built the daily data, we reuse that and just fill in the new daily volume each time
+##' 
+##' @param travel_data Data.frame. Monthly travel data with columns travelers, t_month, and days_month
+##' @param travel_data_daily Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
+##' @param travel_dispersion Numeric. Value defining how evenly distributed daily travel is across a month. 
+##' 
+make_daily_travel_faster <- function(travel_data, travel_data_daily, travel_dispersion=10){
+    
+    travel_data <- travel_data %>% 
+        rename(travelers_month = travelers) %>% 
+        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
+    
+    rows_ <- nrow(travel_data)
+    
+    # First sample out the monthly travelers into days
+    x <- as.integer(unlist(lapply(X=1:rows_, 
+                                  FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x], 
+                                                              rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+    
+    travel_data_daily$travelers <- x 
+    
+    return(travel_data_daily)
+}
+
+
+
+
+##'
+##' Expand the travel restrictions to include every date, to allow for merging with travel data. 
+##' 
+##' @param travel_restrictions data.frame of travel restrictions with columns loc, min, max, p_travel
+##' 
+##' 
+expand_travel_restrict <- function(travel_restrictions){
+    
+    travel_restrictions <- travel_restrictions %>% mutate(min=as.Date(min), 
+                                                          max=as.Date(max))
+    travel_restrict_ <- list()
+    for (r in 1:nrow(travel_restrictions)){
+        travel_restrict_[[r]] <- data.frame(loc=travel_restrictions$loc[r], 
+                                            p_travel=travel_restrictions$p_travel[r], 
+                                            t = seq(travel_restrictions$min[r], travel_restrictions$max[r], by="days"))
+    }
+    travel_restrict_ <- data.table::rbindlist(travel_restrict_)
+}
+
+
+
+
+##'
+##' Apply a set of travel restrictions to the travel data, reducing or increasing to a proportion of the average travel.
+##'
+##' @param travel_data Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
+##' @param travel_restrictions_long Data.frame. Daily travel restrictions, including dates, source location, and proportion of cases.
+##' 
+apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
+    
+    travel_data <- left_join(travel_data, travel_restrictions_long, by=c("t","source"="loc")) %>% 
+        replace_na(list(p_travel=1)) %>%
+        mutate(travelers=travelers*p_travel)
+    
+    return(travel_data)
+}
+
+
+
+
+
+
