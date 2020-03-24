@@ -552,7 +552,7 @@ setup_and_run_importations <- function(dest="UT",
                        nrow=n_sim, byrow = TRUE)
 
     ## ~ Travel restrictions -----------------------------------------------------
-    load("data/travel-restrictions.rda")
+    data("travel-restrictions")
 
     ## Run Model -------------------------------------------------------------
     input_data <- input_data %>%
@@ -574,8 +574,6 @@ setup_and_run_importations <- function(dest="UT",
     dir.create(file.path("data", project_name))
     write_csv(input_data_cases, file.path("data", project_name, "input_data_cases.csv"))
     write_csv(travel_data_monthly_cases, file.path("data", project_name, "travel_data_monthly.csv"))
-    ## try to remove travel_restrictions later by having one universal file
-    write_csv(travel_restrictions, file.path("data", project_name, "travel_restrictions.csv"))
 
     ## The "meanD_mat" here is the distribution of time during which an infected individual could
     ##   potentially travel from a source to a sink/destination. This distribution includes the time
