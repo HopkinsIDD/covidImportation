@@ -1,13 +1,4 @@
-
-
-if(!require('data.table')) install.packages('data.table')
-if(!require('reshape2')) install.packages('reshape2')
-
-
-
-
-
-
+##' Estimate imports base
 ##'
 ##' This is the base model for estimating importations. We will use this within the larger framework
 ##' to get importations per simulation
@@ -57,11 +48,6 @@ est_imports_base <- function(input_data,
 
 }
 
-
-
-
-
-
 ##'
 ##' Estimate the detection dates of importations
 ##'
@@ -85,12 +71,6 @@ est_import_detect_dates <- function(sim_res){
 
 }
 
-
-
-
-
-
-
 ##'
 ##' Run the full simulation of daily importations
 ##'
@@ -106,7 +86,6 @@ est_import_detect_dates <- function(sim_res){
 ##' @param time_inftotravel
 ##' @param
 ##' @param
-
 run_daily_import_model_par <- function(n_sim=10000,
                                        input_data,
                                        travel_data_monthly=travel_data_monthly,
@@ -127,9 +106,8 @@ run_daily_import_model_par <- function(n_sim=10000,
                                        project_name, batch, version,
                                        print_progress=TRUE,
                                        cores=4){
-
-  library(doParallel)
-  library(abind)
+  require(doParallel)
+  require(abind)
 
   sources_ <- sort(unique(input_data$source))
   dests_ <- sort(unique(input_data$destination))
@@ -626,10 +604,3 @@ setup_and_run_importations <- function(dest="UT",
     return(list(importation_sim=importation_sim,
                 importation_pars=import_pars_df))
 }
-
-
-
-
-
-
-

@@ -13,6 +13,9 @@ Authors@R:
 Description: What the package does (one paragraph).
 Depends:
     tidyverse,
+    httr,
+    lubridate,
+    globaltoolbox,
     fitdistrplus,
     MCMCglmm,
     data.table,

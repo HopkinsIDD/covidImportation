@@ -57,3 +57,29 @@ NULL
 #' @name pop_data
 #' @usage data(pop_data)
 NULL
+
+
+#'
+#' Airport data
+#'
+#' A dataset containing information about airports
+#'
+#' @format A data frame with 55,113 rows and 12 variables:
+#' \itemize{
+#'   \item \code{ident} airport code
+#'   \item \code{type} type of airport
+#'   \item \code{name} airport name
+#'   \item \code{elevation_ft} airport elevation, in feet
+#'   \item \code{continent} 2 letter code for continent
+#'   \item \code{iso_country} 2 letter code for country
+#'   \item \code{iso_region} 2 letter code for country with 2 number code for region
+#'   \item \code{municipality} municipality in which airport is located
+#'   \item \code{gps_code}
+#'   \item \code{iata_code}
+#'   \item \code{local_code}
+#'   \item \code{coordinates} GPS coordinates
+#' }
+#' @docType data
+#' @name airport_data
+#' @usage data(airport_data)
+NULL

@@ -2,7 +2,7 @@
 % Please edit documentation in R/DataUtils.R
 \name{get_oag_travel}
 \alias{get_oag_travel}
-\title{Get subsetted and cleaned OAG data for a specific destination}
+\title{Get OAG travel data}
 \usage{
 get_oag_travel(
   destination = c("CA"),
