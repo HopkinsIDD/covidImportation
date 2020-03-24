@@ -129,7 +129,6 @@ get_airport_city <- function(airport_code = "ORD"){
 #' @param airport_code character, airport code
 #'
 #' @return
-#' @export
 get_airport_state <- function(airport_code = "ORD"){
     data(airport_data)
     return(substr((airport_data %>%
@@ -142,11 +141,10 @@ get_airport_state <- function(airport_code = "ORD"){
 #' @param airport_code character, airport code
 #'
 #' @return
-#' @export
 #'
-#' @examples
+#' @examples get_airport_country()
 get_airport_country <- function(airport_code = "ORD"){
-    airport_data <- read_csv("data/airport-codes.csv")
+    data(airport_data)
     return((airport_data %>% filter(iata_code %in% airport_code))$iso_country)
 }
 
@@ -157,7 +155,6 @@ get_airport_country <- function(airport_code = "ORD"){
 #' @param pull_github_data
 #'
 #' @return
-#' @export
 #'
 #' @examples
 get_incidence_data <- function(first_date = ISOdate(2019,12,1),
@@ -509,7 +506,6 @@ get_metro_labels <- function(data){
 #' @param shift_incid_days
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_input_data <- function(incid_data,
@@ -618,7 +614,6 @@ make_input_data <- function(incid_data,
 #' @param inf_period_nohosp_sd
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_meanD <- function(input_data,
