@@ -10,11 +10,12 @@ get_airport_country(airport_code = "ORD")
 \item{airport_code}{character, airport code}
 }
 \value{
-
+ISO3 code for the country where the airport is
 }
 \description{
 Get airport country
 }
 \examples{
 get_airport_country()
+
 }

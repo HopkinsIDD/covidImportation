@@ -12,18 +12,17 @@ Authors@R:
            role = c("ctb")))
 Description: What the package does (one paragraph).
 Depends:
-    tidyverse,
+    R (>= 3.5),
+    tidyverse
+Imports:
     httr,
     lubridate,
-    globaltoolbox,
     doParallel,
     fitdistrplus,
-    MCMCglmm,
     data.table,
     abind,
     reshape2,
-    arrayhelpers,
-    R (>= 3.5)
+    arrayhelpers
 License: What license it uses
 Encoding: UTF-8
 LazyData: true

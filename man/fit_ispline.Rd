@@ -2,7 +2,7 @@
 % Please edit documentation in R/BasicEpiAnalyses.R
 \name{fit_ispline}
 \alias{fit_ispline}
-\title{Function to fit monotonically increasing spline. Returns a function that 
+\title{Function to fit monotonically increasing spline. Returns a function that
 can be used to predict the spline for each date.}
 \usage{
 fit_ispline(dates, obs, df = round(length(obs)/3))
@@ -18,6 +18,6 @@ fit_ispline(dates, obs, df = round(length(obs)/3))
 a function that takse in some number of dates and gives predictions on those
 }
 \description{
-Function to fit monotonically increasing spline. Returns a function that 
+Function to fit monotonically increasing spline. Returns a function that
 can be used to predict the spline for each date.
 }

@@ -45,6 +45,11 @@ run_daily_import_model_par(
 \item{allow_travel_variance}{whether to sample from the travel variance}
 
 \item{meanD_mat}{matrix of mean duration during which infected individuals can travel}
+
+\item{time_inftotravel}{}
+}
+\value{
+list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
 }
 \description{
 Run the full simulation of daily importations

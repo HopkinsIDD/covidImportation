@@ -10,7 +10,7 @@ get_airport_state(airport_code = "ORD")
 \item{airport_code}{character, airport code}
 }
 \value{
-
+State/province of the airport
 }
 \description{
 Get airport state

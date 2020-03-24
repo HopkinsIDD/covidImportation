@@ -25,6 +25,9 @@ can travel, in days.}
 
 \item{allow_travel_variance}{Logical, whether to sample the travel}
 }
+\value{
+
+}
 \description{
 This is the base model for estimating importations. We will use this within the larger framework
 to get importations per simulation

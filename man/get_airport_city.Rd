@@ -9,6 +9,9 @@ get_airport_city(airport_code = "ORD")
 \arguments{
 \item{airport_code}{character, airport code}
 }
+\value{
+City of the aiport
+}
 \description{
 These functions are all vectorized
 }
