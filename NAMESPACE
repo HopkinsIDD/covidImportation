@@ -2,5 +2,5 @@
 
 export(run_daily_import_model_par)
 export(setup_and_run_importations)
-import(globaltoolbox)
-importFrom(MCMCglmm,rtnorm)
+import(globaltoolboxlite)
+importFrom(truncnorm,rtruncnorm)

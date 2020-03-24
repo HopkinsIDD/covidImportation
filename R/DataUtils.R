@@ -167,7 +167,7 @@ get_airport_country <- function(airport_code = "ORD"){
 #' @return
 #'
 #' @examples
-#' @import globaltoolbox
+#' @import globaltoolboxlite
 get_incidence_data <- function(first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
                                pull_github_data=TRUE){
@@ -221,8 +221,8 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     # Get ISO Code .....................
     jhucsse <- jhucsse %>%
-        mutate(country = get_iso(Country_Region)) %>%
-        mutate(country_name = get_country_name_ISO3(country))
+        mutate(country = globaltoolboxlite::get_iso(Country_Region)) %>%
+        mutate(country_name = globaltoolboxlite::get_country_name_ISO3(country))
     jhucsse <- jhucsse %>% mutate(country_name = ifelse(country=="KOS", "Kosovo", country_name))
     #unique((incid_data %>% dplyr::filter(is.na(country)))$source)
     # country_ <- countrycode::countrycode(unique(jhucsse$Country_Region),
@@ -335,24 +335,32 @@ get_oag_travel <- function(destination=c("CA"),
                                     `Time Series` = col_double()))
 
     if (destination_type=="city"){
-        dest_data <- data_travel_all %>% dplyr::filter(`Arr City Name` %in% destination)
+        dest_data <- data_travel_all %>%
+            dplyr::filter(`Arr City Name` %in% destination)
     } else if (destination_type=="airport"){
-        dest_data <- data_travel_all %>% dplyr::filter(`Arr Airport Code` %in% destination)
+        dest_data <- data_travel_all %>%
+            dplyr::filter(`Arr Airport Code` %in% destination)
     } else if (destination_type=="state"){
-        dest_data <- data_travel_all %>% dplyr::filter(`Arr State Code` %in% destination)
+        dest_data <- data_travel_all %>%
+            dplyr::filter(`Arr State Code` %in% destination)
     } else if (destination_type=="country"){
-        dest_data <- data_travel_all %>% dplyr::filter(`Arr Country Code` %in% destination)
+        dest_data <- data_travel_all %>%
+            dplyr::filter(`Arr Country Code` %in% destination)
     }
 
     if (!is.null(dest_0)){
         if (dest_0_type=="city"){
-            dest_data <- dest_data %>% dplyr::filter(`Arr City Name` %in% dest_0)
+            dest_data <- dest_data %>%
+                dplyr::filter(`Arr City Name` %in% dest_0)
         } else if (dest_0_type=="airport"){
-            dest_data <- dest_data %>% dplyr::filter(`Arr Airport Code` %in% dest_0)
+            dest_data <- dest_data %>%
+                dplyr::filter(`Arr Airport Code` %in% dest_0)
         } else if (dest_0_type=="state"){
-            dest_data <- dest_data %>% dplyr::filter(`Arr State Code` %in% dest_0)
+            dest_data <- dest_data %>%
+                dplyr::filter(`Arr State Code` %in% dest_0)
         } else if (dest_0_type=="country"){
-            dest_data <- dest_data %>% dplyr::filter(`Arr Country Code` %in% dest_0)
+            dest_data <- dest_data %>%
+                dplyr::filter(`Arr Country Code` %in% dest_0)
         }
     }
 
@@ -377,37 +385,38 @@ get_oag_travel <- function(destination=c("CA"),
 
 
     # Get us State codes for departures
-    airport_data <- read_csv("data/airport-codes.csv")
-    airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
-                                                                 countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
-    airport_data_us <- airport_data %>% dplyr::filter(iso_country=="USA")
+    data(airport_data)
+    airport_data <- airport_data %>%
+        mutate(iso_country = ifelse(iso_country=="XK", "KOS",
+                                    countrycode::countrycode(iso_country,
+                                                             origin = "iso2c",
+                                                             destination = "iso3c")))
+    airport_data_us <- airport_data %>%
+        dplyr::filter(iso_country=="USA")
 
-    dest_data <- left_join(dest_data,
-                           airport_data_us %>% mutate(state = substr(iso_region, 4,5)) %>%
-                               dplyr::select(state, iata_code),
-                           by=c("Dep Airport Code"="iata_code"))
-    dest_data <- dest_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
-
-
-    # Aggregate SOURCE LOCATION to province (China) or state (US) or country (all others) for source
-    dest_data <- dest_data %>% rename(dep_airport = `Dep Airport Code`,
-                                      dep_state = `Dep State Code`,
-                                      dep_country = `Dep Country Code`,
-                                      dep_city = `Dep City Name`,
-                                      arr_airport = `Arr Airport Code`,
-                                      arr_city = `Arr City Name`,
-                                      arr_state = `Arr State Code`,
-                                      arr_country = `Arr Country Code`,
-                                      arr_city = `Arr City Name`,
-                                      travelers = `Total Est. Pax`,
-                                      yr_month = `Time Series`,
-                                      dep_province = Province)
-
-    # Fix US cities with "(US) [STATE]" in name
-    dest_data <- dest_data %>% mutate(arr_city = gsub(" \\(US\\).*", "", arr_city))
-
-
-    # Aggregate to dest_aggr_level, then get mean across 3 years ...................
+    dest_data <- dest_data %>%
+        left_join(airport_data_us %>%
+                      mutate(state = substr(iso_region, 4,5)) %>%
+                      dplyr::select(state, iata_code),
+                  by=c("Dep Airport Code"="iata_code")) %>%
+        mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state),
+                                       state, `Dep State Code`)) %>%
+        # Aggregate SOURCE LOCATION to province (China) or state (US) or country (all others) for source
+        rename(dep_airport = `Dep Airport Code`,
+               dep_state = `Dep State Code`,
+               dep_country = `Dep Country Code`,
+               dep_city = `Dep City Name`,
+               arr_airport = `Arr Airport Code`,
+               arr_city = `Arr City Name`,
+               arr_state = `Arr State Code`,
+               arr_country = `Arr Country Code`,
+               arr_city = `Arr City Name`,
+               travelers = `Total Est. Pax`,
+               yr_month = `Time Series`,
+               dep_province = Province) %>%
+        # Fix US cities with "(US) [STATE]" in name
+        mutate(arr_city = gsub(" \\(US\\).*", "", arr_city)) %>%
+        # Aggregate to dest_aggr_level, then get mean across 3 years ..............
 
     dest_data_aggr <- dest_data %>%
         mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
