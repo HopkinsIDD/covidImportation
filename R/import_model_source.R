@@ -301,7 +301,6 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
 #' @param exclude character string, patterns to exclude from the file names of interest
 #'
 #' @return character string, path to most recent file
-#' @export
 #'
 #' @examples
 find_recent_file <- function(name_start, path, exclude=NULL){
@@ -359,7 +358,6 @@ find_recent_file <- function(name_start, path, exclude=NULL){
 #' }
 #'
 #' @return
-#' @export
 #'
 #' @examples
 setup_and_run_importations <- function(dest="UT",
