@@ -15,3 +15,6 @@ get_airport_country(airport_code = "ORD")
 \description{
 Get airport country
 }
+\examples{
+get_airport_country()
+}

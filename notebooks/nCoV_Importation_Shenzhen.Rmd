@@ -310,7 +310,7 @@ version="All_timevar"
 batch <- "1st"
 # shift incidence back by 4 days (midpoint of incubation period (=2) + time to detect/seek care (=2))
 shift_incid_days <- -5 
-source("R/ncov_importation_model_time&loc.R")
+source("R/covid_importation_model_time&loc.R")
 
 ```
     
