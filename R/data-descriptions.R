@@ -14,3 +14,24 @@
 #' @name travel_restrictions
 #' @usage data(travel-restrictions)
 NULL
+
+#' Underreporting data
+#'
+#' A dataset containing estimates for the reporting rate for each country based on
+#'  their CFR from https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html
+#'
+#' @format A data frame with 6 variables:
+#' \itemize{
+#'   \item \code{country} country name
+#'   \item \code{total_cases} number of reported cases
+#'   \item \code{total_deaths} number of reported deaths
+#'   \item \code{underreporting_estimate} estimate of reporting rate using mean CFR from Verity et al.
+#'   \item \code{lower} estimate of reporting rate using upper bound CFR from Verity et al.
+#'   \item \code{upper} estimate of reporting rate using lower bound CFR from Verity et al.
+#' }
+#' @docType data
+#' @references Russell, T.W. et al. Using a delay-adjusted case fatality ratio to estimate under-reporting. CMMID Repository 2020.
+#' @references Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
+#' @name underreporting
+#' @usage data(underreporting)
+NULL
