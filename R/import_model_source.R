@@ -392,8 +392,9 @@ setup_and_run_importations <- function(dest="UT",
                                        project_name="Utah_import",
                                        version="global",
                                        batch="1st",
-                                       end_date=Sys.Date(),
+                                       pull_github_data=TRUE,
                                        get_travel,
+                                       end_date=Sys.Date(),
                                        n_sim=100,
                                        cores=4,
                                        get_detection_time=FALSE,
@@ -422,7 +423,7 @@ setup_and_run_importations <- function(dest="UT",
     ## ~ Incidence data --------------------------------------------------------
     incid_data_list <- get_incidence_data(first_date = ISOdate(2019,12,1),
                                           last_date = Sys.time(),
-                                          pull_github_data=TRUE)
+                                          pull_github_data=pull_github_data)
     incid_data <- incid_data_list$incid_data %>%
         filter(source != "USA")
     jhucsse <- incid_data_list$jhucsse
@@ -473,7 +474,7 @@ setup_and_run_importations <- function(dest="UT",
     travel_data <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
 
     ## ~ Population Data -------------------------------------------------------
-    pop_data <- read_csv("data/pop_data.csv") %>% as.data.frame()
+    data(pop_data)
 
     ## ~~ First Check that the variables match up
     # Check that incidence data does not have duplicates

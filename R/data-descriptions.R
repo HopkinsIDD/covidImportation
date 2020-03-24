@@ -1,3 +1,4 @@
+#'
 #' Travel restrictions data
 #'
 #' A dataset containing locations and dates of travel restrictions, as well as an
@@ -15,6 +16,8 @@
 #' @usage data(travel-restrictions)
 NULL
 
+
+#'
 #' Underreporting data
 #'
 #' A dataset containing estimates for the reporting rate for each country based on
@@ -34,4 +37,23 @@ NULL
 #' @references Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
 #' @name underreporting
 #' @usage data(underreporting)
+NULL
+
+
+#'
+#' Population data
+#'
+#' A dataset containing populations for each source
+#'
+#' @format A data frame with 5 variables:
+#' \itemize{
+#'   \item \code{country_name} country name
+#'   \item \code{country} country code
+#'   \item \code{pop} population
+#'   \item \code{source} if the source is the country, then the country code; if the source is sub-country level, then it is a code for the source
+#'   \item \code{state_name} full name of US states
+#' }
+#' @docType data
+#' @name pop_data
+#' @usage data(pop_data)
 NULL
