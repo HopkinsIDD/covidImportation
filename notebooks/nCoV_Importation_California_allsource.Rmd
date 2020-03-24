@@ -237,6 +237,8 @@ incid_data <- incid_data %>% mutate(state_tmp = state.abb[match(source, state.na
 
 ```
 
+
+
 ### Confirmed Cases in China
 ```{r}
 ## Plot current confirmed cases in China

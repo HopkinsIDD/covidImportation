@@ -10,7 +10,7 @@
 if (!exists("version")){       version <- "1"                    }
 if (!exists("batch")){         batch <- "1"                    }
 if (!exists("project_name")){  project_name <- "california_import" }
-import_sim_file <- file.path("output",project_name, sprintf("nCoV_importation_sim_%s_batch_detect_v%s.RData", batch, version))
+import_sim_file <- file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_detect_v%s.RData", batch, version))
 
 options(scipen=999)
 

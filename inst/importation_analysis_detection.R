@@ -10,7 +10,7 @@ if (!exists("start_date")){                   start_date <- "2020-01-21" }
 if (!exists("na_to_zero")){                   na_to_zero <- TRUE }
 
 dir.create(file.path("results", project_name), recursive = TRUE)
-import_detect_file <- file.path("output",project_name, sprintf("nCoV_importation_detect_%s_batch_v%s.RData", batch, version))
+import_detect_file <- file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version))
 
 # 
 # print(project_name)

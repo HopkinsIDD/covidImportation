@@ -14,7 +14,7 @@ print(version)
 print(batch)
 
 dir.create(file.path("results", project_name), recursive = TRUE)
-import_sim_file <- file.path("output",project_name, sprintf("nCoV_importation_sim_%s_batch_v%s.RData", batch, version))
+import_sim_file <- file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_v%s.RData", batch, version))
 
 
 

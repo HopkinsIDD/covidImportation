@@ -254,7 +254,7 @@ import_pars_df <- calc_nb_import_pars(importation_sim, project_name, batch, vers
 
 
 
-tmp <- load("output/california_import/nCoV_importation_sim_1st_batch_vglobal.RData")
+tmp <- load("output/california_import/covid_importation_sim_1st_batch_vglobal.RData")
 
 import_pars_df <- calc_nb_import_pars(importation_sim, project_name, batch, version)
 

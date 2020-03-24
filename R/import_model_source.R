@@ -260,8 +260,8 @@ run_daily_import_model_par <- function(n_sim=10000,
 
   # Save Sims
   dir.create(file.path("output",project_name), recursive = TRUE)
-  save(importation_sim, file = file.path("output",project_name, sprintf("nCoV_importation_sim_%s_batch_v%s.RData", batch, version)))
-  save(importation_detect, file = file.path("output",project_name, sprintf("nCoV_importation_detect_%s_batch_v%s.RData", batch, version)))
+  save(importation_sim, file = file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_v%s.RData", batch, version)))
+  save(importation_detect, file = file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version)))
 
   print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
   return(list(importation_sim=importation_sim, importation_detect=importation_detect))
@@ -313,7 +313,7 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
     }
   }
 
-  write_csv(import_pars_df, file.path("output",project_name, sprintf("nCoV_importation_nb_params_%s_batch_v%s.csv", batch, version)))
+  write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
   return(import_pars_df)
 }
 
