@@ -6,7 +6,7 @@
 ##' Eventually, we would like automate this.
 ##'
 ##' @return NA (saves a CSV of the current data to the data directory)
-##' @export
+##' 
 ##' 
 pull_JHUCSSE_github_data <- function(){
     require(tidyverse)
@@ -59,7 +59,7 @@ pull_JHUCSSE_github_data <- function(){
 ##' @param print_file_path logical whether or not to print the file path
 ##'
 ##' @return a data frame with the basic data.
-##' @export
+##' 
 read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
 
     ## first get a list of all of the files in the directory
@@ -121,7 +121,6 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
 ##' @param airport_code character, airport code
 ##' 
 ##' @return City of the aiport
-##' @export
 ##' 
 get_airport_city <- function(airport_code = "ORD"){
     data(airport_data)
@@ -135,7 +134,7 @@ get_airport_city <- function(airport_code = "ORD"){
 #' @param airport_code character, airport code
 #'
 #' @return State/province of the airport
-#' @export
+#' 
 get_airport_state <- function(airport_code = "ORD"){
     data(airport_data)
     return(substr((airport_data %>%
@@ -148,12 +147,11 @@ get_airport_state <- function(airport_code = "ORD"){
 #' @param airport_code character, airport code
 #'
 #' @return ISO3 code for the country where the airport is
-#' @export
 #'
-#' @examples
+#' @examples get_airport_country()
 #' 
 get_airport_country <- function(airport_code = "ORD"){
-    airport_data <- read_csv("data/airport-codes.csv")
+    data(airport_data)
     return((airport_data %>% filter(iata_code %in% airport_code))$iso_country)
 }
 
@@ -165,7 +163,6 @@ get_airport_country <- function(airport_code = "ORD"){
 #' @param pull_github_data
 #'
 #' @return
-#' @export
 #'
 #' @examples
 #' 
@@ -520,7 +517,6 @@ get_CA_metro_labels <- function(data){
 #' @param shift_incid_days
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_input_data <- function(incid_data,
@@ -631,7 +627,6 @@ make_input_data <- function(incid_data,
 #' @param inf_period_nohosp_sd
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_meanD <- function(input_data,

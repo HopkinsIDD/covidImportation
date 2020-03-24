@@ -2,8 +2,7 @@
 % Please edit documentation in R/import_model_source.R
 \name{est_imports_base}
 \alias{est_imports_base}
-\title{This is the base model for estimating importations. We will use this within the larger framework
-to get importations per simulation}
+\title{Estimate imports base}
 \usage{
 est_imports_base(
   input_data,
