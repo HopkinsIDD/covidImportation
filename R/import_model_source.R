@@ -19,34 +19,34 @@ est_imports_base <- function(input_data,
                              meanD,
                              u_origin,
                              allow_travel_variance=FALSE){
-    cases <- input_data_sim$cases_incid
+    cases <- input_data$cases_incid
     this.sim <- rep(0, length(cases))
 
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     # if allowing variance in travel, using travelers SE
     if (allow_travel_variance){
         Travelers_over_Population_and_days <-
-            rtnorm(dim(input_data_sim)[1],
-                   mean = input_data_sim$travelers,
-                   sd = input_data_sim$travelers_SE,
-                   lower = 0) / input_data_sim$days_per_t / input_data_sim$population
+            rtnorm(dim(input_data)[1],
+                   mean = input_data$travelers,
+                   sd = input_data$travelers_SE,
+                   lower = 0) / input_data$days_per_t / input_data$population
     } else {
-        Travelers_over_Population_and_days <- input_data_sim$travelers / input_data_sim$days_per_t / input_data_sim$population
+        Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
     }
 
 
-  cases <- input_data_sim$cases_incid
+  cases <- input_data$cases_incid
   this.sim <- rep(0, length(cases))
 
 
   # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
   if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
-      Travelers_over_Population_and_days <- rtruncnorm(dim(input_data_sim)[1],
-                                                       mean = input_data_sim$travelers,
-                                                       sd = input_data_sim$travelers_SE,
-                                                       a = 0) / input_data_sim$days_per_t / input_data_sim$population
+      Travelers_over_Population_and_days <- rtruncnorm(dim(input_data)[1],
+                                                       mean = input_data$travelers,
+                                                       sd = input_data$travelers_SE,
+                                                       a = 0) / input_data$days_per_t / input_data$population
   } else {
-      Travelers_over_Population_and_days <- input_data_sim$travelers / input_data_sim$days_per_t / input_data_sim$population
+      Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
   }
 
   # adjust probability by travel probability reduction
