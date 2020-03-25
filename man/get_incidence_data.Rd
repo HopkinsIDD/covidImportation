@@ -6,8 +6,11 @@
 \usage{
 get_incidence_data(
   first_date = ISOdate(2019, 12, 1),
-  last_date = Sys.time(),
-  pull_github_data = TRUE
+  last_date = Sys.Date(),
+  update_case_data = TRUE,
+  case_data_dir = "data/case_data",
+  check_saved_data = TRUE,
+  save_data = TRUE
 )
 }
 \arguments{

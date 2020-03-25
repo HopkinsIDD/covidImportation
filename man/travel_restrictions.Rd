@@ -4,13 +4,15 @@
 \name{travel_restrictions}
 \alias{travel_restrictions}
 \title{Travel restrictions data}
-\format{A data frame with 721 rows and 4 variables:
+\format{
+A data frame with 721 rows and 4 variables:
 \itemize{
   \item \code{loc} adm1 level location name
   \item \code{min} the starting date of the travel restriction
   \item \code{max} the last date of the travel restriction
   \item \code{p_travel} the proportion of normal level travel due to the travel restriction (e.g. 0.1 means that there is 10% of the normal travel due to the restriction)
-}}
+}
+}
 \usage{
 data(travel-restrictions)
 }

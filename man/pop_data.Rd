@@ -4,14 +4,16 @@
 \name{pop_data}
 \alias{pop_data}
 \title{Population data}
-\format{A data frame with 5 variables:
+\format{
+A data frame with 5 variables:
 \itemize{
   \item \code{country_name} country name
   \item \code{country} country code
   \item \code{pop} population
   \item \code{source} if the source is the country, then the country code; if the source is sub-country level, then it is a code for the source
   \item \code{state_name} full name of US states
-}}
+}
+}
 \usage{
 data(pop_data)
 }

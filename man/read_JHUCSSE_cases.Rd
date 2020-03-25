@@ -5,12 +5,19 @@
 \title{Reads in the JHUCSSE total case count data up
 until (and including) a given dat.}
 \usage{
-read_JHUCSSE_cases(last_time, append_wiki, print_file_path = FALSE)
+read_JHUCSSE_cases(
+  last_date = Sys.Date(),
+  append_wiki = TRUE,
+  case_data_dir = "data/case_data",
+  print_file_path = FALSE
+)
 }
 \arguments{
-\item{last_time}{Date, the last time to consider data from}
+\item{last_date}{Date, the last time to consider data from}
 
 \item{append_wiki}{logical, should we also append data from wikipedia}
+
+\item{case_data_dir}{directory where daily reported case data files are stored by the function.}
 
 \item{print_file_path}{logical whether or not to print the file path}
 }

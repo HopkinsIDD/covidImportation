@@ -4,7 +4,8 @@
 \name{airport_data}
 \alias{airport_data}
 \title{Airport data}
-\format{A data frame with 55,113 rows and 12 variables:
+\format{
+A data frame with 55,113 rows and 12 variables:
 \itemize{
   \item \code{ident} airport code
   \item \code{type} type of airport
@@ -18,7 +19,8 @@
   \item \code{iata_code}
   \item \code{local_code}
   \item \code{coordinates} GPS coordinates
-}}
+}
+}
 \usage{
 data(airport_data)
 }

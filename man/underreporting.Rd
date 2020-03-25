@@ -4,7 +4,8 @@
 \name{underreporting}
 \alias{underreporting}
 \title{Underreporting data}
-\format{A data frame with 6 variables:
+\format{
+A data frame with 6 variables:
 \itemize{
   \item \code{country} country name
   \item \code{total_cases} number of reported cases
@@ -12,7 +13,8 @@
   \item \code{underreporting_estimate} estimate of reporting rate using mean CFR from Verity et al.
   \item \code{lower} estimate of reporting rate using upper bound CFR from Verity et al.
   \item \code{upper} estimate of reporting rate using lower bound CFR from Verity et al.
-}}
+}
+}
 \usage{
 data(underreporting)
 }

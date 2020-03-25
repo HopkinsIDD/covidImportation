@@ -4,16 +4,19 @@
 \name{airport_attribution}
 \alias{airport_attribution}
 \title{Airport attribution data for China}
-\format{A data frame with 507 rows and 3 variables:
+\format{
+A data frame with 507 rows and 4 variables:
 \itemize{
   \item \code{Province} the name of a Chinese province
   \item \code{airport_iata} airport code
-  \item \code{attribution} the percentage of people from that province that use that airport, such that the sum of the attributions for each province equals 1
-}}
+  \item \code{attribution} the proportion of people from a given airport that come from a province, such that the sum of the attributions for each airport equals 1
+  \item \code{pop} the population of the province
+}
+}
 \usage{
 data(airport_attribution)
 }
 \description{
-A dataset containing information about which Chinese airports the people in
-different Chinese provinces use.
+A dataset containing information about which Chinese provinces the people from
+different Chinese airports come from.
 }
