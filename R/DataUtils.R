@@ -366,7 +366,7 @@ get_oag_travel <- function(destination=c("CA"),
 
 
     # Give Chinese airports the provinces
-    airport_attribution <- read_csv(file ='data/airport_attribution.csv')
+    data(airport_attribution)
 
     dest_data <- left_join(dest_data,
                            airport_attribution %>%

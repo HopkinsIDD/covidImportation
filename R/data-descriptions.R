@@ -83,3 +83,20 @@ NULL
 #' @name airport_data
 #' @usage data(airport_data)
 NULL
+
+#'
+#' Airport attribution data for China
+#'
+#' A dataset containing information about which Chinese airports the people in
+#' different Chinese provinces use.
+#'
+#' @format A data frame with 507 rows and 3 variables:
+#' \itemize{
+#'   \item \code{Province} the name of a Chinese province
+#'   \item \code{airport_iata} airport code
+#'   \item \code{attribution} the percentage of people from that province that use that airport, such that the sum of the attributions for each province equals 1
+#' }
+#' @docType data
+#' @name airport_attribution
+#' @usage data(airport_attribution)
+NULL
