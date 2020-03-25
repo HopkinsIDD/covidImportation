@@ -6,7 +6,7 @@
 \usage{
 update_JHUCSSE_github_data(
   case_data_dir = "data/case_data",
-  last_date = Sys.Date(),
+  last_date = Sys.time(),
   check_saved_data = FALSE,
   save_data = FALSE
 )

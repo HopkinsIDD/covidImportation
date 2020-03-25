@@ -6,7 +6,7 @@
 \usage{
 get_incidence_data(
   first_date = ISOdate(2019, 12, 1),
-  last_date = Sys.Date(),
+  last_date = Sys.time(),
   update_case_data = TRUE,
   case_data_dir = "data/case_data",
   check_saved_data = TRUE,

@@ -216,7 +216,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
     dates_have_ <- unique(c(update_dates, files_in_dir_dates, comb_data_in_dir_dates))
     data_files <- data_files[!(dates_tocheck_ %in% dates_have_)]
     dates_tocheck_ <- dates_tocheck_[!(dates_tocheck_ %in% files_in_dir_dates)]
-    
+
     
     # pull and combine data from github
     rc <- list()
@@ -353,11 +353,8 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
         data('jhucsse_case_data', package = 'covidImportation')
     }
     
-    # Combine JHU CSSE data
-    jhucsse_case_data <- read_JHUCSSE_cases(last_date = last_date, append_wiki=TRUE)
     # Make all Diamond Princess Cases same source
     jhucsse_case_data <- jhucsse_case_data %>% mutate(Province_State = ifelse(grepl("diamond princess", Province_State, ignore.case = TRUE), "Diamond Princess", Province_State))
-
 
 
     # Get US States ................
