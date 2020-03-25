@@ -387,7 +387,6 @@ setup_and_run_importations <- function(dest="UT",
     dest_type <- match.arg(dest_type)
     dest_aggr_level <- match.arg(dest_aggr_level)
 
-    ## GENERAL SETUP -----------------------------------------------------------
     ## Create needed directories
     dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
     dir.create(file.path("data",project_name), recursive = TRUE, showWarnings = FALSE)
@@ -447,7 +446,7 @@ setup_and_run_importations <- function(dest="UT",
     ##  - Get daily for merging purposes
     travel_data <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
 
-    ## ~ Population Data -------------------------------------------------------
+    ## ~ Population Data
     data(pop_data)
 
     ## ~~ First Check that the variables match up
@@ -520,16 +519,17 @@ setup_and_run_importations <- function(dest="UT",
     ## We assume this is uniform
     time_inftotravel <- sapply(time_inftodetect, runif, n=1, min=0)
     time_traveltodetect <- time_inftodetect - time_inftotravel
-    ## ~ Travel reductions -----------------------------------------------------
+    
+    ## ~ Travel reductions
     tr_inf_redux <- rep(0, n_sim)
-    ## ~ Origin reporting rate -------------------------------------------------
+    
+    ## ~ Origin reporting rate
     u_origin <- matrix(rep(input_data$p_report_source, n_sim),
                        nrow=n_sim, byrow = TRUE)
 
-    ## ~ Travel restrictions -----------------------------------------------------
+    ## ~ Travel restrictions
     data("travel-restrictions")
 
-    ## Run Model -------------------------------------------------------------
     input_data <- input_data %>%
         mutate(source = as.character(source),
                destination = as.character(dest))

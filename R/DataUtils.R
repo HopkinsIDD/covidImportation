@@ -8,12 +8,15 @@
 ##' @return NA (saves a CSV of the current data to the data directory)
 ##'
 ##'
-pull_JHUCSSE_github_data <- function(){
+pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
 
     library(httr)
     library(tidyverse)
     library(lubridate)
-
+    
+    # Create directory to hold all the data
+    dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+    
     # First get a list of files so we can get the latest one
     req <- GET("https://api.github.com/repos/CSSEGISandData/COVID-19/git/trees/master?recursive=1")
 
@@ -47,7 +50,7 @@ pull_JHUCSSE_github_data <- function(){
         case_data <- readr::read_csv(url(url_))
 
         # Save it
-        readr::write_csv(case_data, file.path("data/case_data", paste0("JHUCSSE Total Cases ", date_,".csv")))
+        readr::write_csv(case_data, file.path(case_data_dir, paste0("JHUCSSE Total Cases ", date_,".csv")))
     }
 }
 
@@ -61,11 +64,14 @@ pull_JHUCSSE_github_data <- function(){
 ##'
 ##' @return a data frame with the basic data.
 ##'
-read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
+read_JHUCSSE_cases <- function(last_time=Sys.Date(), 
+                               append_wiki=TRUE, 
+                               case_data_dir = "data/case_data", 
+                               print_file_path=FALSE) {
 
     ## first get a list of all of the files in the directory
     ## starting with "JHUCSSE Total Cases"
-    file_list <- list.files("data/case_data","JHUCSSE Total Cases",
+    file_list <- list.files(case_data_dir,"JHUCSSE Total Cases",
                             full.names = TRUE)
 
     file_list <- rev(file_list)
@@ -93,12 +99,12 @@ read_JHUCSSE_cases <- function(last_time, append_wiki, print_file_path=FALSE) {
         rc[[f]] <- tmp
     }
     rc <- data.table::rbindlist(rc, fill = TRUE)
-
-
+    
+    ##Now drop any after the date given
     rc <- rc %>% as.data.frame() %>% mutate(Update = lubridate::ymd_hms(Update)) %>%
         dplyr::filter(Update <= last_time)
 
-    ##Now drop any after the date given
+    # Fix Chinese provinces and 
     rc <- rc %>%
         mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
         mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
