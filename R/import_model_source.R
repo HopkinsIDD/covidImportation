@@ -321,7 +321,7 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
         }
     }
 
-    write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
+    # write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
     return(import_pars_df)
 }
 
@@ -440,7 +440,7 @@ setup_and_run_importations <- function(dest="UT",
         group_by(destination) %>%
         summarise(travelers = mean(travelers))
 
-    write_csv(travel_mean, paste0("data/", paste(dest, collapse = "+"), "-", dest_aggr_level, "_monthymeantravelers.csv"))
+    # write_csv(travel_mean, paste0("data/", paste(dest, collapse = "+"), "-", dest_aggr_level, "_monthymeantravelers.csv"))
 
     ## Travel data
     ##  - Get daily for merging purposes
@@ -499,9 +499,9 @@ setup_and_run_importations <- function(dest="UT",
         dplyr::filter(t<=as.Date(end_date))
 
     ## save final input data
-    write_csv(input_data,
-              file.path("data", project_name,
-                        sprintf("input_data_%s_batch_v%s.RData", batch, version)))
+    # write_csv(input_data,
+    #           file.path("data", project_name,
+    #                     sprintf("input_data_%s_batch_v%s.RData", batch, version)))
 
     ## ~ Time to detect importations -------------------------------------------
     ## -- If we assume people generally depart at some point during their incubation period,
@@ -546,9 +546,9 @@ setup_and_run_importations <- function(dest="UT",
         dplyr::filter(source %in% source_w_cases$source)
 
     ## SAVE ALL THE DATA NEEDED
-    dir.create(file.path("data", project_name))
-    write_csv(input_data_cases, file.path("data", project_name, "input_data_cases.csv"))
-    write_csv(travel_data_monthly_cases, file.path("data", project_name, "travel_data_monthly.csv"))
+    # dir.create(file.path("data", project_name))
+    # write_csv(input_data_cases, file.path("data", project_name, "input_data_cases.csv"))
+    # write_csv(travel_data_monthly_cases, file.path("data", project_name, "travel_data_monthly.csv"))
 
     ## The "meanD_mat" here is the distribution of time during which an infected individual could
     ##   potentially travel from a source to a sink/destination. This distribution includes the time
@@ -597,6 +597,9 @@ setup_and_run_importations <- function(dest="UT",
                                           project_name,
                                           batch,
                                           version)
-    return(list(importation_sim=importation_sim,
-                importation_pars=import_pars_df))
+    return(list(input_data=input_data_cases,
+                travel_data_monthly=travel_data_monthly_cases,
+                importation_sims=importation_sim,
+                nb_params=import_pars_df,
+                airport_monthly_mean_travelers=travel_mean))
 }
