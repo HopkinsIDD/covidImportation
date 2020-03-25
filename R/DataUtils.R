@@ -364,24 +364,39 @@ get_oag_travel <- function(destination=c("CA"),
         }
     }
 
+    data('pop_data', package = 'covidImportation')
 
     # Give Chinese airports the provinces
     data(airport_attribution)
 
+    airport_attribution <- airport_attribution %>%
+        mutate(Province = gsub(" Province", "", Province)) %>%
+        mutate(Province = gsub(" province", "", Province)) %>%
+        mutate(Province = gsub(" Special Administrative Region", "", Province)) %>%
+        mutate(Province = gsub(" Autonomous Region", "", Province)) %>%
+        mutate(Province = gsub(" Municipality", "", Province)) %>%
+        mutate(Province = ifelse(grepl("Xinjiang", Province), "Xinjiang", Province)) %>%
+        mutate(Province = ifelse(grepl("Guangxi", Province), "Guangxi", Province)) %>%
+        mutate(Province = ifelse(grepl("Ningxia", Province), "Ningxia", Province)) %>%
+        mutate(Province = ifelse(grepl("Inner Mongolia", Province), "Nei Mongol", Province)) %>%
+        mutate(Province = ifelse(grepl("Macao", Province), "Macau", Province)) %>%
+        # Attribute travel according to normalizaed attribution score,
+        #  weighted by population
+        left_join(pop_data %>% dplyr::select(source, pop),
+                  by=c("Province"="source")) %>%
+        group_by(airport_iata) %>%
+        mutate(attribution = attribution*pop / sum(attribution*pop)) %>%
+        ungroup()
+
+    # merge with travel data
     dest_data <- left_join(dest_data,
-                           airport_attribution %>%
-                               mutate(Province = gsub(" Province", "", Province)) %>%
-                               mutate(Province = gsub(" province", "", Province)) %>%
-                               mutate(Province = gsub(" Special Administrative Region", "", Province)) %>%
-                               mutate(Province = gsub(" Autonomous Region", "", Province)) %>%
-                               mutate(Province = gsub(" Municipality", "", Province)) %>%
-                               mutate(Province = ifelse(grepl("Xinjiang", Province), "Xinjiang", Province)) %>%
-                               mutate(Province = ifelse(grepl("Guangxi", Province), "Guangxi", Province)) %>%
-                               mutate(Province = ifelse(grepl("Ningxia", Province), "Ningxia", Province)) %>%
-                               mutate(Province = ifelse(grepl("Inner Mongolia", Province), "Nei Mongol", Province)) %>%
-                               mutate(Province = ifelse(grepl("Macao", Province), "Macau", Province)) %>%
-                               dplyr::select(-attribution),
+                           airport_attribution,
                            by=c("Dep Airport Code"="airport_iata"))
+    # Adjust travel volume based on attribution
+    dest_data <- dest_data %>%
+        replace_na(list(attribution=1)) %>%
+        mutate(`Total Est. Pax` = `Total Est. Pax` * attribution) %>%
+        dplyr::select(-attribution, pop)
 
 
     # Get us State codes for departures
