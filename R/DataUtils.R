@@ -469,7 +469,7 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
 ##' Get OAG travel data
 ##'
-##' Get subsetted and cleaned OAG data for a specific destination
+##' Get subsetted and cleaned OAG data for a specific destination, using the full OAG data set
 ##'
 ##' @param destination destination of interest; can be a vector.
 ##' @param destination_type options: "airport", "city", "state", "country"
@@ -477,14 +477,21 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 ##' @param dest_0_type default=NULL; must specify if specifying a `dest_0` option.
 ##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
 
-get_oag_travel <- function(destination=c("CA"),
+get_oag_travel_fulldata <- function(destination=c("CA"),
                            destination_type="state",
                            dest_0=NULL,
                            dest_0_type=NULL,
-                           dest_aggr_level="city"){
+                           dest_aggr_level="city",
+                           oag_file="data/complete_OAG_data.csv"){
+    
+    if (!file.exists(oag_file)){
+        print(paste0("Error: ", oag_file, " does not exist."))
+        return(NA)
+    }
+    
     # Read full data
     # these data are clean in  `oag_data_cleaning.R`
-    data_travel_all <- read_csv(file.path("data", "complete_OAG_data.csv"), na=c(""," ", "NA"),
+    data_travel_all <- read_csv(oag_file, na=c(""," ", "NA"),
                                 col_types = list(
                                     `Dep Airport Code` = col_character(),
                                     `Dep City Name` = col_character(),
@@ -625,11 +632,63 @@ get_oag_travel <- function(destination=c("CA"),
 }
 
 
-
 # # Save CA cities
 # dest_data_aggr <- get_oag_travel(destination="CA", destination_type="state", dest_aggr_level="airport")
 # ca_airports <- dest_data_aggr %>% group_by(arr_airport, arr_city, arr_state, arr_country) %>% summarise(n_occur = n())
 # write_csv(ca_airports, "data/ca_airports.csv")
+
+
+
+
+
+
+
+##' Get OAG travel data
+##'
+##' Get subsetted and cleaned OAG data for a specific destination, using the full OAG data set
+##'
+##' @param destination destination of interest; can be a vector.
+##' @param destination_type options: "airport", "city", "state", "country"
+##' @param dest_0 default=NULL; change to specify higher level destination (i.e. dest_0="USA")
+##' @param dest_0_type default=NULL; must specify if specifying a `dest_0` option.
+##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
+
+get_oag_travel <- function(destination=c("CA"),
+                           destination_type="state",
+                           dest_country="USA",
+                           dest_aggr_level="city"){
+    
+    # check if destination is in the USA
+    # -- only US aggregated data are available in the package
+    if (dest_country!="USA"){
+        print("Only aggregated, averaged travel data for travel into the USA are included in this package. 
+              For other countries, provide your own data and use 'get_oag_travel_fulldata' or contact Shaun Truelove (shauntruelove@jhu.edu).")
+        return(NA)
+    }
+    
+    # Load the data
+    load_travel_dat <- function(dest_country){
+        env <- new.env()
+        dest_data <- data(list=tolower(paste0(dest_country, "_oag_aggr_travel")), 
+                          package = "covidImportation", 
+                          envir = env)[1]
+        return(env[[dest_data]])
+    }
+    dest_data <- load_travel_dat(dest_country)
+    
+    # subset to the destination of interest
+    dest_data <- dest_data %>% as.data.frame() %>% 
+        dplyr::filter(get(paste0("arr_",destination_type)) %in% destination)
+    
+    return(dest_data)
+}
+
+
+
+
+
+
+
 
 
 

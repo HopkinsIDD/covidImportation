@@ -6,15 +6,19 @@
 \usage{
 setup_and_run_importations(
   dest = "UT",
-  dest_type = c("state", "city", "airport", "country"),
-  dest_0 = NULL,
-  dest_0_type = NULL,
-  dest_aggr_level = c("airport", "city", "state", "country", "metro"),
+  dest_type = c("state"),
+  dest_country = "USA",
+  dest_aggr_level = c("airport"),
   project_name = "Utah_import",
   version = "global",
   batch = "1st",
-  pull_github_data = TRUE,
-  get_travel,
+  first_date = ISOdate(2019, 12, 1),
+  last_date = Sys.time(),
+  update_case_data = TRUE,
+  case_data_dir = "data/case_data",
+  check_saved_data = TRUE,
+  save_data = TRUE,
+  get_travel = TRUE,
   end_date = Sys.Date(),
   n_sim = 100,
   cores = 4,
@@ -32,10 +36,6 @@ setup_and_run_importations(
 \item{dest}{character string, name of destination to simulate importations for}
 
 \item{dest_type}{character string, options: "airport", "city", "state", "country"}
-
-\item{dest_0}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
-
-\item{dest_0_type}{optional character string, must specify if specifying a `dest_0` option; default=NULL}
 
 \item{dest_aggr_level}{character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)}
 
@@ -71,6 +71,10 @@ setup_and_run_importations(
   \item \code{shift_incid_days} lag from infection to report
   \item \code{delta} days per time period
 }}
+
+\item{dest_0}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
+
+\item{dest_0_type}{optional character string, must specify if specifying a `dest_0` option; default=NULL}
 }
 \value{
 

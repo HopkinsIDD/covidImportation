@@ -359,15 +359,19 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
 #'
 #' @export
 setup_and_run_importations <- function(dest="UT",
-                                       dest_type=c("state", "city","airport", "country"),
-                                       dest_0=NULL,
-                                       dest_0_type=NULL,
-                                       dest_aggr_level=c("airport", "city", "state", "country", "metro"),
+                                       dest_type=c("state"), #,"city","airport", "country"),
+                                       dest_country="USA",
+                                       dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                        project_name="Utah_import",
                                        version="global",
                                        batch="1st",
-                                       pull_github_data=TRUE,
-                                       get_travel,
+                                       first_date = ISOdate(2019,12,1),
+                                       last_date = Sys.time(),
+                                       update_case_data=TRUE,
+                                       case_data_dir = "data/case_data",
+                                       check_saved_data=TRUE,
+                                       save_data=TRUE,
+                                       get_travel=TRUE,
                                        end_date=Sys.Date(),
                                        n_sim=100,
                                        cores=4,
@@ -394,27 +398,23 @@ setup_and_run_importations <- function(dest="UT",
 
     ## DATA --------------------------------------------------------------------
     ## ~ Incidence data --------------------------------------------------------
-    incid_data_list <- get_incidence_data(first_date = ISOdate(2019,12,1),
-                                          last_date = Sys.time(),
-                                          pull_github_data=pull_github_data)
-    incid_data <- incid_data_list$incid_data %>%
-        dplyr::filter(source != "USA")
+    incid_data_list <- get_incidence_data(first_date = first_date,
+                                          last_date = last_date,
+                                          update_case_data = update_case_data,
+                                          case_data_dir = case_data_dir,
+                                          check_saved_data = check_saved_data,
+                                          save_data = save_data)
+    
+    incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
     jhucsse <- incid_data_list$jhucsse
 
     ## ~ Travel Data  ----------------------------------------------------------
     ## if travel data exists load it, otherwise download it
-    if(missing(get_travel)){
-        get_travel <- paste0(paste(dest, collapse = "+"), "-", dest_aggr_level,
-                             "_oag_20172019.csv") %>%
-            find_recent_file(path="data/") %>%
-            is.na()
-    }
     if(get_travel) {
         travel_data_monthly <- get_oag_travel(destination=dest,
                                               destination_type=dest_type,
-                                              dest_aggr_level=dest_aggr_level,
-                                              dest_0=dest_0,
-                                              dest_0_type=dest_0_type) %>%
+                                              dest_country=dest_country,
+                                              dest_aggr_level=dest_aggr_level) %>%
             mutate(travelers=travelers_mean, t_year=2020) %>%
             mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
                                     # Increase travel for Chinese New Year
@@ -447,7 +447,7 @@ setup_and_run_importations <- function(dest="UT",
     travel_data <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
 
     ## ~ Population Data
-    data(pop_data)
+    data(pop_data, package="covidImportation")
 
     ## ~~ First Check that the variables match up
     # Check that incidence data does not have duplicates
