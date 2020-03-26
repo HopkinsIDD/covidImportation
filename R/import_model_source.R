@@ -19,7 +19,7 @@ est_imports_base <- function(input_data,
                              meanD,
                              u_origin,
                              allow_travel_variance=FALSE){
-  
+
     cases <- input_data$cases_incid
     this.sim <- rep(0, length(cases))
 
@@ -38,7 +38,7 @@ est_imports_base <- function(input_data,
     cases <- input_data$cases_incid
     this.sim <- rep(0, length(cases))
 
-  
+
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
         Travelers_over_Population_and_days <- rtruncnorm(dim(input_data)[1],
@@ -48,7 +48,7 @@ est_imports_base <- function(input_data,
     } else {
         Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
     }
-  
+
     # adjust probability by travel probability reduction
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
@@ -115,11 +115,11 @@ est_import_detect_dates <- function(sim_res){
 ##' @param time_inftotravel time from infection to traveling
 ##'
 ##' @return list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
-##' 
+##'
 ##' @import doParallel
-##' 
+##'
 ##' @export
-##' 
+##'
 run_daily_import_model_par <- function(n_sim=10000,
                                        input_data,
                                        travel_data_monthly=travel_data_monthly,
@@ -162,20 +162,20 @@ run_daily_import_model_par <- function(n_sim=10000,
     # Sims as multidimensional arrays
     importation_sim <- array(0, dim = c(length(sources_), length(dests_), length(t_), n_sim),
                              dimnames = list(sources_, dests_, as.character(t_), 1:n_sim))
-    
+
     # make the function to bind each simulation array in the foreach loop
     acomb <- function(...) abind::abind(..., along=4)
-    
+
     # Set up the cluster for parallelization
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
-    
-    
+
+
     # Run the foreach loop to estimate importations for n simulations
     importation_sim <-
-        foreach(n=1:n_sim, .combine = acomb, 
-                .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base"), 
+        foreach(n=1:n_sim, .combine = acomb,
+                .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base"),
                 .packages=c("dplyr","tidyr")) %dopar% {
 
             if (print_progress){
@@ -228,7 +228,7 @@ run_daily_import_model_par <- function(n_sim=10000,
 
 
     importation_detect <- NULL
-    
+
     # Now lets get detections ........................................
 
     # If we want detected time of the importations, we generate a 4D array of that here
@@ -236,35 +236,35 @@ run_daily_import_model_par <- function(n_sim=10000,
 
       importation_detect <- array(0, dim = c(length(sources_), length(dests_), length(t_detect_), n_sim),
                                   dimnames = list(sources_, dests_, as.character(t_detect_), 1:n_sim))
-      
-      
+
+
       importation_detect <- foreach(n=1:n_sim, .combine = acomb,
                                     .export=c("est_import_detect_dates"),
                                     .packages=c("dplyr","tidyr")) %dopar% {
-                                      
+
                                       importation_detect_tmp <- importation_detect[,,,n]
-                                      
+
                                       # get a single simulation
                                       this.sim_ <- arrayhelpers::array2df(importation_sim[,,,n])
                                       colnames(this.sim_) <- c("this.sim", "source","destination","t")
                                       this.sim <- this.sim_$this.sim
-                                      
+
                                       # Detected Importations
                                       if (sum(this.sim) == 0 ) next    # - if no importations, skip to next
-                                      
+
                                       import_dates_ <- est_import_detect_dates(this.sim_)
-                                      
+
                                       tmp <- data.frame(source=import_dates_$detect_sources,
                                                         destination=import_dates_$detect_dests,
                                                         t = as.character(as.Date(import_dates_$detect_dates))) %>%
                                         group_by(source, destination, t) %>% summarise(this.sim = n())
-                                      
+
                                       detect_array_ <- reshape2::acast(tmp, source ~ destination ~ t, value.var = "this.sim")
                                       importation_detect_tmp[dimnames(detect_array_)[[1]], dimnames(detect_array_)[[2]], dimnames(detect_array_)[[3]]] <- detect_array_
-                                      
+
                                       importation_detect_tmp
                                     }
-        
+
         # Give the sim dimension dimnames
         dimnames(importation_detect)[[4]] <- 1:n_sim
         # Replace NAs with 0. These are all pairs that did not have travel or cases
@@ -283,7 +283,7 @@ run_daily_import_model_par <- function(n_sim=10000,
         save(importation_detect, file = file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version)))
       }
     }
-    
+
     print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
     return(list(importation_sim=importation_sim, importation_detect=importation_detect))
 
@@ -316,11 +316,11 @@ calc_nb_import_pars <- function(importation_sim){
     n_dest <- length(dests)
 
     # Make the blank parameter data.frame
-    import_pars_df <- tidyr::expand_grid(detestination=dests, t=t, size=1, mu=0)
-    
+    import_pars_df <- tidyr::expand_grid(destination=dests, t=t, size=1, mu=0)
+
     # Suppress errors for this loop
     options(show.error.messages = FALSE)
-    
+
     for (d_ in 1:length(dests)){
         for (t_ in 1:length(t)){
 
@@ -336,10 +336,10 @@ calc_nb_import_pars <- function(importation_sim){
             import_pars_df[row_ind, 3:4] <- pars_
         }
     }
-    
+
     # Un-suppress errors
     options(show.error.messages = TRUE)
-    
+
 
     # write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
     return(import_pars_df)
@@ -427,7 +427,7 @@ setup_and_run_importations <- function(dest="UT",
                                           case_data_dir = case_data_dir,
                                           check_saved_data = check_saved_data,
                                           save_data = save_data)
-    
+
     incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
     jhucsse <- incid_data_list$jhucsse
 
@@ -453,7 +453,7 @@ setup_and_run_importations <- function(dest="UT",
             rename(source = dep_loc_aggr)
         travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
     }
-    
+
     ## monthly average totals into destinations
     travel_mean <- travel_data_monthly %>%
         group_by(destination, t_month) %>%
@@ -538,10 +538,10 @@ setup_and_run_importations <- function(dest="UT",
     ## We assume this is uniform
     time_inftotravel <- sapply(time_inftodetect, runif, n=1, min=0)
     time_traveltodetect <- time_inftodetect - time_inftotravel
-    
+
     ## ~ Travel reductions
     tr_inf_redux <- rep(0, n_sim)
-    
+
     ## ~ Origin reporting rate
     u_origin <- matrix(rep(input_data$p_report_source, n_sim),
                        nrow=n_sim, byrow = TRUE)
@@ -615,14 +615,14 @@ setup_and_run_importations <- function(dest="UT",
     ## get parameters from sims
     if (get_nbinom_params){
       import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim)
-      
+
       return(list(input_data=input_data_cases,
                   #travel_data_monthly=travel_data_monthly_cases,
                   importation_sims=importation_sim,
                   nb_params=import_pars_df,
                   airport_monthly_mean_travelers=travel_mean))
     } else {
-      
+
       return(list(input_data=input_data_cases,
                   #travel_data_monthly=travel_data_monthly_cases,
                   importation_sims=importation_sim,
