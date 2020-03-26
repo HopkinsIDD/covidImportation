@@ -13,7 +13,7 @@
 #' }
 #' @docType data
 #' @name travel_restrictions
-#' @usage data(travel-restrictions)
+#' @usage data(travel_restrictions)
 NULL
 
 

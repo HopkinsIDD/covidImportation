@@ -24,7 +24,8 @@ Imports:
     data.table,
     abind,
     reshape2,
-    arrayhelpers
+    arrayhelpers,
+    truncnorm
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
