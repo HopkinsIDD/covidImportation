@@ -271,7 +271,7 @@ run_daily_import_model_par <- function(n_sim=10000,
         importation_detect[is.na(importation_detect)] <- 0
     }
 
-    stopCluster(cl)
+    parallel::stopCluster(cl)
 
 
 
