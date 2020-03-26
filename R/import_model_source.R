@@ -19,6 +19,7 @@ est_imports_base <- function(input_data,
                              meanD,
                              u_origin,
                              allow_travel_variance=FALSE){
+  
     cases <- input_data$cases_incid
     this.sim <- rep(0, length(cases))
 
@@ -34,23 +35,22 @@ est_imports_base <- function(input_data,
         Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
     }
 
+    cases <- input_data$cases_incid
+    this.sim <- rep(0, length(cases))
 
-  cases <- input_data$cases_incid
-  this.sim <- rep(0, length(cases))
-
-
-  # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
-  if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
-      Travelers_over_Population_and_days <- rtruncnorm(dim(input_data)[1],
-                                                       mean = input_data$travelers,
-                                                       sd = input_data$travelers_SE,
-                                                       a = 0) / input_data$days_per_t / input_data$population
-  } else {
-      Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
-  }
-
-  # adjust probability by travel probability reduction
-  prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
+  
+    # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
+    if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
+        Travelers_over_Population_and_days <- rtruncnorm(dim(input_data)[1],
+                                                         mean = input_data$travelers,
+                                                         sd = input_data$travelers_SE,
+                                                         a = 0) / input_data$days_per_t / input_data$population
+    } else {
+        Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
+    }
+  
+    # adjust probability by travel probability reduction
+    prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
     for (c in 1:length(cases)){
@@ -97,25 +97,29 @@ est_import_detect_dates <- function(sim_res){
 ##' @param travel_restrictions data.frame of travel restrictions
 ##' @param allow_travel_variance whether to sample from the travel variance
 ##' @param meanD_mat matrix of mean duration during which infected individuals can travel
-##' @param tr_inf_redux
-##' @param u_origin
-##' @param get_detection_time
-##' @param time_inftodetect
-##' @param incub_mean_log
-##' @param incub_sd_log
-##' @param inf_period_hosp_shape
-##' @param inf_period_hosp_scale
-##' @param inf_period_nohosp_mean
-##' @param inf_period_nohosp_sd
-##' @param project_name
-##' @param batch
-##' @param version
-##' @param print_progress
-##' @param cores
-##' @param time_inftotravel
+##' @param tr_inf_redux proportion reduction in travel when individuals are infected
+##' @param u_origin reporting rate, origin
+##' @param get_detection_time logical; return importation detection or not
+##' @param time_inftodetect Time from infection to detection
+##' @param incub_mean_log log mean incubation period
+##' @param incub_sd_log log sd of incubation period
+##' @param inf_period_hosp_shape infectious period of hospitalized, shape
+##' @param inf_period_hosp_scale infectious period of hospitalized, scale
+##' @param inf_period_nohosp_mean infectious period of non-hospitalized, shape
+##' @param inf_period_nohosp_sd infectious period of non-hospitalized, scale
+##' @param project_name project name, if saving in the function
+##' @param batch run batch, if saving in the function
+##' @param version run version, if saving in the function
+##' @param print_progress logical, whether to print the progress of the simulations
+##' @param cores number of cores for parallel processing
+##' @param time_inftotravel time from infection to traveling
 ##'
 ##' @return list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
+##' 
+##' @import doParallel
+##' 
 ##' @export
+##' 
 run_daily_import_model_par <- function(n_sim=10000,
                                        input_data,
                                        travel_data_monthly=travel_data_monthly,
@@ -133,11 +137,11 @@ run_daily_import_model_par <- function(n_sim=10000,
                                        inf_period_hosp_scale,
                                        inf_period_nohosp_mean,
                                        inf_period_nohosp_sd,
-                                       project_name, batch, version,
+                                       project_name=NULL, batch=NULL, version=NULL,
                                        print_progress=TRUE,
-                                       cores=4){
-    require(doParallel)
-    require(abind)
+                                       cores=4, save_sims=FALSE){
+    library(doParallel)
+    #library(abind)
 
     sources_ <- sort(unique(input_data$source))
     dests_ <- sort(unique(input_data$destination))
@@ -147,18 +151,6 @@ run_daily_import_model_par <- function(n_sim=10000,
     # Sims in longform
     sim <- input_data %>% dplyr::select(source, destination, t) %>% data.table::as.data.table()
 
-    # Sims as multidimensional arrays
-    importation_sim <- array(0, dim = c(length(sources_), length(dests_), length(t_), n_sim),
-                             dimnames = list(sources_, dests_, as.character(t_), 1:n_sim))
-    importation_detect <- array(0, dim = c(length(sources_), length(dests_), length(t_detect_), n_sim),
-                                dimnames = list(sources_, dests_, as.character(t_detect_), 1:n_sim))
-
-    # Set up the cluster for parallelization
-    print(paste0("Making cluster of ", cores," for parallelization."))
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
-
-
     # start the timer
     t.start <- proc.time()
 
@@ -167,12 +159,24 @@ run_daily_import_model_par <- function(n_sim=10000,
     # Make travel restrictions into long, expanded format for easy merging
     travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
 
-
+    # Sims as multidimensional arrays
+    importation_sim <- array(0, dim = c(length(sources_), length(dests_), length(t_), n_sim),
+                             dimnames = list(sources_, dests_, as.character(t_), 1:n_sim))
+    
     # make the function to bind each simulation array in the foreach loop
     acomb <- function(...) abind::abind(..., along=4)
+    
+    # Set up the cluster for parallelization
+    print(paste0("Making a cluster of ", cores," for parallelization."))
+    cl <- parallel::makeCluster(cores)
+    doParallel::registerDoParallel(cl)
+    
+    
     # Run the foreach loop to estimate importations for n simulations
     importation_sim <-
-        foreach(n=1:n_sim, .combine = acomb, .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base"), .packages=c("dplyr","tidyr")) %dopar% {
+        foreach(n=1:n_sim, .combine = acomb, 
+                .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base"), 
+                .packages=c("dplyr","tidyr")) %dopar% {
 
             if (print_progress){
                 if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
@@ -223,54 +227,63 @@ run_daily_import_model_par <- function(n_sim=10000,
 
 
 
-
+    importation_detect <- NULL
+    
     # Now lets get detections ........................................
 
     # If we want detected time of the importations, we generate a 4D array of that here
     if (get_detection_time){
 
-        importation_detect <- foreach(n=1:n_sim, .combine = acomb,
-                                      .export=c("est_import_detect_dates"),
-                                      .packages=c("dplyr","tidyr")) %dopar% {
-
-                                          importation_detect_tmp <- importation_detect[,,,n]
-
-                                          # get a single simulation
-                                          this.sim_ <- arrayhelpers::array2df(importation_sim[,,,n])
-                                          colnames(this.sim_) <- c("this.sim", "source","destination","t")
-                                          this.sim <- this.sim_$this.sim
-
-                                          # Detected Importations
-                                          if (sum(this.sim) == 0 ) next    # - if no importations, skip to next
-
-                                          import_dates_ <- est_import_detect_dates(this.sim_)
-
-                                          tmp <- data.frame(source=import_dates_$detect_sources,
-                                                            destination=import_dates_$detect_dests,
-                                                            t = as.character(as.Date(import_dates_$detect_dates))) %>%
-                                              group_by(source, destination, t) %>% summarise(this.sim = n())
-
-                                          detect_array_ <- reshape2::acast(tmp, source ~ destination ~ t, value.var = "this.sim")
-                                          importation_detect_tmp[dimnames(detect_array_)[[1]], dimnames(detect_array_)[[2]], dimnames(detect_array_)[[3]]] <- detect_array_
-
-                                          importation_detect_tmp
-                                      }
+      importation_detect <- array(0, dim = c(length(sources_), length(dests_), length(t_detect_), n_sim),
+                                  dimnames = list(sources_, dests_, as.character(t_detect_), 1:n_sim))
+      
+      
+      importation_detect <- foreach(n=1:n_sim, .combine = acomb,
+                                    .export=c("est_import_detect_dates"),
+                                    .packages=c("dplyr","tidyr")) %dopar% {
+                                      
+                                      importation_detect_tmp <- importation_detect[,,,n]
+                                      
+                                      # get a single simulation
+                                      this.sim_ <- arrayhelpers::array2df(importation_sim[,,,n])
+                                      colnames(this.sim_) <- c("this.sim", "source","destination","t")
+                                      this.sim <- this.sim_$this.sim
+                                      
+                                      # Detected Importations
+                                      if (sum(this.sim) == 0 ) next    # - if no importations, skip to next
+                                      
+                                      import_dates_ <- est_import_detect_dates(this.sim_)
+                                      
+                                      tmp <- data.frame(source=import_dates_$detect_sources,
+                                                        destination=import_dates_$detect_dests,
+                                                        t = as.character(as.Date(import_dates_$detect_dates))) %>%
+                                        group_by(source, destination, t) %>% summarise(this.sim = n())
+                                      
+                                      detect_array_ <- reshape2::acast(tmp, source ~ destination ~ t, value.var = "this.sim")
+                                      importation_detect_tmp[dimnames(detect_array_)[[1]], dimnames(detect_array_)[[2]], dimnames(detect_array_)[[3]]] <- detect_array_
+                                      
+                                      importation_detect_tmp
+                                    }
+        
+        # Give the sim dimension dimnames
+        dimnames(importation_detect)[[4]] <- 1:n_sim
+        # Replace NAs with 0. These are all pairs that did not have travel or cases
+        importation_detect[is.na(importation_detect)] <- 0
     }
 
     stopCluster(cl)
 
-    # Give the sim dimension dimnames
-    dimnames(importation_detect)[[4]] <- 1:n_sim
-    # Replace NAs with 0. These are all pairs that did not have travel or cases
-    importation_detect[is.na(importation_detect)] <- 0
-
 
 
     # Save Sims
-    dir.create(file.path("output",project_name), recursive = TRUE)
-    save(importation_sim, file = file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_v%s.RData", batch, version)))
-    save(importation_detect, file = file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version)))
-
+    if (save_sims){
+      dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
+      save(importation_sim, file = file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_v%s.RData", batch, version)))
+      if (get_detection_time){
+        save(importation_detect, file = file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version)))
+      }
+    }
+    
     print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
     return(list(importation_sim=importation_sim, importation_detect=importation_detect))
 
@@ -292,7 +305,7 @@ run_daily_import_model_par <- function(n_sim=10000,
 ##' @param batch
 ##' @param version
 ##'
-calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
+calc_nb_import_pars <- function(importation_sim){
 
     # aggregate to just destination
     import_sim_dests <- apply(importation_sim, 2:4, sum, na.rm=TRUE)
@@ -304,7 +317,10 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
 
     # Make the blank parameter data.frame
     import_pars_df <- tidyr::expand_grid(detestination=dests, t=t, size=1, mu=0)
-
+    
+    # Suppress errors for this loop
+    options(show.error.messages = FALSE)
+    
     for (d_ in 1:length(dests)){
         for (t_ in 1:length(t)){
 
@@ -312,7 +328,7 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
                 fitdistrplus::fitdist(import_sim_dests[d_, t_, ], distr="nbinom", method="mle")$estimate
             },
             #warning = function(w) { },
-            error = function(err) {
+            error = function(e) {
                 c(1,0)
             })
             row_ind <- (d_-1)*n_t + t_
@@ -320,10 +336,16 @@ calc_nb_import_pars <- function(importation_sim, project_name, batch, version){
             import_pars_df[row_ind, 3:4] <- pars_
         }
     }
+    
+    # Un-suppress errors
+    options(show.error.messages = TRUE)
+    
 
     # write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
     return(import_pars_df)
 }
+
+
 
 #' Set up and run importation sims
 #'
@@ -372,13 +394,13 @@ setup_and_run_importations <- function(dest="UT",
                                        check_saved_data=TRUE,
                                        save_data=TRUE,
                                        get_travel=TRUE,
-                                       end_date=Sys.Date(),
                                        n_sim=100,
                                        cores=4,
                                        get_detection_time=FALSE,
                                        travel_dispersion=3,
                                        allow_travel_variance=FALSE,
                                        print_progress=TRUE,
+                                       get_nbinom_params=TRUE,
                                        param_list=list(incub_mean_log=log(5.89),
                                                        incub_sd_log=log(1.74),
                                                        inf_period_nohosp_mean=15,
@@ -388,8 +410,9 @@ setup_and_run_importations <- function(dest="UT",
                                                        p_report_source=c(0.05, 0.25),
                                                        shift_incid_days=-10,
                                                        delta=1)){
-    dest_type <- match.arg(dest_type)
-    dest_aggr_level <- match.arg(dest_aggr_level)
+    ## >>> NOT SURE WHAT THESE ARE HERE FOR
+    # dest_type <- match.arg(dest_type)
+    # dest_aggr_level <- match.arg(dest_aggr_level)
 
     ## Create needed directories
     dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
@@ -414,33 +437,29 @@ setup_and_run_importations <- function(dest="UT",
         travel_data_monthly <- get_oag_travel(destination=dest,
                                               destination_type=dest_type,
                                               dest_country=dest_country,
-                                              dest_aggr_level=dest_aggr_level) %>%
-            mutate(travelers=travelers_mean, t_year=2020) %>%
-            mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
-                                    # Increase travel for Chinese New Year
-                                    travelers*1.6, travelers)) %>%
+                                              dest_aggr_level=dest_aggr_level) %>% as.data.frame()
+        travel_data_monthly <- travel_data_monthly %>%
+            mutate(t_year=2020) %>%
             rename(source = dep_loc_aggr)
         travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
     } else{
         travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
                                       dest_aggr_level, "_oag_20172019.csv") %>%
             read_csv(na=c(""," ","NA"))%>%
-            mutate(travelers=travelers_mean,
-                   t_year=2020) %>%
+            mutate(t_year=2020) %>%
             mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
                                     # Increase travel for Chinese New Year
                                     travelers*1.6, travelers)) %>%
             rename(source = dep_loc_aggr)
         travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
     }
+    
     ## monthly average totals into destinations
     travel_mean <- travel_data_monthly %>%
         group_by(destination, t_month) %>%
         summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
         group_by(destination) %>%
         summarise(travelers = mean(travelers))
-
-    # write_csv(travel_mean, paste0("data/", paste(dest, collapse = "+"), "-", dest_aggr_level, "_monthymeantravelers.csv"))
 
     ## Travel data
     ##  - Get daily for merging purposes
@@ -496,7 +515,7 @@ setup_and_run_importations <- function(dest="UT",
                # For first pass, reporting rate is just Hubei/not Hubei
                days_per_t=param_list$delta # ~ delta: days per time period
         ) %>%
-        dplyr::filter(t<=as.Date(end_date))
+        dplyr::filter(t<=as.Date(last_date))
 
     ## save final input data
     # write_csv(input_data,
@@ -528,11 +547,11 @@ setup_and_run_importations <- function(dest="UT",
                        nrow=n_sim, byrow = TRUE)
 
     ## ~ Travel restrictions
-    data("travel-restrictions")
+    data("travel_restrictions")
 
     input_data <- input_data %>%
         mutate(source = as.character(source),
-               destination = as.character(dest))
+               destination = as.character(destination))
 
     ## Filter to sources with cases -- to speed it up
     source_w_cases <- input_data %>%
@@ -587,19 +606,29 @@ setup_and_run_importations <- function(dest="UT",
         inf_period_nohosp_sd=param_list$inf_period_nohosp_sd,
         project_name=project_name, batch=batch, version=version,
         print_progress=print_progress,
-        cores=cores)
+        cores=cores, save_sims=FALSE)
+
 
     ## print time required
     print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
 
     ## get parameters from sims
-    import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim,
-                                          project_name,
-                                          batch,
-                                          version)
-    return(list(input_data=input_data_cases,
-                travel_data_monthly=travel_data_monthly_cases,
-                importation_sims=importation_sim,
-                nb_params=import_pars_df,
-                airport_monthly_mean_travelers=travel_mean))
+    if (get_nbinom_params){
+      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim,
+                                            project_name,
+                                            batch,
+                                            version)
+      
+      return(list(input_data=input_data_cases,
+                  #travel_data_monthly=travel_data_monthly_cases,
+                  importation_sims=importation_sim,
+                  nb_params=import_pars_df,
+                  airport_monthly_mean_travelers=travel_mean))
+    } else {
+      
+      return(list(input_data=input_data_cases,
+                  #travel_data_monthly=travel_data_monthly_cases,
+                  importation_sims=importation_sim,
+                  airport_monthly_mean_travelers=travel_mean))
+    }
 }

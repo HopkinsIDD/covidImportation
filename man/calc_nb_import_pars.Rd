@@ -4,7 +4,7 @@
 \alias{calc_nb_import_pars}
 \title{Get negative binomial estimates for each time and destination}
 \usage{
-calc_nb_import_pars(importation_sim, project_name, batch, version)
+calc_nb_import_pars(importation_sim)
 }
 \arguments{
 \item{importation_sim}{4D array outputted from the importation model}

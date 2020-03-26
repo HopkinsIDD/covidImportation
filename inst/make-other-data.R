@@ -8,51 +8,70 @@ usethis::use_data(underreporting, overwrite = TRUE)
 
 
 
-## make travel_restrictions data (THIS DOESN"T WORK CURRENTLY)
-travel_restrictions <- data.frame(loc=unique((input_data %>%
-                           filter(dep_country=="CHN"))$source),
-           min=param_list$hubei_shutdown[1],
-           max=param_list$hubei_shutdown[2],
-           # Reduce travel from all Chinese sources to 10%
-           p_travel=.1) %>%
-    filter(loc!="Hubei") %>%
+
+# Travel Restrictions Data ------------------------------------------------
+
+hubei_shutdown <- c("2020-01-24", "2020-05-01")
+data("pop_data", package = "covidImportation")
+# this requires the pop_data to have all of the correct source locations
+
+## make travel_restrictions data
+travel_restrictions <- 
+
+  # Reduce travel from all Chinese sources to 10%
+    data.frame(loc=unique((pop_data %>% filter(country=="CHN"))$source),
+                         min=hubei_shutdown[1], 
+                         max=hubei_shutdown[2],
+                         p_travel=.1) %>% filter(loc!="Hubei") %>%
+  
+  # Reduce travel from Hubei to 0
     bind_rows(data.frame(loc="Hubei",
-                         min=param_list$hubei_shutdown[1],
-                         max=param_list$hubei_shutdown[2],
-                         # Reduce travel from Hubei to 0
+                         min=hubei_shutdown[1],
+                         max=hubei_shutdown[2],
                          p_travel=0)) %>%
-    bind_rows(data.frame(loc=unique((input_data %>%
-                                         filter(dep_country=="USA"))$source),
+  
+  # Reduce travel from all US sources to 60%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
                          min="2020-03-02",
                          max="2020-03-08",
-                         # Reduce travel from all US sources to 50%
                          p_travel=.6)) %>%
-    bind_rows(data.frame(loc=unique((input_data %>%
-                                         filter(dep_country!="CHN" & dep_country!="USA"))$source),
+  
+  # Reduce travel from all US sources to 30%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                         min="2020-03-09", 
+                         max="2020-03-16", 
+                         p_travel=.3)) %>%
+  
+  # Reduce travel from all US sources to 10%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                         min="2020-03-17", 
+                         max="2020-06-16", 
+                         p_travel=.1)) %>%
+                         
+  # Reduce travel from non-China to US to 30%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
                          min="2020-03-02",
                          max="2020-03-08",
-                         # Reduce travel from non-China to US to 30%
                          p_travel=.3)) %>%
-    bind_rows(data.frame(loc=unique((input_data %>%
-                                         filter(dep_country=="USA"))$source),
+
+  # Reduce travel from all US sources to 10%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
                          min="2020-03-09",
-                         # Reduce travel from all US sources to 30%
-                         max=param_list$hubei_shutdown[2], p_travel=.3)) %>%
-    bind_rows(data.frame(loc=unique((input_data %>%
-                                         filter(dep_country!="CHN" & dep_country!="USA"))$source),
-                         min="2020-03-09",
-                         max=param_list$hubei_shutdown[2],
-                         # Reduce travel from all US sources to 10%
+                         max="2020-03-16",
                          p_travel=.1)) %>%
-    bind_rows(data.frame(loc=unique((input_data %>% filter(dep_country!="CHN" & dep_country!="USA"))$source),
-                         min="2020-03-16",
-                         max=param_list$hubei_shutdown[2],
-                         # Reduce travel from all US sources to 20%
+  
+  # Reduce travel from all US sources to 20%
+    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
+                         min="2020-03-17",
+                         max=hubei_shutdown[2],
                          p_travel=.2))
-#usethis::use_data(travel_restrictions, overwrite = TRUE)
+
+usethis::use_data(travel_restrictions, overwrite = TRUE)
 
 
 
+
+# Airport Attributions - China ------------------------------------------
 
 ## make airport_attributions data
 airport_attribution <- read_csv("data-raw/airport_attribution.csv") %>%
@@ -79,6 +98,8 @@ usethis::use_data(airport_attribution, overwrite = TRUE)
 
 
 
+# JHUCSSE Case Data ------------------------------------------------------
+
 ## Generate combined JHU CSSE data for packages (so users dont have to create the full data)
 update_jhucsse_package_data <- function(){
     
@@ -98,6 +119,8 @@ update_jhucsse_package_data()
 
 
 
+# Wikipedia Case Data -----------------------------------------------------
+
 wikipedia_cases <- readr::read_csv("data-raw/WikipediaWuhanPre1-20-2020.csv",
                         col_types=readr::cols(Update = readr::col_datetime("%m/%d/%Y")))
 usethis::use_data(wikipedia_cases, overwrite = TRUE)
@@ -106,14 +129,7 @@ usethis::use_data(wikipedia_cases, overwrite = TRUE)
 
 
 
-
-
-
-
-
-
-
-
+# OAG Travel Data ---------------------------------------------------------
 
 ##' Get OAG travel data
 ##'
@@ -235,7 +251,9 @@ make_aggr_oag_travel <- function(){
 dest_data_aggr_orig <- make_aggr_oag_travel()
 dest_data_aggr <- dest_data_aggr_orig %>% 
   as.data.frame() %>%
-  select(-dep_country, -arr_city) %>% 
+  # Increase travel for Chinese New Year
+  mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN", travelers_mean*1.6, travelers_mean)) %>%
+  select(-arr_city) %>% 
   mutate(travelers_sd=round(travelers_sd, 1), travelers_mean=round(travelers_mean, 1))
 
 format(object.size(dest_data_aggr), "Mb")
@@ -244,7 +262,7 @@ save(dest_data_aggr, file=paste0("data_other/", "complete_oag_aggr_lite.rda"))
 
 
 usa_oag_aggr_travel <- dest_data_aggr %>% filter(arr_country=="USA")
-format(object.size(dest_data_aggr_usa), "Mb")
+format(object.size(usa_oag_aggr_travel), "Mb")
 usethis::use_data(usa_oag_aggr_travel, overwrite = TRUE)
 #write_csv(dest_data_aggr_usa, paste0("data_other/", "usa_oag_aggr_lite.csv"))
 #save(dest_data_aggr_usa, file=paste0("data_other/", "usa_oag_aggr_lite.rda"))

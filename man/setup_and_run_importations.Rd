@@ -19,13 +19,13 @@ setup_and_run_importations(
   check_saved_data = TRUE,
   save_data = TRUE,
   get_travel = TRUE,
-  end_date = Sys.Date(),
   n_sim = 100,
   cores = 4,
   get_detection_time = FALSE,
   travel_dispersion = 3,
   allow_travel_variance = FALSE,
   print_progress = TRUE,
+  get_nbinom_params = TRUE,
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
     inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_shape = 0.75,
     inf_period_hosp_scale = 5.367, p_report_source = c(0.05, 0.25), shift_incid_days =
@@ -44,8 +44,6 @@ setup_and_run_importations(
 \item{version}{character string}
 
 \item{batch}{character string}
-
-\item{end_date}{Date, last import date}
 
 \item{n_sim}{numeric, number of simulations}
 
@@ -75,6 +73,8 @@ setup_and_run_importations(
 \item{dest_0}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
 
 \item{dest_0_type}{optional character string, must specify if specifying a `dest_0` option; default=NULL}
+
+\item{end_date}{Date, last import date}
 }
 \value{
 

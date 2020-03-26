@@ -476,7 +476,8 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 ##' @param dest_0 default=NULL; change to specify higher level destination (i.e. dest_0="USA")
 ##' @param dest_0_type default=NULL; must specify if specifying a `dest_0` option.
 ##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
-
+##'
+##' @export
 get_oag_travel_fulldata <- function(destination=c("CA"),
                            destination_type="state",
                            dest_0=NULL,
@@ -764,9 +765,9 @@ make_input_data <- function(incid_data,
                                             !grepl("diamond princess", source, ignore.case = TRUE))
 
     # merge data (delimit it by travel data)
-    pop_data_    <- pop_data %>% mutate(source = as.character(source)) %>%
+    pop_data    <- pop_data %>% mutate(source = as.character(source)) %>%
         dplyr::select(source, dep_country=country, population=pop)
-    incid_data_  <- incid_data %>% mutate(source = as.character(source)) %>%
+    incid_data  <- incid_data %>% mutate(source = as.character(source)) %>%
         dplyr::select(source, t, incid_est, dep_country=country)
 
 
@@ -800,15 +801,16 @@ make_input_data <- function(incid_data,
     # aggregation levels for destination
     arr_vars <- c("arr_airport", "arr_city","arr_metro", "arr_state", "arr_country")
     other_vars <- c("source", "dep_country", "t", "t_day", "t_month", "t_year", "travelers", "travelers_month")
-    arr_vars <- arr_vars[arr_vars %in% colnames(travel_data)]
+    all_vars <- c(other_vars, arr_vars)
+    all_vars <- all_vars[all_vars %in% colnames(travel_data)]
 
-    travel_data_ <- travel_data %>% mutate(source = as.character(source)) %>%
-        dplyr::select(c(other_vars, arr_vars))
+    travel_data <- travel_data %>% mutate(source = as.character(source)) %>%
+        dplyr::select(all_vars)
 
     # combine them all
     input_data <- full_join(
-        right_join(pop_data_, travel_data_, by=c("source", "dep_country")),
-        incid_data_, by=c("source", "dep_country", "t"))
+        right_join(pop_data, travel_data, by=c("source", "dep_country")),
+        incid_data, by=c("source", "dep_country", "t"))
     input_data <- input_data %>% rename(cases_incid=incid_est)
 
     start_date <- min((input_data %>% dplyr::filter(cases_incid>0))$t)
@@ -974,9 +976,21 @@ expand_travel_restrict <- function(travel_restrictions){
                                             t = seq(travel_restrictions$min[r], travel_restrictions$max[r], by="days"))
     }
     travel_restrict_ <- data.table::rbindlist(travel_restrict_)
+    
+    # Throw an error if duplicates of days for locations
+    dupls_ <- sum(duplicated(travel_restrict_ %>% mutate(loc_t = paste(loc, t)) %>% pull(loc_t)))
+    if (dupls_>0){
+        stop("Duplicates in travel restrictions. Fix the travel_restrictions file.", call. = FALSE)
+    }
+    
+    return(travel_restrict_)
 }
 
 
+
+## Test
+#travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
+    
 
 
 ##'
@@ -986,7 +1000,7 @@ expand_travel_restrict <- function(travel_restrictions){
 ##' @param travel_restrictions_long Data.frame. Daily travel restrictions, including dates, source location, and proportion of cases.
 ##'
 apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
-
+    travel_restrictions_long <- travel_restrictions_long %>% distinct()
     travel_data <- left_join(travel_data, travel_restrictions_long, by=c("t","source"="loc")) %>%
         replace_na(list(p_travel=1)) %>%
         mutate(travelers=travelers*p_travel)
@@ -999,6 +1013,8 @@ apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
 
 
 
+#' find_recent_file
+#' 
 #' @param name_start character string, first letters in file name
 #' @param path character string, path to folder of interest, end with "/"
 #' @param exclude character string, patterns to exclude from the file names of interest

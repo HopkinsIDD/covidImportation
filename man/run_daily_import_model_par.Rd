@@ -24,11 +24,12 @@ run_daily_import_model_par(
   inf_period_hosp_scale,
   inf_period_nohosp_mean,
   inf_period_nohosp_sd,
-  project_name,
-  batch,
-  version,
+  project_name = NULL,
+  batch = NULL,
+  version = NULL,
   print_progress = TRUE,
-  cores = 4
+  cores = 4,
+  save_sims = FALSE
 )
 }
 \arguments{
@@ -46,7 +47,37 @@ run_daily_import_model_par(
 
 \item{meanD_mat}{matrix of mean duration during which infected individuals can travel}
 
-\item{time_inftotravel}{}
+\item{tr_inf_redux}{proportion reduction in travel when individuals are infected}
+
+\item{u_origin}{reporting rate, origin}
+
+\item{get_detection_time}{logical; return importation detection or not}
+
+\item{time_inftotravel}{time from infection to traveling}
+
+\item{time_inftodetect}{Time from infection to detection}
+
+\item{incub_mean_log}{log mean incubation period}
+
+\item{incub_sd_log}{log sd of incubation period}
+
+\item{inf_period_hosp_shape}{infectious period of hospitalized, shape}
+
+\item{inf_period_hosp_scale}{infectious period of hospitalized, scale}
+
+\item{inf_period_nohosp_mean}{infectious period of non-hospitalized, shape}
+
+\item{inf_period_nohosp_sd}{infectious period of non-hospitalized, scale}
+
+\item{project_name}{project name, if saving in the function}
+
+\item{batch}{run batch, if saving in the function}
+
+\item{version}{run version, if saving in the function}
+
+\item{print_progress}{logical, whether to print the progress of the simulations}
+
+\item{cores}{number of cores for parallel processing}
 }
 \value{
 list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
