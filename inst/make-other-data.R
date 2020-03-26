@@ -1,4 +1,8 @@
 
+
+library(tidyverse)
+
+
 ## make underreporting data
 source("https://raw.githubusercontent.com/salauer/CFR_calculation/master/global_estimates/scripts/main_script_clean.R")
 underreporting <- reportDataFinal; rm(reportDataFinal)
@@ -17,54 +21,54 @@ data("pop_data", package = "covidImportation")
 
 ## make travel_restrictions data
 travel_restrictions <- 
-
+  
   # Reduce travel from all Chinese sources to 10%
-    data.frame(loc=unique((pop_data %>% filter(country=="CHN"))$source),
-                         min=hubei_shutdown[1], 
-                         max=hubei_shutdown[2],
-                         p_travel=.1) %>% filter(loc!="Hubei") %>%
+  data.frame(loc=unique((pop_data %>% filter(country=="CHN"))$source),
+             min=hubei_shutdown[1], 
+             max=hubei_shutdown[2],
+             p_travel=.1) %>% filter(loc!="Hubei") %>%
   
   # Reduce travel from Hubei to 0
-    bind_rows(data.frame(loc="Hubei",
-                         min=hubei_shutdown[1],
-                         max=hubei_shutdown[2],
-                         p_travel=0)) %>%
+  bind_rows(data.frame(loc="Hubei",
+                       min=hubei_shutdown[1],
+                       max=hubei_shutdown[2],
+                       p_travel=0)) %>%
   
   # Reduce travel from all US sources to 60%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                         min="2020-03-02",
-                         max="2020-03-08",
-                         p_travel=.6)) %>%
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                       min="2020-03-02",
+                       max="2020-03-08",
+                       p_travel=.6)) %>%
   
   # Reduce travel from all US sources to 30%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                         min="2020-03-09", 
-                         max="2020-03-16", 
-                         p_travel=.3)) %>%
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                       min="2020-03-09", 
+                       max="2020-03-16", 
+                       p_travel=.3)) %>%
   
   # Reduce travel from all US sources to 10%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                         min="2020-03-17", 
-                         max="2020-06-16", 
-                         p_travel=.1)) %>%
-                         
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                       min="2020-03-17", 
+                       max="2020-06-16", 
+                       p_travel=.1)) %>%
+  
   # Reduce travel from non-China to US to 30%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                         min="2020-03-02",
-                         max="2020-03-08",
-                         p_travel=.3)) %>%
-
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
+                       min="2020-03-02",
+                       max="2020-03-08",
+                       p_travel=.3)) %>%
+  
   # Reduce travel from all US sources to 10%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                         min="2020-03-09",
-                         max="2020-03-16",
-                         p_travel=.1)) %>%
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
+                       min="2020-03-09",
+                       max="2020-03-16",
+                       p_travel=.1)) %>%
   
   # Reduce travel from all US sources to 20%
-    bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                         min="2020-03-17",
-                         max=hubei_shutdown[2],
-                         p_travel=.2))
+  bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
+                       min="2020-03-17",
+                       max=hubei_shutdown[2],
+                       p_travel=.2))
 
 usethis::use_data(travel_restrictions, overwrite = TRUE)
 
@@ -75,23 +79,23 @@ usethis::use_data(travel_restrictions, overwrite = TRUE)
 
 ## make airport_attributions data
 airport_attribution <- read_csv("data-raw/airport_attribution.csv") %>%
-    mutate(Province = gsub(" Province", "", Province)) %>%
-    mutate(Province = gsub(" province", "", Province)) %>%
-    mutate(Province = gsub(" Special Administrative Region", "", Province)) %>%
-    mutate(Province = gsub(" Autonomous Region", "", Province)) %>%
-    mutate(Province = gsub(" Municipality", "", Province)) %>%
-    mutate(Province = ifelse(grepl("Xinjiang", Province), "Xinjiang", Province)) %>%
-    mutate(Province = ifelse(grepl("Guangxi", Province), "Guangxi", Province)) %>%
-    mutate(Province = ifelse(grepl("Ningxia", Province), "Ningxia", Province)) %>%
-    mutate(Province = ifelse(grepl("Inner Mongolia", Province), "Nei Mongol", Province)) %>%
-    mutate(Province = ifelse(grepl("Macao", Province), "Macau", Province)) %>%
-    # Attribute travel according to normalizaed attribution score,
-    #  weighted by population
-    left_join(read_csv("data-raw/pop_data.csv") %>% dplyr::select(source, pop),
-              by=c("Province"="source")) %>%
-    group_by(airport_iata) %>%
-    mutate(attribution = attribution*pop / sum(attribution*pop)) %>%
-    ungroup()
+  mutate(Province = gsub(" Province", "", Province)) %>%
+  mutate(Province = gsub(" province", "", Province)) %>%
+  mutate(Province = gsub(" Special Administrative Region", "", Province)) %>%
+  mutate(Province = gsub(" Autonomous Region", "", Province)) %>%
+  mutate(Province = gsub(" Municipality", "", Province)) %>%
+  mutate(Province = ifelse(grepl("Xinjiang", Province), "Xinjiang", Province)) %>%
+  mutate(Province = ifelse(grepl("Guangxi", Province), "Guangxi", Province)) %>%
+  mutate(Province = ifelse(grepl("Ningxia", Province), "Ningxia", Province)) %>%
+  mutate(Province = ifelse(grepl("Inner Mongolia", Province), "Nei Mongol", Province)) %>%
+  mutate(Province = ifelse(grepl("Macao", Province), "Macau", Province)) %>%
+  # Attribute travel according to normalizaed attribution score,
+  #  weighted by population
+  left_join(read_csv("data-raw/pop_data.csv") %>% dplyr::select(source, pop),
+            by=c("Province"="source")) %>%
+  group_by(airport_iata) %>%
+  mutate(attribution = attribution*pop / sum(attribution*pop)) %>%
+  ungroup()
 #save(airport_attribution, file="data/airport_attribution.rda")
 usethis::use_data(airport_attribution, overwrite = TRUE)
 
@@ -102,17 +106,17 @@ usethis::use_data(airport_attribution, overwrite = TRUE)
 
 ## Generate combined JHU CSSE data for packages (so users dont have to create the full data)
 update_jhucsse_package_data <- function(){
-    
-    # pull the data from github
-    pull_JHUCSSE_github_data(case_data_dir = "data/case_data")
-    # read and merge data
-    jhucsse_case_data <- read_JHUCSSE_cases(last_time=Sys.Date(), 
-                                       append_wiki=TRUE, 
-                                       case_data_dir = "data/case_data", 
-                                       print_file_path=FALSE) 
-    
-    #save(jhucsse_case_data, file="data/jhucsse_case_data.rda")
-    usethis::use_data(jhucsse_case_data, overwrite = TRUE)
+  
+  # pull the data from github
+  pull_JHUCSSE_github_data(case_data_dir = "data/case_data")
+  # read and merge data
+  jhucsse_case_data <- read_JHUCSSE_cases(last_time=Sys.Date(), 
+                                          append_wiki=TRUE, 
+                                          case_data_dir = "data/case_data", 
+                                          print_file_path=FALSE) 
+  
+  #save(jhucsse_case_data, file="data/jhucsse_case_data.rda")
+  usethis::use_data(jhucsse_case_data, overwrite = TRUE)
 }
 update_jhucsse_package_data()
 
@@ -122,7 +126,7 @@ update_jhucsse_package_data()
 # Wikipedia Case Data -----------------------------------------------------
 
 wikipedia_cases <- readr::read_csv("data-raw/WikipediaWuhanPre1-20-2020.csv",
-                        col_types=readr::cols(Update = readr::col_datetime("%m/%d/%Y")))
+                                   col_types=readr::cols(Update = readr::col_datetime("%m/%d/%Y")))
 usethis::use_data(wikipedia_cases, overwrite = TRUE)
 
 
@@ -142,110 +146,126 @@ usethis::use_data(wikipedia_cases, overwrite = TRUE)
 ##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
 
 make_aggr_oag_travel <- function(){
-    # Read full data
-    # these data are clean in  `oag_data_cleaning.R`
-    data_travel_all <- read_csv(file.path("data_other", "complete_OAG_data.csv"), na=c(""," ", "NA"),
-                                col_types = list(
-                                    `Dep Airport Code` = col_character(),
-                                    `Dep City Name` = col_character(),
-                                    `Dep State Code` = col_character(),
-                                    `Dep Country Code` = col_character(),
-                                    `Arr Airport Code` = col_character(),
-                                    `Arr City Name` = col_character(),
-                                    `Arr State Code` = col_character(),
-                                    `Arr Country Code` = col_character(),
-                                    `Total Est. Pax` = col_double(),
-                                    `Time Series` = col_double()))
-    
+  # Read full data
+  # these data are clean in  `oag_data_cleaning.R`
+  data_travel_all <- read_csv(file.path("data_other", "complete_OAG_data.csv"), na=c(""," ", "NA"),
+                              col_types = list(
+                                `Dep Airport Code` = col_character(),
+                                `Dep City Name` = col_character(),
+                                `Dep State Code` = col_character(),
+                                `Dep Country Code` = col_character(),
+                                `Arr Airport Code` = col_character(),
+                                `Arr City Name` = col_character(),
+                                `Arr State Code` = col_character(),
+                                `Arr Country Code` = col_character(),
+                                `Total Est. Pax` = col_double(),
+                                `Time Series` = col_double()))
   
-    data('pop_data', package = 'covidImportation')
-    
-    # Give Chinese airports the provinces
-    data(airport_attribution)
-    
-    # merge with travel data
-    dest_data <- left_join(data_travel_all,
-                           airport_attribution,
-                           by=c("Dep Airport Code"="airport_iata"))
-    rm(data_travel_all)
-    gc()
-    # Adjust travel volume based on attribution
-    dest_data <- dest_data %>%
-        replace_na(list(attribution=1)) %>%
-        mutate(`Total Est. Pax` = `Total Est. Pax` * attribution) %>%
-        dplyr::select(-attribution, pop)
-    
-    
-    # Get us State codes for departures
-    data(airport_data)
-    airport_data <- airport_data %>%
-        mutate(iso_country = ifelse(iso_country=="XK", "KOS",
-                                    countrycode::countrycode(iso_country,
-                                                             origin = "iso2c",
-                                                             destination = "iso3c")))
-    airport_data_us <- airport_data %>%
-        dplyr::filter(iso_country=="USA")
-    
-    dest_data <- dest_data %>%
-        left_join(airport_data_us %>%
-                      mutate(state = substr(iso_region, 4,5)) %>%
-                      dplyr::select(state, iata_code),
-                  by=c("Dep Airport Code"="iata_code")) %>%
-        mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state),
-                                       state, `Dep State Code`)) %>%
-        # Aggregate SOURCE LOCATION to province (China) or state (US) or country (all others) for source
-        rename(dep_airport = `Dep Airport Code`,
-               dep_state = `Dep State Code`,
-               dep_country = `Dep Country Code`,
-               dep_city = `Dep City Name`,
-               arr_airport = `Arr Airport Code`,
-               arr_city = `Arr City Name`,
-               arr_state = `Arr State Code`,
-               arr_country = `Arr Country Code`,
-               travelers = `Total Est. Pax`,
-               yr_month = `Time Series`,
-               dep_province = Province) %>%
-        # Fix US cities with "(US) [STATE]" in name
-        mutate(arr_city = gsub(" \\(US\\).*", "", arr_city))
-    
-    
-    # Aggregate to source (country, Chinese province, or US State, for now)
-    
-    
-    
-    # make aggregate source variable, and get mean across 3 years 
-    dest_data <- dest_data %>%
-        mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
-               t_year = substr(yr_month, 1,4),
-               t_month = as.character(substr(yr_month, 5,6)))    # Get year and month variables
-    
-    
-    
-    
-    # aggregation levels for destination
-    aggr_levels <- factor(c("airport", "city", "metro", "state", "country"), levels=c("airport", "city", "metro", "state", "country"), ordered = TRUE)
-    loc_vars_aggr <- c("arr_airport", "arr_city","arr_metro", "arr_state", "arr_country")[aggr_levels>="airport"]
-    loc_vars_aggr <- loc_vars_aggr[loc_vars_aggr %in% colnames(dest_data)]
-    other_vars_aggr <- c("yr_month", "t_year", "t_month", "dep_loc_aggr", "dep_country")
-    
-    dest_data_aggr <- dest_data %>% group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
-        summarise(travelers = sum(travelers, na.rm = TRUE))
-    rm(dest_data)
-    gc()
-    
-    # Get Monthly means across the 3 year (using geometric means)
-    other_vars_aggr <- c("t_month", "dep_loc_aggr", "dep_country")
-    dest_data_aggr <- dest_data_aggr %>%
-        group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
-        summarise(travelers_sd = sd(travelers),
-                  travelers_mean = exp(mean(log(travelers+1)))-1)
-    
-    dest_data_aggr <- dest_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
-    
-    # Save it
-    write_csv(dest_data_aggr, paste0("data_other/", "complete_oag_aggr.csv"))
-    
-    return(dest_data_aggr)
+  
+  # Re-assign city, state, country from airport codes (cuz OAG sucks and these data have tons of errors)
+  data(airport_data)
+  airport_data <- airport_data %>%
+    filter(type!="closed") %>% 
+    mutate(iso_country = ifelse(iso_country=="XK", "KOS",
+                                countrycode::countrycode(iso_country,
+                                                         origin = "iso2c",
+                                                         destination = "iso3c"))) %>%
+    mutate(state = substr(iso_region, 4,6)) %>%
+    dplyr::select(-c(type, name, continent, gps_code, local_code, coordinates, elevation_ft, ident, iso_region)) %>%
+    filter(!is.na(iata_code))
+  airport_data <- airport_data %>% distinct() %>% 
+    filter(!duplicated(iata_code))
+  
+  
+  ## Fix arrival codes
+  data_travel_all <- left_join(data_travel_all, 
+                               airport_data, by = c("Arr Airport Code"="iata_code"))
+  data_travel_all <- data_travel_all %>%
+    dplyr::select(-c(`Arr City Name`, `Arr State Code`, `Arr Country Code`)) %>%
+    rename(`Arr City Name`=municipality, `Arr State Code`=state, `Arr Country Code`=iso_country)
+  
+  ## Fix Departure codes
+  data_travel_all <- left_join(data_travel_all, 
+                               airport_data, by = c("Dep Airport Code"="iata_code"))
+  data_travel_all <- data_travel_all %>%
+    dplyr::select(-c(`Dep City Name`, `Dep State Code`, `Dep Country Code`)) %>%
+    rename(`Dep City Name`=municipality, `Dep State Code`=state, `Dep Country Code`=iso_country)
+  
+  
+  # data_dups <- data_travel_all %>% group_by(`Arr Airport Code`) %>%
+  #   summarise(unique_cities = length(unique(`Arr City Name`)))
+  # data_dups <- data_travel_all %>% group_by(`Dep Airport Code`) %>%
+  #   summarise(unique_cities = length(unique(`Dep City Name`)))
+  # View(data_travel_all %>% filter(`Arr Airport Code`== "AUS"))
+  
+  
+  data('pop_data', package = 'covidImportation')
+  
+  # Give Chinese airports the provinces
+  data(airport_attribution)
+  
+  # merge with travel data
+  dest_data <- left_join(data_travel_all,
+                         airport_attribution,
+                         by=c("Dep Airport Code"="airport_iata"))
+  rm(data_travel_all)
+  gc()
+  # Adjust travel volume based on attribution
+  dest_data <- dest_data %>%
+    replace_na(list(attribution=1)) %>%
+    mutate(`Total Est. Pax` = `Total Est. Pax` * attribution) %>%
+    dplyr::select(-attribution, pop)
+  
+  
+  # # Get us State codes for departures
+  # airport_data_us <- airport_data %>%
+  #   dplyr::filter(iso_country=="USA")
+  # 
+  dest_data <- dest_data %>%
+    rename(dep_airport = `Dep Airport Code`,
+           dep_state = `Dep State Code`,
+           dep_country = `Dep Country Code`,
+           dep_city = `Dep City Name`,
+           arr_airport = `Arr Airport Code`,
+           arr_city = `Arr City Name`,
+           arr_state = `Arr State Code`,
+           arr_country = `Arr Country Code`,
+           travelers = `Total Est. Pax`,
+           yr_month = `Time Series`,
+           dep_province = Province)
+  
+  
+  # make aggregate source variable, and get mean across 3 years 
+  dest_data <- dest_data %>%
+    mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
+           t_year = substr(yr_month, 1,4),
+           t_month = as.character(substr(yr_month, 5,6)))    # Get year and month variables
+  
+  
+  # aggregation levels for destination
+  aggr_levels <- factor(c("airport", "city", "metro", "state", "country"), levels=c("airport", "city", "metro", "state", "country"), ordered = TRUE)
+  loc_vars_aggr <- c("arr_airport", "arr_city","arr_metro", "arr_state", "arr_country")[aggr_levels>="airport"]
+  loc_vars_aggr <- loc_vars_aggr[loc_vars_aggr %in% colnames(dest_data)]
+  other_vars_aggr <- c("yr_month", "t_year", "t_month", "dep_loc_aggr", "dep_country")
+  
+  dest_data_aggr <- dest_data %>% group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
+    summarise(travelers = sum(travelers, na.rm = TRUE))
+  rm(dest_data)
+  gc()
+  
+  # Get Monthly means across the 3 year (using geometric means)
+  other_vars_aggr <- c("t_month", "dep_loc_aggr", "dep_country")
+  dest_data_aggr <- dest_data_aggr %>%
+    group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
+    summarise(travelers_sd = sd(travelers),
+              travelers_mean = exp(mean(log(travelers+1)))-1)
+  
+  dest_data_aggr <- dest_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
+  
+  # Save it
+  write_csv(dest_data_aggr, paste0("data_other/", "complete_oag_aggr.csv"))
+  
+  return(dest_data_aggr)
 }
 
 dest_data_aggr_orig <- make_aggr_oag_travel()

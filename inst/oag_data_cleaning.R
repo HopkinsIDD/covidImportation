@@ -153,215 +153,215 @@ us_airports <- unique((data_travel_all %>% filter(`Dep Country Code`=="USA" & `A
 
 
 
-
-
-
-data_travel_all <- read_csv(file.path("data", "complete_OAG_data.csv"), na=c(""," ", "NA"),
-                            col_types = list(
-                                `Dep Airport Code` = col_character(),
-                                `Dep City Name` = col_character(),
-                                `Dep State Code` = col_character(),
-                                `Dep Country Code` = col_character(),
-                                `Arr Airport Code` = col_character(),
-                                `Arr City Name` = col_character(),
-                                `Arr State Code` = col_character(),
-                                `Arr Country Code` = col_character(),
-                                `Total Est. Pax` = col_double(),
-                                `Time Series` = col_double()))
-
-cali_data <- data_travel_all %>% filter(`Arr State Code`=="CA")
-write_csv(cali_data, "data/cali_oag_20172019.csv")
-
-
-
-# SAVE INBOUND TO CALIFORNIA ----------------------------------------------
-
-cali_data <- read_csv("data/cali_oag_20172019.csv", na=c(""," ","NA"),
-                      col_types = list(
-                          `Dep Airport Code` = col_character(),
-                          `Dep City Name` = col_character(),
-                          `Dep State Code` = col_character(),
-                          `Dep Country Code` = col_character(),
-                          `Arr Airport Code` = col_character(),
-                          `Arr City Name` = col_character(),
-                          `Arr State Code` = col_character(),
-                          `Arr Country Code` = col_character(),
-                          `Total Est. Pax` = col_double(),
-                          `Time Series` = col_double()))
-
-
-# Give Chinese airports the provinces 
-airport_attribution <- read_csv(file ='data/airport_attribution.csv')
-
-cali_data <- left_join(cali_data, 
-                       airport_attribution %>% mutate(Province = gsub(" Province", "", Province)) %>% 
-                           select(-attribution),
-                       by=c("Dep Airport Code"="airport_iata"))
-
-
-# Get us State codes for departures
-airport_data <- read_csv("data/airport-codes.csv")
-airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
-                                                             countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
-
-airport_data_us <- airport_data %>% filter(iso_country=="USA")
-
-cali_data <- left_join(cali_data,
-                       airport_data_us %>% mutate(state = substr(iso_region, 4,5)) %>%
-                           select(state, iata_code),
-                       by=c("Dep Airport Code"="iata_code"))
-cali_data <- cali_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
-
-
-
-# Aggregate to province (China) or state (US) or country (all others) for source
-cali_data <- cali_data %>% rename(dep_airport = `Dep Airport Code`,
-                                       dep_state = `Dep State Code`,
-                                       dep_country = `Dep Country Code`,
-                                       dep_city = `Dep City Name`,
-                                       arr_airport = `Arr Airport Code`,
-                                       arr_city = `Arr City Name`,
-                                       arr_state = `Arr State Code`,
-                                       arr_country = `Arr Country Code`,
-                                       arr_city = `Arr City Name`,
-                                       travelers = `Total Est. Pax`,
-                                       yr_month = `Time Series`,
-                                       dep_province = Province)
-# Get aggr location
-cali_data_aggr <- cali_data %>%
-    mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
-cali_data_aggr <- cali_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
-    summarise(travelers = sum(travelers, na.rm=TRUE))
-
-# Get Monthly means across the 3 year (will do geometric means)
-cali_data_aggr <- cali_data_aggr %>% 
-    mutate(t_year = substr(yr_month, 1,4), t_month = as.character(substr(yr_month, 5,6)))
-cali_data_aggr <- cali_data_aggr %>%
-    group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, t_month) %>% 
-    summarise(travelers_sd = sd(travelers),
-              travelers_mean = exp(mean(log(travelers+1)))-1)
-
-cali_data_aggr <- cali_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
-
-
-    
-# Save it
-write_csv(cali_data_aggr, "data/cali_oag_20172019_aggr.csv")
-
-
-
-
-
-
-
-# SHENZHEN INBOUND --------------------------------------------------------
-
-
-data_travel_all <- read_csv(file.path("data", "complete_OAG_data.csv"), na=c(""," ", "NA"),
-                            col_types = list(
-                                `Dep Airport Code` = col_character(),
-                                `Dep City Name` = col_character(),
-                                `Dep State Code` = col_character(),
-                                `Dep Country Code` = col_character(),
-                                `Arr Airport Code` = col_character(),
-                                `Arr City Name` = col_character(),
-                                `Arr State Code` = col_character(),
-                                `Arr Country Code` = col_character(),
-                                `Total Est. Pax` = col_double(),
-                                `Time Series` = col_double()))
-
-
-# check all locations
-# china_data <- data_travel_all %>% filter(`Arr Country Code`=="CHN")
-# Guangzhou
-
-
-shenzhen_data <- data_travel_all %>% filter(`Arr Airport Code`=="SZX")
-write_csv(shenzhen_data, "data/shenzhen_oag_20172019.csv")
-
-
-
-# SAVE INBOUND TO shenzhenFORNIA ----------------------------------------------
-
-shenzhen_data <- read_csv("data/shenzhen_oag_20172019.csv", na=c(""," ","NA"),
-                      col_types = list(
-                          `Dep Airport Code` = col_character(),
-                          `Dep City Name` = col_character(),
-                          `Dep State Code` = col_character(),
-                          `Dep Country Code` = col_character(),
-                          `Arr Airport Code` = col_character(),
-                          `Arr City Name` = col_character(),
-                          `Arr State Code` = col_character(),
-                          `Arr Country Code` = col_character(),
-                          `Total Est. Pax` = col_double(),
-                          `Time Series` = col_double()))
-
-
-# Give Chinese airports the provinces 
-airport_attribution <- read_csv(file ='data/airport_attribution.csv')
-
-shenzhen_data <- left_join(shenzhen_data, 
-                       airport_attribution %>% mutate(Province = gsub(" Province", "", Province)) %>% 
-                           select(-attribution),
-                       by=c("Dep Airport Code"="airport_iata"))
-
-
-# Get us State codes for departures
-airport_data <- read_csv("data/airport-codes.csv")
-airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
-                                                             countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
-
-airport_data_us <- airport_data %>% filter(iso_country=="USA")
-
-shenzhen_data <- left_join(shenzhen_data,
-                       airport_data_us %>% mutate(state = substr(iso_region, 4,5)) %>%
-                           select(state, iata_code),
-                       by=c("Dep Airport Code"="iata_code"))
-shenzhen_data <- shenzhen_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
-
-
-
-# Aggregate SOURCE/Departure Location to province (China) or state (US) or country (all others) for source
-shenzhen_data <- shenzhen_data %>% rename(dep_airport = `Dep Airport Code`,
-                                  dep_state = `Dep State Code`,
-                                  dep_country = `Dep Country Code`,
-                                  dep_city = `Dep City Name`,
-                                  arr_airport = `Arr Airport Code`,
-                                  arr_city = `Arr City Name`,
-                                  arr_state = `Arr State Code`,
-                                  arr_country = `Arr Country Code`,
-                                  arr_city = `Arr City Name`,
-                                  travelers = `Total Est. Pax`,
-                                  yr_month = `Time Series`,
-                                  dep_province = Province)
-
-# Get Aggr Departure location
-shenzhen_data_aggr <- shenzhen_data %>%
-    mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
-shenzhen_data_aggr <- shenzhen_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
-    summarise(travelers = sum(travelers, na.rm=TRUE))
-
-
-
-# Get Monthly means across the 3 year (will do geometric means)
-shenzhen_data_aggr <- shenzhen_data_aggr %>% 
-    mutate(t_year = substr(yr_month, 1,4), t_month = as.character(substr(yr_month, 5,6)))
-shenzhen_data_aggr <- shenzhen_data_aggr %>%
-    group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, t_month) %>% 
-    summarise(travelers_sd = sd(travelers),
-              travelers_mean = exp(mean(log(travelers+1)))-1)
-
-shenzhen_data_aggr <- shenzhen_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
-
-
-
-# Save it
-write_csv(shenzhen_data_aggr, "data/shenzhen_oag_20172019_aggr.csv")
-
-
-
-
-
+# 
+# 
+# 
+# data_travel_all <- read_csv(file.path("data", "complete_OAG_data.csv"), na=c(""," ", "NA"),
+#                             col_types = list(
+#                                 `Dep Airport Code` = col_character(),
+#                                 `Dep City Name` = col_character(),
+#                                 `Dep State Code` = col_character(),
+#                                 `Dep Country Code` = col_character(),
+#                                 `Arr Airport Code` = col_character(),
+#                                 `Arr City Name` = col_character(),
+#                                 `Arr State Code` = col_character(),
+#                                 `Arr Country Code` = col_character(),
+#                                 `Total Est. Pax` = col_double(),
+#                                 `Time Series` = col_double()))
+# 
+# cali_data <- data_travel_all %>% filter(`Arr State Code`=="CA")
+# write_csv(cali_data, "data/cali_oag_20172019.csv")
+# 
+# 
+# 
+# # SAVE INBOUND TO CALIFORNIA ----------------------------------------------
+# 
+# cali_data <- read_csv("data/cali_oag_20172019.csv", na=c(""," ","NA"),
+#                       col_types = list(
+#                           `Dep Airport Code` = col_character(),
+#                           `Dep City Name` = col_character(),
+#                           `Dep State Code` = col_character(),
+#                           `Dep Country Code` = col_character(),
+#                           `Arr Airport Code` = col_character(),
+#                           `Arr City Name` = col_character(),
+#                           `Arr State Code` = col_character(),
+#                           `Arr Country Code` = col_character(),
+#                           `Total Est. Pax` = col_double(),
+#                           `Time Series` = col_double()))
+# 
+# 
+# # Give Chinese airports the provinces 
+# airport_attribution <- read_csv(file ='data/airport_attribution.csv')
+# 
+# cali_data <- left_join(cali_data, 
+#                        airport_attribution %>% mutate(Province = gsub(" Province", "", Province)) %>% 
+#                            select(-attribution),
+#                        by=c("Dep Airport Code"="airport_iata"))
+# 
+# 
+# # Get us State codes for departures
+# airport_data <- read_csv("data/airport-codes.csv")
+# airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
+#                                                              countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
+# 
+# airport_data_us <- airport_data %>% filter(iso_country=="USA")
+# 
+# cali_data <- left_join(cali_data,
+#                        airport_data_us %>% mutate(state = substr(iso_region, 4,5)) %>%
+#                            select(state, iata_code),
+#                        by=c("Dep Airport Code"="iata_code"))
+# cali_data <- cali_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
+# 
+# 
+# 
+# # Aggregate to province (China) or state (US) or country (all others) for source
+# cali_data <- cali_data %>% rename(dep_airport = `Dep Airport Code`,
+#                                        dep_state = `Dep State Code`,
+#                                        dep_country = `Dep Country Code`,
+#                                        dep_city = `Dep City Name`,
+#                                        arr_airport = `Arr Airport Code`,
+#                                        arr_city = `Arr City Name`,
+#                                        arr_state = `Arr State Code`,
+#                                        arr_country = `Arr Country Code`,
+#                                        arr_city = `Arr City Name`,
+#                                        travelers = `Total Est. Pax`,
+#                                        yr_month = `Time Series`,
+#                                        dep_province = Province)
+# # Get aggr location
+# cali_data_aggr <- cali_data %>%
+#     mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
+# cali_data_aggr <- cali_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
+#     summarise(travelers = sum(travelers, na.rm=TRUE))
+# 
+# # Get Monthly means across the 3 year (will do geometric means)
+# cali_data_aggr <- cali_data_aggr %>% 
+#     mutate(t_year = substr(yr_month, 1,4), t_month = as.character(substr(yr_month, 5,6)))
+# cali_data_aggr <- cali_data_aggr %>%
+#     group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, t_month) %>% 
+#     summarise(travelers_sd = sd(travelers),
+#               travelers_mean = exp(mean(log(travelers+1)))-1)
+# 
+# cali_data_aggr <- cali_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
+# 
+# 
+#     
+# # Save it
+# write_csv(cali_data_aggr, "data/cali_oag_20172019_aggr.csv")
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# # SHENZHEN INBOUND --------------------------------------------------------
+# 
+# 
+# data_travel_all <- read_csv(file.path("data", "complete_OAG_data.csv"), na=c(""," ", "NA"),
+#                             col_types = list(
+#                                 `Dep Airport Code` = col_character(),
+#                                 `Dep City Name` = col_character(),
+#                                 `Dep State Code` = col_character(),
+#                                 `Dep Country Code` = col_character(),
+#                                 `Arr Airport Code` = col_character(),
+#                                 `Arr City Name` = col_character(),
+#                                 `Arr State Code` = col_character(),
+#                                 `Arr Country Code` = col_character(),
+#                                 `Total Est. Pax` = col_double(),
+#                                 `Time Series` = col_double()))
+# 
+# 
+# # check all locations
+# # china_data <- data_travel_all %>% filter(`Arr Country Code`=="CHN")
+# # Guangzhou
+# 
+# 
+# shenzhen_data <- data_travel_all %>% filter(`Arr Airport Code`=="SZX")
+# write_csv(shenzhen_data, "data/shenzhen_oag_20172019.csv")
+# 
+# 
+# 
+# # SAVE INBOUND TO shenzhenFORNIA ----------------------------------------------
+# 
+# shenzhen_data <- read_csv("data/shenzhen_oag_20172019.csv", na=c(""," ","NA"),
+#                       col_types = list(
+#                           `Dep Airport Code` = col_character(),
+#                           `Dep City Name` = col_character(),
+#                           `Dep State Code` = col_character(),
+#                           `Dep Country Code` = col_character(),
+#                           `Arr Airport Code` = col_character(),
+#                           `Arr City Name` = col_character(),
+#                           `Arr State Code` = col_character(),
+#                           `Arr Country Code` = col_character(),
+#                           `Total Est. Pax` = col_double(),
+#                           `Time Series` = col_double()))
+# 
+# 
+# # Give Chinese airports the provinces 
+# airport_attribution <- read_csv(file ='data/airport_attribution.csv')
+# 
+# shenzhen_data <- left_join(shenzhen_data, 
+#                        airport_attribution %>% mutate(Province = gsub(" Province", "", Province)) %>% 
+#                            select(-attribution),
+#                        by=c("Dep Airport Code"="airport_iata"))
+# 
+# 
+# # Get us State codes for departures
+# airport_data <- read_csv("data/airport-codes.csv")
+# airport_data <- airport_data %>% mutate(iso_country = ifelse(iso_country=="XK", "KOS",
+#                                                              countrycode::countrycode(iso_country, origin = "iso2c", destination = "iso3c")))
+# 
+# airport_data_us <- airport_data %>% filter(iso_country=="USA")
+# 
+# shenzhen_data <- left_join(shenzhen_data,
+#                        airport_data_us %>% mutate(state = substr(iso_region, 4,5)) %>%
+#                            select(state, iata_code),
+#                        by=c("Dep Airport Code"="iata_code"))
+# shenzhen_data <- shenzhen_data %>% mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state), state, `Dep State Code`))
+# 
+# 
+# 
+# # Aggregate SOURCE/Departure Location to province (China) or state (US) or country (all others) for source
+# shenzhen_data <- shenzhen_data %>% rename(dep_airport = `Dep Airport Code`,
+#                                   dep_state = `Dep State Code`,
+#                                   dep_country = `Dep Country Code`,
+#                                   dep_city = `Dep City Name`,
+#                                   arr_airport = `Arr Airport Code`,
+#                                   arr_city = `Arr City Name`,
+#                                   arr_state = `Arr State Code`,
+#                                   arr_country = `Arr Country Code`,
+#                                   arr_city = `Arr City Name`,
+#                                   travelers = `Total Est. Pax`,
+#                                   yr_month = `Time Series`,
+#                                   dep_province = Province)
+# 
+# # Get Aggr Departure location
+# shenzhen_data_aggr <- shenzhen_data %>%
+#     mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)))
+# shenzhen_data_aggr <- shenzhen_data_aggr %>% group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, yr_month) %>% 
+#     summarise(travelers = sum(travelers, na.rm=TRUE))
+# 
+# 
+# 
+# # Get Monthly means across the 3 year (will do geometric means)
+# shenzhen_data_aggr <- shenzhen_data_aggr %>% 
+#     mutate(t_year = substr(yr_month, 1,4), t_month = as.character(substr(yr_month, 5,6)))
+# shenzhen_data_aggr <- shenzhen_data_aggr %>%
+#     group_by(dep_loc_aggr, dep_country, arr_city, arr_state, arr_country, t_month) %>% 
+#     summarise(travelers_sd = sd(travelers),
+#               travelers_mean = exp(mean(log(travelers+1)))-1)
+# 
+# shenzhen_data_aggr <- shenzhen_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
+# 
+# 
+# 
+# # Save it
+# write_csv(shenzhen_data_aggr, "data/shenzhen_oag_20172019_aggr.csv")
+# 
+# 
+# 
+# 
+# 
 
 
 

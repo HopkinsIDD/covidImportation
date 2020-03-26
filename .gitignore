@@ -40,3 +40,26 @@ vignettes/*.pdf
 
 .DS_Store
 *.Rproj
+
+# CDC Travel Data
+data/CDC_travel_data/
+
+# ITA data
+data/Travel_ITA/
+data/travel_reports/
+
+# Case count data
+data/JHUCSSE Total*
+
+# R dev and archive
+/R-in-dev-and-archive/
+
+/IRB/
+
+/output/
+
+/Run_Logs/
+
+/figures/
+
+/data/case_data/JHUCSSE*
