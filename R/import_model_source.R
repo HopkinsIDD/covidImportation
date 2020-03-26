@@ -582,7 +582,7 @@ setup_and_run_importations <- function(dest="UT",
                             param_list$inf_period_nohosp_mean,
                             param_list$inf_period_nohosp_sd)
 
-    t.start <- proc.time() # start timer to measure this
+    #t.start <- proc.time() # start timer to measure this
 
     ## Run the model
     importation_sim <- run_daily_import_model_par(
@@ -609,15 +609,12 @@ setup_and_run_importations <- function(dest="UT",
         cores=cores, save_sims=FALSE)
 
 
-    ## print time required
-    print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
+    # ## print time required
+    # print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
 
     ## get parameters from sims
     if (get_nbinom_params){
-      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim,
-                                            project_name,
-                                            batch,
-                                            version)
+      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim)
       
       return(list(input_data=input_data_cases,
                   #travel_data_monthly=travel_data_monthly_cases,
