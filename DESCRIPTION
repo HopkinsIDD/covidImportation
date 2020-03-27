@@ -25,7 +25,18 @@ Imports:
     abind,
     reshape2,
     arrayhelpers,
-    truncnorm
+    truncnorm,
+    geosphere,
+    ggvoronoi,
+    gpclib,
+    igraph,
+    magrittr,
+    maptools,
+    raster,
+    rgdal,
+    rlist,
+    sf,
+    tidycensus
 License: What license it uses
 Encoding: UTF-8
 LazyData: true

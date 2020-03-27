@@ -171,6 +171,7 @@ library(covidImportation)
 # First run the setup
 
 dest <- "UT"
+dest=c("CA","OR","WA","NV","AZ")
 setup_res <- covidImportation::setup_importations(dest=dest,
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
@@ -197,7 +198,7 @@ setup_res <- covidImportation::setup_importations(dest=dest,
 
 
 sim_res <- covidImportation::run_importations(
-                             n_sim=100,
+                             n_sim=10,
                              cores=5,
                              get_detection_time=FALSE,
                              travel_dispersion=3,

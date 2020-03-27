@@ -769,6 +769,8 @@ setup_importations <- function(dest="UT",
     summarise(travelers = mean(travelers)) %>%
     arrange(desc(travelers))
   
+  
+  
   # Destinations to keep
   dests_keep <- travel_mean$destination[1:min(c(nrow(travel_mean), n_top_dests))]
   travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
@@ -848,6 +850,7 @@ setup_importations <- function(dest="UT",
   # save the data that we will pass to the model
   readr::write_csv(input_data, file.path(output_dir, "input_data.csv"))
   readr::write_csv(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
+  readr::write_csv(travel_mean, file.path(output_dir, "travel_mean.csv"))
   readr::write_csv(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
   
   print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
@@ -1071,6 +1074,7 @@ run_daily_import_model <- function(input_data,
 #'
 #' @return
 #'
+#' @import doParallel
 #' @export
 #' 
 run_importations <- function(n_sim=100,
