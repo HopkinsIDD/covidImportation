@@ -301,11 +301,13 @@ run_daily_import_model_par <- function(n_sim=10000,
 ##' Get negative binomial estimates for each time and destination
 ##'
 ##' @param importation_sim 4D array outputted from the importation model
-##' @param project_name
-##' @param batch
-##' @param version
+##' @param cores number of cores to use in parallel. if not parallel, specify 1.
+##' 
+##' @import doParallel
 ##'
-calc_nb_import_pars <- function(importation_sim){
+##' @export
+##'
+calc_nb_import_pars <- function(importation_sim, cores=4){
 
     # aggregate to just destination
     import_sim_dests <- apply(importation_sim, 2:4, sum, na.rm=TRUE)
@@ -316,13 +318,24 @@ calc_nb_import_pars <- function(importation_sim){
     n_dest <- length(dests)
 
     # Make the blank parameter data.frame
-    import_pars_df <- tidyr::expand_grid(destination=dests, t=t, size=1, mu=0)
+    #import_pars_df <- tidyr::expand_grid(destination=dests, t=t, size=1, mu=0)
 
+    
+    # Set up the cluster for parallelization
+    library(doParallel)
+    print(paste0("Making a cluster of ", cores," for parallelization."))
+    cl <- parallel::makeCluster(cores)
+    doParallel::registerDoParallel(cl)
+    
     # Suppress errors for this loop
     options(show.error.messages = FALSE)
-
-    for (d_ in 1:length(dests)){
-        for (t_ in 1:length(t)){
+    
+    foreach(t_=1:length(t), .export = "fitdistrplus::fitdist",
+                            .combine = rbind) %dopar% {
+        
+        import_pars_df <- data.frame(destination=dests, t=t_, size=1, mu=0)
+                              
+        for (d_ in 1:length(dests)){
 
             pars_ <- tryCatch ( {
                 fitdistrplus::fitdist(import_sim_dests[d_, t_, ], distr="nbinom", method="mle")$estimate
@@ -331,15 +344,18 @@ calc_nb_import_pars <- function(importation_sim){
             error = function(e) {
                 c(1,0)
             })
-            row_ind <- (d_-1)*n_t + t_
-            #import_pars_df_[[t_]] <- data.frame(airport = dests[d_], date=t[t_], size=pars_[1], mu=pars_[2] ))
-            import_pars_df[row_ind, 3:4] <- pars_
+
+            import_pars_df[d_, 3:4] <- pars_
+            
         }
+        import_pars_df
     }
 
     # Un-suppress errors
     options(show.error.messages = TRUE)
-
+    
+    parallel::stopCluster(cl)
+    
 
     # write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
     return(import_pars_df)
@@ -360,6 +376,7 @@ calc_nb_import_pars <- function(importation_sim){
 #' @param end_date Date, last import date
 #' @param n_sim numeric, number of simulations
 #' @param cores numeric, number of cores to run in parallel
+#' @param n_top_dests Number of destinations to include, ranked by volume; default (Inf) is all.
 #' @param get_detection_time logical
 #' @param travel_dispersion numeric
 #' @param allow_travel_variance logical
@@ -392,10 +409,11 @@ setup_and_run_importations <- function(dest="UT",
                                        update_case_data=TRUE,
                                        case_data_dir = "data/case_data",
                                        check_saved_data=TRUE,
-                                       save_data=TRUE,
+                                       save_case_data=TRUE,
                                        get_travel=TRUE,
                                        n_sim=100,
                                        cores=4,
+                                       n_top_dests=Inf, 
                                        get_detection_time=FALSE,
                                        travel_dispersion=3,
                                        allow_travel_variance=FALSE,
@@ -414,10 +432,10 @@ setup_and_run_importations <- function(dest="UT",
     # dest_type <- match.arg(dest_type)
     # dest_aggr_level <- match.arg(dest_aggr_level)
 
-    ## Create needed directories
-    dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
-    dir.create(file.path("data",project_name), recursive = TRUE, showWarnings = FALSE)
-    dir.create(file.path("figures",project_name), recursive = TRUE, showWarnings = FALSE)
+    # ## Create needed directories
+    # dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
+    # dir.create(file.path("data",project_name), recursive = TRUE, showWarnings = FALSE)
+    # dir.create(file.path("figures",project_name), recursive = TRUE, showWarnings = FALSE)
 
     ## DATA --------------------------------------------------------------------
     ## ~ Incidence data --------------------------------------------------------
@@ -426,7 +444,7 @@ setup_and_run_importations <- function(dest="UT",
                                           update_case_data = update_case_data,
                                           case_data_dir = case_data_dir,
                                           check_saved_data = check_saved_data,
-                                          save_data = save_data)
+                                          save_data = save_case_data)
 
     incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
     jhucsse <- incid_data_list$jhucsse
@@ -459,8 +477,13 @@ setup_and_run_importations <- function(dest="UT",
         group_by(destination, t_month) %>%
         summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
         group_by(destination) %>%
-        summarise(travelers = mean(travelers))
-
+        summarise(travelers = mean(travelers)) %>%
+        arrange(desc(travelers))
+    
+    # Destinations to keep
+    dests_keep <- travel_mean$destination[1:min(c(nrow(travel_mean), n_top_dests))]
+    travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
+    
     ## Travel data
     ##  - Get daily for merging purposes
     travel_data <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
@@ -614,7 +637,7 @@ setup_and_run_importations <- function(dest="UT",
 
     ## get parameters from sims
     if (get_nbinom_params){
-      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim)
+      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim, cores=cores)
 
       return(list(input_data=input_data_cases,
                   #travel_data_monthly=travel_data_monthly_cases,

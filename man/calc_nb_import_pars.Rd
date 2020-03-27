@@ -4,12 +4,12 @@
 \alias{calc_nb_import_pars}
 \title{Get negative binomial estimates for each time and destination}
 \usage{
-calc_nb_import_pars(importation_sim)
+calc_nb_import_pars(importation_sim, cores = 4)
 }
 \arguments{
 \item{importation_sim}{4D array outputted from the importation model}
 
-\item{version}{}
+\item{cores}{number of cores to use in parallel. if not parallel, specify 1.}
 }
 \description{
 Get negative binomial estimates for each time and destination

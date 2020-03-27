@@ -17,10 +17,11 @@ setup_and_run_importations(
   update_case_data = TRUE,
   case_data_dir = "data/case_data",
   check_saved_data = TRUE,
-  save_data = TRUE,
+  save_case_data = TRUE,
   get_travel = TRUE,
   n_sim = 100,
   cores = 4,
+  n_top_dests = Inf,
   get_detection_time = FALSE,
   travel_dispersion = 3,
   allow_travel_variance = FALSE,
@@ -48,6 +49,8 @@ setup_and_run_importations(
 \item{n_sim}{numeric, number of simulations}
 
 \item{cores}{numeric, number of cores to run in parallel}
+
+\item{n_top_dests}{Number of destinations to include, ranked by volume; default (Inf) is all.}
 
 \item{get_detection_time}{logical}
 

@@ -14,7 +14,7 @@ A data frame with 721 rows and 4 variables:
 }
 }
 \usage{
-data(travel-restrictions)
+data(travel_restrictions)
 }
 \description{
 A dataset containing locations and dates of travel restrictions, as well as an

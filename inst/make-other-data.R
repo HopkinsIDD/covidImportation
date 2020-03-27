@@ -181,17 +181,22 @@ make_aggr_oag_travel <- function(){
   data_travel_all <- left_join(data_travel_all, 
                                airport_data, by = c("Arr Airport Code"="iata_code"))
   data_travel_all <- data_travel_all %>%
-    dplyr::select(-c(`Arr City Name`, `Arr State Code`, `Arr Country Code`)) %>%
-    rename(`Arr City Name`=municipality, `Arr State Code`=state, `Arr Country Code`=iso_country)
+    mutate(`Arr City Name`   = ifelse(!is.na(municipality), municipality, `Arr City Name`),
+           `Arr State Code`  = ifelse(!is.na(state), state, `Arr State Code`),
+           `Arr Country Code`= ifelse(!is.na(iso_country), iso_country, `Arr Country Code`)) %>%
+    dplyr::select(-c(municipality, state, iso_country))
   
   ## Fix Departure codes
   data_travel_all <- left_join(data_travel_all, 
                                airport_data, by = c("Dep Airport Code"="iata_code"))
   data_travel_all <- data_travel_all %>%
-    dplyr::select(-c(`Dep City Name`, `Dep State Code`, `Dep Country Code`)) %>%
-    rename(`Dep City Name`=municipality, `Dep State Code`=state, `Dep Country Code`=iso_country)
-  
-  
+    mutate(`Dep City Name`   = ifelse(!is.na(municipality), municipality, `Dep City Name`),
+           `Dep State Code`  = ifelse(!is.na(state), state, `Dep State Code`),
+           `Dep Country Code`= ifelse(!is.na(iso_country), iso_country, `Dep Country Code`)) %>%
+    dplyr::select(-c(municipality, state, iso_country))
+    
+    
+    
   # data_dups <- data_travel_all %>% group_by(`Arr Airport Code`) %>%
   #   summarise(unique_cities = length(unique(`Arr City Name`)))
   # data_dups <- data_travel_all %>% group_by(`Dep Airport Code`) %>%
@@ -257,8 +262,8 @@ make_aggr_oag_travel <- function(){
   other_vars_aggr <- c("t_month", "dep_loc_aggr", "dep_country")
   dest_data_aggr <- dest_data_aggr %>%
     group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
-    summarise(travelers_sd = sd(travelers),
-              travelers_mean = exp(mean(log(travelers+1)))-1)
+    summarise(travelers_sd = sd(travelers, na.rm = TRUE),
+              travelers_mean = exp(mean(log(travelers+1), na.rm = TRUE))-1)
   
   dest_data_aggr <- dest_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
   

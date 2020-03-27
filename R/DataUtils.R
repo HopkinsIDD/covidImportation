@@ -912,8 +912,9 @@ make_daily_travel <- function(travel_data, travel_dispersion=10){
 
     # First sample out the monthly travelers into days
     x <- as.integer(unlist(lapply(X=1:rows_,
-                                  FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x],
-                                                              rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
+                FUN=function(x=X) rmultinom(n = 1, 
+                                            size = travel_data$travelers_month[x],
+                                            prob = rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
 
     # get an indicator for day of the month
     t_day <- unlist(lapply(X=1:rows_, FUN=function(x=X) 1:travel_data$days_month[x]))
