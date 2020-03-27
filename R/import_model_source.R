@@ -1,3 +1,4 @@
+
 ##' Estimate imports base
 ##'
 ##' This is the base model for estimating importations. We will use this within the larger framework
@@ -69,12 +70,12 @@ est_imports_base <- function(input_data,
 ##'
 ##' @param sim_res Vector of importation simulation results
 ##'
-est_import_detect_dates <- function(sim_res){
+est_import_detect_dates <- function(sim_res, time_inftodetect, time_inftotravel){
 
     # Detection of Cases
-    import_dates <- rep(as.Date(this.sim_$t), times=this.sim_$this.sim)
-    detect_sources <- rep(this.sim_$source, times=this.sim_$this.sim)
-    detect_dests <- rep(this.sim_$destination, times=this.sim_$this.sim)
+    import_dates <- rep(as.Date(sim_res$t), times=sim_res$this.sim)
+    detect_sources <- rep(sim_res$source, times=sim_res$this.sim)
+    detect_dests <- rep(sim_res$destination, times=sim_res$this.sim)
 
     # Add detection times to importation dates
     time_dat <- data.frame(time_inftodetect, time_inftotravel) %>%
@@ -140,6 +141,7 @@ run_daily_import_model_par <- function(n_sim=10000,
                                        project_name=NULL, batch=NULL, version=NULL,
                                        print_progress=TRUE,
                                        cores=4, save_sims=FALSE){
+    
     library(doParallel)
     #library(abind)
 
@@ -297,6 +299,12 @@ run_daily_import_model_par <- function(n_sim=10000,
 
 
 
+
+
+
+
+
+
 ##'
 ##' Get negative binomial estimates for each time and destination
 ##'
@@ -330,8 +338,9 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
     # Suppress errors for this loop
     options(show.error.messages = FALSE)
     
-    foreach(t_=1:length(t), .export = "fitdistrplus::fitdist",
-                            .combine = rbind) %dopar% {
+    import_pars_df_all <- foreach(t_=1:length(t), 
+                            .packages = "fitdistrplus",
+                            .combine = "rbind") %dopar% {
         
         import_pars_df <- data.frame(destination=dests, t=t_, size=1, mu=0)
                               
@@ -358,7 +367,7 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
     
 
     # write_csv(import_pars_df, file.path("output",project_name, sprintf("covid_importation_nb_params_%s_batch_v%s.csv", batch, version)))
-    return(import_pars_df)
+    return(import_pars_df_all)
 }
 
 
@@ -397,6 +406,7 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
 #' @return
 #'
 #' @export
+#' 
 setup_and_run_importations <- function(dest="UT",
                                        dest_type=c("state"), #,"city","airport", "country"),
                                        dest_country="USA",
@@ -418,7 +428,6 @@ setup_and_run_importations <- function(dest="UT",
                                        travel_dispersion=3,
                                        allow_travel_variance=FALSE,
                                        print_progress=TRUE,
-                                       get_nbinom_params=TRUE,
                                        param_list=list(incub_mean_log=log(5.89),
                                                        incub_sd_log=log(1.74),
                                                        inf_period_nohosp_mean=15,
@@ -437,8 +446,8 @@ setup_and_run_importations <- function(dest="UT",
     # dir.create(file.path("data",project_name), recursive = TRUE, showWarnings = FALSE)
     # dir.create(file.path("figures",project_name), recursive = TRUE, showWarnings = FALSE)
 
-    ## DATA --------------------------------------------------------------------
-    ## ~ Incidence data --------------------------------------------------------
+    ## DATA
+    ## ~ Incidence data
     incid_data_list <- get_incidence_data(first_date = first_date,
                                           last_date = last_date,
                                           update_case_data = update_case_data,
@@ -449,7 +458,7 @@ setup_and_run_importations <- function(dest="UT",
     incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
     jhucsse <- incid_data_list$jhucsse
 
-    ## ~ Travel Data  ----------------------------------------------------------
+    ## ~ Travel Data
     ## if travel data exists load it, otherwise download it
     if(get_travel) {
         travel_data_monthly <- get_oag_travel(destination=dest,
@@ -528,7 +537,7 @@ setup_and_run_importations <- function(dest="UT",
     # incid_sources[!(incid_sources %in% travel_sources)]
     # incid_sources[!(incid_sources %in% pop_sources)]
 
-    ## ~~ Merge it all ---------------------------------------------------------
+    ## ~~ Merge it all
     input_data <- make_input_data(incid_data, travel_data, pop_data,
                                   shift_incid_days=param_list$shift_incid_days,
                                   dest_aggr_level=dest_aggr_level) %>%
@@ -545,7 +554,7 @@ setup_and_run_importations <- function(dest="UT",
     #           file.path("data", project_name,
     #                     sprintf("input_data_%s_batch_v%s.RData", batch, version)))
 
-    ## ~ Time to detect importations -------------------------------------------
+    ## ~ Time to detect importations
     ## -- If we assume people generally depart at some point during their incubation period,
     ##     or very early in the symptomatic phase,
     ##     we can generate a distribution of time from travel to detection.
@@ -560,14 +569,7 @@ setup_and_run_importations <- function(dest="UT",
     ##  There are reports of travelers taking fever-reducers and a portion dont show fever
     ## We assume this is uniform
     time_inftotravel <- sapply(time_inftodetect, runif, n=1, min=0)
-    time_traveltodetect <- time_inftodetect - time_inftotravel
-
-    ## ~ Travel reductions
-    tr_inf_redux <- rep(0, n_sim)
-
-    ## ~ Origin reporting rate
-    u_origin <- matrix(rep(input_data$p_report_source, n_sim),
-                       nrow=n_sim, byrow = TRUE)
+    #time_traveltodetect <- time_inftodetect - time_inftotravel
 
     ## ~ Travel restrictions
     data("travel_restrictions")
@@ -582,22 +584,30 @@ setup_and_run_importations <- function(dest="UT",
         group_by(source) %>%
         summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
         dplyr::filter(cum_cases>0)
-    input_data_cases <- input_data %>%
+    input_data <- input_data %>%
         dplyr::filter(source %in% source_w_cases$source)
-    travel_data_monthly_cases <- travel_data_monthly %>%
+    travel_data_monthly <- travel_data_monthly %>%
         dplyr::filter(source %in% source_w_cases$source)
 
+    
+    ## ~ Travel reductions
+    tr_inf_redux <- rep(0, n_sim)
+    
+    ## ~ Origin reporting rate
+    u_origin <- matrix(rep(input_data$p_report_source, n_sim),
+                       nrow=n_sim, byrow = TRUE)
+    
     ## SAVE ALL THE DATA NEEDED
     # dir.create(file.path("data", project_name))
-    # write_csv(input_data_cases, file.path("data", project_name, "input_data_cases.csv"))
-    # write_csv(travel_data_monthly_cases, file.path("data", project_name, "travel_data_monthly.csv"))
+    # write_csv(input_data, file.path("data", project_name, "input_data.csv"))
+    # write_csv(travel_data_monthly, file.path("data", project_name, "travel_data_monthly.csv"))
 
     ## The "meanD_mat" here is the distribution of time during which an infected individual could
     ##   potentially travel from a source to a sink/destination. This distribution includes the time
     ##   from infection to isolation/quarantine for detected cases (typically hospitalized/reported),
     ##   travel restriction or a decision not to travel, or for cases with asymptomatic or very mild illness, until recovery.
     ##   This value is drawn from a combination of the other distributions show here.
-    meanD_mat <- make_meanD(input_data_cases, n_sim,
+    meanD_mat <- make_meanD(input_data, n_sim,
                             param_list$incub_mean_log,
                             param_list$incub_sd_log,
                             param_list$inf_period_hosp_shape,
@@ -610,7 +620,7 @@ setup_and_run_importations <- function(dest="UT",
     ## Run the model
     importation_sim <- run_daily_import_model_par(
         n_sim=n_sim,
-        input_data = input_data_cases,
+        input_data = input_data,
         travel_data_monthly = travel_data_monthly,
         travel_dispersion=travel_dispersion,
         travel_restrictions=travel_restrictions,
@@ -635,20 +645,506 @@ setup_and_run_importations <- function(dest="UT",
     # ## print time required
     # print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
 
-    ## get parameters from sims
-    if (get_nbinom_params){
-      import_pars_df <- calc_nb_import_pars(importation_sim$importation_sim, cores=cores)
-
       return(list(input_data=input_data_cases,
-                  #travel_data_monthly=travel_data_monthly_cases,
-                  importation_sims=importation_sim,
-                  nb_params=import_pars_df,
-                  airport_monthly_mean_travelers=travel_mean))
-    } else {
-
-      return(list(input_data=input_data_cases,
-                  #travel_data_monthly=travel_data_monthly_cases,
+                  #travel_data_monthly=travel_data_monthly,
                   importation_sims=importation_sim,
                   airport_monthly_mean_travelers=travel_mean))
-    }
+    
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+#' Set up importation sims
+#'
+#' @param dest character string, name of destination to simulate importations for
+#' @param dest_type character string, options: "airport", "city", "state", "country"
+#' @param dest_0 optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
+#' @param dest_0_type optional character string, must specify if specifying a `dest_0` option; default=NULL
+#' @param dest_aggr_level character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
+#' @param project_name character string
+#' @param version character string
+#' @param batch character string
+#' @param end_date Date, last import date
+#' @param n_sim numeric, number of simulations
+#' @param cores numeric, number of cores to run in parallel
+#' @param n_top_dests Number of destinations to include, ranked by volume; default (Inf) is all.
+#' @param get_detection_time logical
+#' @param travel_dispersion numeric
+#' @param allow_travel_variance logical
+#' @param print_progress logical
+#' @param param_list list, with the following elements
+#' \itemize{
+#'   \item \code{incub_mean_log} numeric, the mean_log parameter for the lnorm distribution for the incubation period
+#'   \item \code{incub_sd_log} numeric, the sd_log parameter for the lnorm distribution for the incubation period
+#'   \item \code{inf_period_nohosp_mean} numeric, the mean parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
+#'   \item \code{inf_period_nohosp_sd} numeric, the sd parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
+#'   \item \code{inf_period_hosp_shape} numeric, the shape parameter of a Gamma distribution for the infectious period for time to hospitalization
+#'   \item \code{inf_period_hosp_scale} numeric, the scale parameter of a Gamma distribution for the infectious period for time to hospitalization
+#'   \item \code{p_report_source} numeric vector of length 2, currently the probability of reporting by source with the first indicating Hubei reporting and second indicating everywhere else (UPDATE WITH THESE https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html)
+#'   \item \code{shift_incid_days} lag from infection to report
+#'   \item \code{delta} days per time period
+#' }
+#'
+#' @return
+#'
+#' @export
+#' 
+setup_importations <- function(dest="UT",
+                                       dest_type=c("state"), #,"city","airport", "country"),
+                                       dest_country="USA",
+                                       dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+                                       first_date = ISOdate(2019,12,1),
+                                       last_date = Sys.time(),
+                                       update_case_data=TRUE,
+                                       case_data_dir = "data/case_data",
+                                       output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                                       check_saved_data=TRUE,
+                                       save_case_data=TRUE,
+                                       get_travel=TRUE,
+                                       n_top_dests=Inf, 
+                                       travel_dispersion=3,
+                                       param_list=list(incub_mean_log=log(5.89),
+                                                       incub_sd_log=log(1.74),
+                                                       inf_period_nohosp_mean=15,
+                                                       inf_period_nohosp_sd=5,
+                                                       inf_period_hosp_shape=0.75,
+                                                       inf_period_hosp_scale=5.367,
+                                                       p_report_source=c(0.05, 0.25),
+                                                       shift_incid_days=-10,
+                                                       delta=1)){
+
+  ## Create needed directories
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  ## DATA
+  ## ~ Incidence data
+  incid_data_list <- get_incidence_data(first_date = first_date,
+                                        last_date = last_date,
+                                        update_case_data = update_case_data,
+                                        case_data_dir = case_data_dir,
+                                        check_saved_data = check_saved_data,
+                                        save_data = save_case_data)
+  
+  incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
+  jhucsse <- incid_data_list$jhucsse
+  
+  ## ~ Travel Data
+  ## if travel data exists load it, otherwise download it
+  if(get_travel) {
+    travel_data_monthly <- get_oag_travel(destination=dest,
+                                          destination_type=dest_type,
+                                          dest_country=dest_country,
+                                          dest_aggr_level=dest_aggr_level) %>% as.data.frame()
+    travel_data_monthly <- travel_data_monthly %>%
+      mutate(t_year=2020) %>%
+      rename(source = dep_loc_aggr)
+    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
+  } else{
+    travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
+                                  dest_aggr_level, "_oag_20172019.csv") %>%
+      read_csv(na=c(""," ","NA"))%>%
+      mutate(t_year=2020) %>%
+      mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
+                              # Increase travel for Chinese New Year
+                              travelers*1.6, travelers)) %>%
+      rename(source = dep_loc_aggr)
+    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
+  }
+  
+  ## monthly average totals into destinations
+  travel_mean <- travel_data_monthly %>%
+    group_by(destination, t_month) %>%
+    summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
+    group_by(destination) %>%
+    summarise(travelers = mean(travelers)) %>%
+    arrange(desc(travelers))
+  
+  # Destinations to keep
+  dests_keep <- travel_mean$destination[1:min(c(nrow(travel_mean), n_top_dests))]
+  travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
+  
+  ## Travel data
+  ##  - Get daily for merging purposes
+  travel_data_daily <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
+  
+  ## ~ Population Data
+  data(pop_data, package="covidImportation")
+  
+  ## ~~ First Check that the variables match up
+  # Check that incidence data does not have duplicates
+  incid_dups <- sum(incid_data %>%
+                      mutate(source_t = paste(source, t)) %>%
+                      mutate(dup_entry=duplicated(source_t)) %>%
+                      pull(dup_entry))
+  if(sum(incid_dups)>0){
+    dup_entry <- incid_data %>%
+      mutate(source_t = paste(source, t)) %>%
+      mutate(dup_entry=duplicated(source_t)) %>%
+      dplyr::filter(dup_entry) %>% pull(source_t)
+    warning("There are duplicate entries in the incidence data.")
+  }
+  ## Check travel data
+  travel_dups <- travel_data_daily %>%
+    mutate(source_dest_t = paste(source, destination, t),
+           dup_entry=duplicated(source_dest_t)) %>%
+    pull(dup_entry) %>%
+    sum()
+  if(sum(travel_dups)>0){
+    warning("There are duplicate entries in the travel data.")
+  }
+  ## Check Population data
+  pop_dups <- pop_data %>%
+    mutate(dup_entry=duplicated(source)) %>%
+    pull(dup_entry) %>%
+    sum()
+  if(sum(pop_dups)>0){
+    warning("There are duplicate entries in the population data.")
+  }
+  # we really just need to make sure there are travel data and pop data for all source locations with incidence
+  # incid_sources <- sort(unique(incid_data$source))
+  # travel_sources <- sort(unique(travel_data_daily$source))
+  # pop_sources <- sort(unique(pop_data$source))
+  # incid_sources[!(incid_sources %in% travel_sources)]
+  # incid_sources[!(incid_sources %in% pop_sources)]
+  
+  ## ~~ Merge it all
+  input_data <- make_input_data(incid_data, travel_data_daily, pop_data,
+                                shift_incid_days=param_list$shift_incid_days,
+                                dest_aggr_level=dest_aggr_level) %>%
+    mutate(p_report_source=ifelse(source=="Hubei",
+                                  param_list$p_report_source[1],
+                                  param_list$p_report_source[2]),
+           # For first pass, reporting rate is just Hubei/not Hubei
+           days_per_t=param_list$delta # ~ delta: days per time period
+    ) %>%
+    dplyr::filter(t<=as.Date(last_date)) %>%
+    mutate(source = as.character(source),
+           destination = as.character(destination))
+  
+  ## Filter to sources with cases -- to speed it up
+  source_w_cases <- input_data %>%
+    dplyr::filter(!duplicated(paste0(source, t))) %>%
+    group_by(source) %>%
+    summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
+    dplyr::filter(cum_cases>0)
+  input_data <- input_data %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  travel_data_monthly <- travel_data_monthly %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  travel_data_daily <- travel_data_daily %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  
+  
+  # save the data that we will pass to the model
+  readr::write_csv(input_data, file.path(output_dir, "input_data.csv"))
+  readr::write_csv(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
+  readr::write_csv(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
+  
+  print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
+}
+  
+  
+
+
+
+
+
+
+
+
+
+##'
+##' Run the full simulation of daily importations
+##'
+##' @param n_sim number of simulations to run
+##' @param input_data full importation input data, including case, travel, and population data
+##' @param travel_data_monthly monthly travel data between sources and destinations
+##' @param travel_dispersion how evenly the monthly travel should be distributed across days
+##' @param travel_restrictions data.frame of travel restrictions
+##' @param allow_travel_variance whether to sample from the travel variance
+##' @param meanD_mat matrix of mean duration during which infected individuals can travel
+##' @param tr_inf_redux proportion reduction in travel when individuals are infected
+##' @param u_origin reporting rate, origin
+##' @param get_detection_time logical; return importation detection or not
+##' @param time_inftodetect Time from infection to detection
+##' @param incub_mean_log log mean incubation period
+##' @param incub_sd_log log sd of incubation period
+##' @param inf_period_hosp_shape infectious period of hospitalized, shape
+##' @param inf_period_hosp_scale infectious period of hospitalized, scale
+##' @param inf_period_nohosp_mean infectious period of non-hospitalized, shape
+##' @param inf_period_nohosp_sd infectious period of non-hospitalized, scale
+##' @param project_name project name, if saving in the function
+##' @param batch run batch, if saving in the function
+##' @param version run version, if saving in the function
+##' @param print_progress logical, whether to print the progress of the simulations
+##' @param cores number of cores for parallel processing
+##' @param time_inftotravel time from infection to traveling
+##'
+##' @return list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
+##'
+##' @import doParallel
+##'
+##' @export
+##'
+run_daily_import_model <- function(input_data,
+                                   travel_data_monthly,
+                                   travel_data_daily,
+                                   travel_dispersion=3,
+                                   travel_restrictions=NULL,
+                                   allow_travel_variance=FALSE,
+                                   tr_inf_redux=0,
+                                   get_detection_time=FALSE,
+                                   param_list=list(incub_mean_log=log(5.89),
+                                                   incub_sd_log=log(1.74),
+                                                   inf_period_nohosp_mean=15,
+                                                   inf_period_nohosp_sd=5,
+                                                   inf_period_hosp_shape=0.75,
+                                                   inf_period_hosp_scale=5.367)
+                                   ){
+  
+  # start the timer
+  t.start <- proc.time()
+  
+  ## ~ Origin reporting rate
+  u_origin <- matrix(rep(input_data$p_report_source, 1),
+                     nrow=1, byrow = TRUE)
+  
+  ## The "meanD_mat" here is the distribution of time during which an infected individual could
+  ##   potentially travel from a source to a sink/destination. This distribution includes the time
+  ##   from infection to isolation/quarantine for detected cases (typically hospitalized/reported),
+  ##   travel restriction or a decision not to travel, or for cases with asymptomatic or very mild illness, until recovery.
+  ##   This value is drawn from a combination of the other distributions show here.
+  meanD_mat <- covidImportation:::make_meanD(input_data, 1,
+                                             param_list$incub_mean_log,
+                                             param_list$incub_sd_log,
+                                             param_list$inf_period_hosp_shape,
+                                             param_list$inf_period_hosp_scale,
+                                             param_list$inf_period_nohosp_mean,
+                                             param_list$inf_period_nohosp_sd)
+  
+  
+  # Make travel restrictions into long, expanded format for easy merging
+  if(is.null(travel_restrictions)){
+    data("travel_restrictions")
+  }
+  travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
+
+  sources_ <- sort(unique(input_data$source))
+  dests_ <- sort(unique(input_data$destination))
+  t_ <- sort(unique(input_data$t))
+  t_detect_ <- seq(as.Date(min(t_)), as.Date(max(t_))+30, by="days") # this might need to increased past 15 days, not sure
+  
+  # Sims in longform
+  sim <- input_data %>% dplyr::select(source, destination, t) %>% data.table::as.data.table()
+  
+
+  # Simulate the daily travel from monthly
+  travel_data_daily <- make_daily_travel_faster(travel_data=travel_data_monthly,
+                                                travel_data_daily=travel_data_daily,
+                                                travel_dispersion=travel_dispersion)
+  
+  # Apply travel restrictions
+  travel_data_daily <- apply_travel_restrictions(travel_data=travel_data_daily, 
+                                                 travel_restrictions_long=travel_restrictions_long)
+  
+  # Join sampled travel data back into input data
+  input_data_sim <- input_data %>%
+    dplyr::select(-travelers) %>%
+    left_join(travel_data_daily %>%
+                dplyr::select(source,destination,t,travelers),
+              by=c("source", "destination", "t"))
+  
+  # Run base model to estimate the number of importations during this simulation
+  this.sim <- est_imports_base(input_data = input_data_sim,
+                               tr_inf_redux = tr_inf_redux,
+                               meanD = meanD_mat,
+                               u_origin = u_origin,
+                               allow_travel_variance=allow_travel_variance)
+  
+  ## Estimate dates of importation and detection of the simulated importations
+  importation_sim <- data.frame(sim, this.sim)
+
+  
+  # Now lets get detections ........................................
+  
+  # If we want detected time of the importations, we generate a 4D array of that here
+  if (get_detection_time){
+    
+    ## ~ Time to detect importations
+    ## -- If we assume people generally depart at some point during their incubation period,
+    ##     or very early in the symptomatic phase,
+    ##     we can generate a distribution of time from travel to detection.
+    ## -- because we are only worried about those who are detected, we can ignore time to recover
+    time_inftodetect <- rlnorm(10000, mean = param_list$incub_mean_log,
+                               sd = param_list$incub_sd_log) +
+      rgamma(10000, shape=param_list$inf_period_hosp_shape,
+             scale=param_list$inf_period_hosp_scale)
+    
+    ## We assume people can and do travel during their incubation period and
+    ##  during that period during which symptoms are still minor.
+    ##  There are reports of travelers taking fever-reducers and a portion dont show fever
+    ## We assume this is uniform
+    time_inftotravel <- sapply(time_inftodetect, runif, n=1, min=0)
+    #time_traveltodetect <- time_inftodetect - time_inftotravel
+    
+    
+    # - if no importations, skip to next
+    if (sum(this.sim) == 0 ){
+      importation_detect <- NULL
+    } else{  
+    
+      import_dates_ <- est_import_detect_dates(importation_sim, time_inftodetect, time_inftotravel)
+      
+      importation_detect <- data.frame(source=import_dates_$detect_sources,
+                        destination=import_dates_$detect_dests,
+                        t = as.character(as.Date(import_dates_$detect_dates))) %>%
+        group_by(source, destination, t) %>% summarise(this.sim = n())
+    }
+    
+    return(list(importation_sim=importation_sim,
+                importation_detect=importation_detect))
+    
+  } else {
+    
+    return(importation_sim)
+  }
+    
+  # # Save Sims
+  # if (save_sims){
+  #   dir.create(file.path("output",project_name), recursive = TRUE, showWarnings = FALSE)
+  #   write_csv(importation_sim, file = file.path("output",project_name, sprintf("covid_importation_sim_%s_batch_v%s.RData", batch, version)))
+  #   if (get_detection_time){
+  #     save(importation_detect, file = file.path("output",project_name, sprintf("covid_importation_detect_%s_batch_v%s.RData", batch, version)))
+  #   }
+  # }
+  # print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
+
+}
+
+
+
+
+
+
+
+
+#' Run importation sims
+#'
+#' @param dest character string, name of destination to simulate importations for
+#' @param dest_type character string, options: "airport", "city", "state", "country"
+#' @param dest_0 optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
+#' @param dest_0_type optional character string, must specify if specifying a `dest_0` option; default=NULL
+#' @param dest_aggr_level character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
+#' @param project_name character string
+#' @param version character string
+#' @param batch character string
+#' @param end_date Date, last import date
+#' @param n_sim numeric, number of simulations
+#' @param cores numeric, number of cores to run in parallel
+#' @param n_top_dests Number of destinations to include, ranked by volume; default (Inf) is all.
+#' @param get_detection_time logical
+#' @param travel_dispersion numeric
+#' @param allow_travel_variance logical
+#' @param print_progress logical
+#' @param param_list list, with the following elements
+#' \itemize{
+#'   \item \code{incub_mean_log} numeric, the mean_log parameter for the lnorm distribution for the incubation period
+#'   \item \code{incub_sd_log} numeric, the sd_log parameter for the lnorm distribution for the incubation period
+#'   \item \code{inf_period_nohosp_mean} numeric, the mean parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
+#'   \item \code{inf_period_nohosp_sd} numeric, the sd parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
+#'   \item \code{inf_period_hosp_shape} numeric, the shape parameter of a Gamma distribution for the infectious period for time to hospitalization
+#'   \item \code{inf_period_hosp_scale} numeric, the scale parameter of a Gamma distribution for the infectious period for time to hospitalization
+#'   \item \code{p_report_source} numeric vector of length 2, currently the probability of reporting by source with the first indicating Hubei reporting and second indicating everywhere else (UPDATE WITH THESE https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html)
+#'   \item \code{shift_incid_days} lag from infection to report
+#'   \item \code{delta} days per time period
+#' }
+#'
+#' @return
+#'
+#' @export
+#' 
+run_importations <- function(n_sim=100,
+                             cores=5,
+                             get_detection_time=FALSE,
+                             travel_dispersion=3,
+                             allow_travel_variance=FALSE,
+                             print_progress=TRUE,
+                             output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                             param_list=list(incub_mean_log=log(5.89),
+                                             incub_sd_log=log(1.74),
+                                             inf_period_nohosp_mean=15,
+                                             inf_period_nohosp_sd=5,
+                                             inf_period_hosp_shape=0.75,
+                                             inf_period_hosp_scale=5.367,
+                                             p_report_source=c(0.05, 0.25))){
+  
+  t.start <- proc.time() # start timer to measure this
+  
+  # Read the saved setup data that we will pass to the model
+  input_data <- readr::read_csv(file.path(output_dir, "input_data.csv"))
+  travel_data_monthly <- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
+  travel_data_daily <- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
+  
+  ## ~ Travel restrictions
+  data("travel_restrictions")
+
+  # Set up the cluster for parallelization
+  print(paste0("Making a cluster of ", cores," for parallelization."))
+  cl <- parallel::makeCluster(cores)
+  doParallel::registerDoParallel(cl)
+  
+  # Run the foreach loop to estimate importations for n simulations
+  foreach(n=1:n_sim,
+          .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base", "run_daily_import_model"),
+          .packages=c("dplyr","tidyr")) %dopar% {
+            
+            if (print_progress){
+              if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
+            }
+            
+            import_est_run <- run_daily_import_model(input_data,
+                                                     travel_data_monthly,
+                                                     travel_data_daily,
+                                                     travel_dispersion=travel_dispersion,
+                                                     travel_restrictions=travel_restrictions,
+                                                     allow_travel_variance=FALSE,
+                                                     tr_inf_redux=0,
+                                                     get_detection_time=FALSE,
+                                                     param_list=list(incub_mean_log=log(5.89),
+                                                                     incub_sd_log=log(1.74),
+                                                                     inf_period_nohosp_mean=15,
+                                                                     inf_period_nohosp_sd=5,
+                                                                     inf_period_hosp_shape=0.75,
+                                                                     inf_period_hosp_scale=5.367))
+            
+            if(get_detection_time){
+              readr::write_csv(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
+              readr::write_csv(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
+            } else {
+              readr::write_csv(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
+            }
+          }
+    
+    parallel::stopCluster(cl)
+  
+    ## print time required
+    print(paste0('Simulation required ', round(as.list(proc.time() - t.start)$elapsed/60, 3), ' minutes'))
+    
+}
+
+
+
+
+
+
+

@@ -4,7 +4,7 @@
 \alias{est_import_detect_dates}
 \title{Estimate the detection dates of importations}
 \usage{
-est_import_detect_dates(sim_res)
+est_import_detect_dates(sim_res, time_inftodetect, time_inftotravel)
 }
 \arguments{
 \item{sim_res}{Vector of importation simulation results}
