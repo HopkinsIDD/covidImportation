@@ -1,6 +1,23 @@
-## Change importation model parameters so that they match the airport attribution clusters
 
-imports_airport_clustering <- function(imports_sim, airport_attribution, regioncode, local_dir="data/") {
+##' 
+##' Change importation model parameters so that they match the airport attribution clusters
+##' 
+##' @title imports_airport_clustering 
+##'
+##' @param imports_sim single simulation result from importation model
+##' @param airport_attribution Airport attribution data.frame
+##' @param regioncode Region/project name
+##' @param local_dir local data directory
+##'
+##' @return A data.frame of clustered airports, dates, and nmber of importations
+##' 
+##' @export
+##'
+imports_airport_clustering <- function(imports_sim, 
+                                       airport_attribution, 
+                                       regioncode, 
+                                       local_dir="data/") {
+  
   air_cl <- airport_attribution # read_csv(paste0("data/", regioncode, "/airport_attribution_", yr, ".csv"))
   
   imports_sim_orig <- imports_sim %>% rename(airport = destination, date=t, imports=this.sim) # read_csv(paste0("data/", regioncode, "/import_nb_params_nocluster.csv"))
@@ -12,14 +29,12 @@ imports_airport_clustering <- function(imports_sim, airport_attribution, regionc
       unlist(strsplit(cl_names[i], "_"))
   })
 
-
   imports_cluster <- purrr::map_dfr(1:length(cl_names_ls), function(i){
     imports_sim_orig %>%
       dplyr::filter(airport %in% cl_names_ls[[i]]) %>%
       dplyr::group_by(date) %>%
       dplyr::summarise(airport = paste(airport, collapse = "_"), imports = sum(imports)) 
   })
-  
   
   imports_sim_tot <- imports_sim_orig %>% 
       dplyr::filter(!(airport %in% unlist(purrr::flatten(cl_names_ls)))) %>%

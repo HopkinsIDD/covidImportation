@@ -1,7 +1,19 @@
 
-
-
-
+##'
+##' Distribute importations into airports out to counties
+##' 
+##' @title distrib_county_imports 
+##'
+##' @param import_sims_clusters number of simulations to run
+##' @param airport_attribution Airport attribution data.frame
+##' @param local_dir local data directory
+##' @param regioncode Region/project name
+##' @param yr Year of county population data
+##'
+##' @return A data.frame of counties, dates, and nmber of importations
+##' 
+##' @export
+##'
 distrib_county_imports <- function(import_sims_clusters,
                                    airport_attribution,
                                    local_dir, 
