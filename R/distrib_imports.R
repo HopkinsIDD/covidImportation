@@ -1,6 +1,6 @@
 
 
-# # # Settings -----------------------------------------------------------------
+# # # Settings
 # states_of_interest <- sort(c("CA","NV","WA","OR","AZ"))
 # regions_of_interest <- paste("US", states_of_interest, sep = "-")
 # year <- "2010"
@@ -33,8 +33,11 @@ airport_estimation <- function(
     plot=FALSE) {
   
   states_of_interest <- sort(states_of_interest)
-  county_pops_shp_path <- get_county_pops(states_of_interest, regioncode, yr, local_dir=local_dir)
-  airports_to_consider <- get_airports_to_consider(airport_monthly_mean_travelers_csv_file, states_of_interest, travelers_threshold)
+  county_pops_shp_path <- get_county_pops(states_of_interest, 
+                                          regioncode, yr, 
+                                          local_dir=local_dir)
+  airports_to_consider <- get_airports_to_consider(airport_monthly_mean_travelers_csv_file, 
+                                                   states_of_interest, travelers_threshold)
   airport_attribution <- do_airport_attribution(airports_to_consider,
                                                 airport_cluster_threshold,
                                                 shapefile_path,
@@ -43,7 +46,10 @@ airport_estimation <- function(
                                                 local_dir=local_dir,
                                                 plot=plot)
   
-  import_sims_clusters <- imports_airport_clustering(imports_sim, airport_attribution, regioncode, local_dir=local_dir)
+  import_sims_clusters <- imports_airport_clustering(imports_sim, 
+                                                     airport_attribution, 
+                                                     regioncode, 
+                                                     local_dir=local_dir)
   
   county_imports <- distrib_county_imports(import_sims_clusters,
                                      airport_attribution,

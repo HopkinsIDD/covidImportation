@@ -1,6 +1,5 @@
 
 
-# SETUP -------------------------------------------------------------------
 
 #gpclibPermit()         # Seems wacky, shouldn't require this.
 # The map projection may not adjusted correctly but the error is minor.
@@ -26,13 +25,22 @@
 
 
 
-
-
-# DATA --------------------------------------------------------------------
-
+##' 
+##' Query the census API to get the county populations for the states of interest, assigned
+##'  to the given region code.
+##'  
+##' 
+##' @title get_airports_to_consider 
+##'
+##' @param airport_monthly_mean_travelers_csv_file Filename of airport monthly mean travelers
+##' @param states_of_interest States for which to get county populations
+##' @param travelers_threshold Minimum monthly average travel volume to be included
+##'
+##' @return A data.frame of clustered airports, dates, and nmber of importations
+##'
 get_airports_to_consider <- function(airport_monthly_mean_travelers_csv_file, 
                                      states_of_interest, 
-                                     travelers_threshold) {
+                                     travelers_threshold=10000) {
     # Airport data
     data("airport_data")
     
@@ -56,9 +64,30 @@ get_airports_to_consider <- function(airport_monthly_mean_travelers_csv_file,
 
 
 
-# Cluster Airports in close proximity -------------------------
 
-do_airport_attribution <- function(airports_to_consider, airport_cluster_threshold, shapefile_path, regioncode, yr=2010, local_dir="data/", plot=FALSE) {
+##' 
+##' Cluster Airports in close proximity
+##'  
+##' 
+##' @title do_airport_attribution 
+##'
+##' @param airports_to_consider data.frame of airports specific to the region of interest
+##' @param airport_cluster_threshold distance in which airports should be considered clustered.
+##' @param shapefile_path file path to shapefile for region
+##' @param regioncode Region/project name
+##' @param yr Year of county population data
+##' @param local_dir local data directory
+##' @param plot logical, whether to plot tesselation maps
+##'
+##' @return A data.frame of airports and counties with attributions
+##'
+do_airport_attribution <- function(airports_to_consider, 
+                                   airport_cluster_threshold=80, 
+                                   shapefile_path = paste0('data/', regioncode, '/shp/','counties_2010_', regioncode, '.shp'), 
+                                   regioncode, 
+                                   yr=2010, 
+                                   local_dir="data/", 
+                                   plot=FALSE) {
 
     ## airport edgelist to start dataframe
     airnet <- igraph::make_full_graph(nrow(airports_to_consider), directed = FALSE, loops = FALSE) %>%
@@ -118,7 +147,7 @@ do_airport_attribution <- function(airports_to_consider, airport_cluster_thresho
     clusters_ls_cl <- rlist::list.remove(clusters_ls_cl, range = remove_indexes)
 
 
-    # Get centroid of airport coordinate clusters -------------------------
+    # Get centroid of airport coordinate clusters
     cluster_ids <- purrr::map_dfr(1:length(clusters_ls_cl), function(i) {
         data.frame(iata_code = clusters_ls_cl[[i]], c_id = i, stringsAsFactors = FALSE)
     })
@@ -137,7 +166,7 @@ do_airport_attribution <- function(airports_to_consider, airport_cluster_thresho
         dplyr::bind_rows(clustered_airports)
 
 
-    # ~ Get Shapefile ---------------------------
+    # ~ Get Shapefile 
     # shape file at adm1 and adm0 level
     loc_map <- rgdal::readOGR(shapefile_path) 
     adm0_loc <- maptools::unionSpatialPolygons(loc_map, loc_map@data$STATEFP)

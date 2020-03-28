@@ -1,10 +1,30 @@
 
-# Query the census API to get the county populations for the states of interest, assigned
-# to the given region code.
-# 
-# Assumes census_api_key is already called by the calling client and
-# that `options(tigris_use_cache = TRUE)`.
-get_county_pops <- function(states_of_interest, regioncode, yr=2010, local_dir="data/") {
+##' 
+##' Query the census API to get the county populations for the states of interest, assigned
+##'  to the given region code.
+##'  
+##' Assumes census_api_key is already called by the calling client with 
+##'  `census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", install=TRUE)``
+##'      and
+##'  `options(tigris_use_cache = TRUE)`  
+##' 
+##' 
+##' @title get_county_pops 
+##'
+##' @param states_of_interest States for which to get county populations
+##' @param regioncode Region/project name
+##' @param yr Year of county population data
+##' @param local_dir local data directory
+##'
+##' @return A data.frame of clustered airports, dates, and nmber of importations
+##' 
+##' @export
+##'
+get_county_pops <- function(states_of_interest, 
+                            regioncode, 
+                            yr=2010, 
+                            local_dir="data/") {
+    
     county_pops <- purrr::map(states_of_interest,
                        ~tidycensus::get_acs(geography = "county",
                                             variables = "B01003_001", ## total population data

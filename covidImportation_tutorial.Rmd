@@ -1,0 +1,129 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This importation package runs a model to estimate importations of SARS-CoV-2 into airports globally. The current package includes data to estimate importations into U.S. airports.
+
+```{r setup}
+
+library(covidImportation)
+
+```
+
+    
+    
+## Setup the data for the importation model.
+    
+```{r}
+
+dest=c("CA","OR","WA","NV","AZ")
+
+setup_res <- covidImportation::setup_importations(dest=dest,
+                               dest_type=c("state"), #,"city","airport", "country"),
+                               dest_country="USA",
+                               dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+                               first_date = ISOdate(2019,12,1),
+                               last_date = Sys.time(),
+                               update_case_data=TRUE,
+                               case_data_dir = "data/case_data",
+                               output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                               check_saved_data=TRUE,
+                               save_case_data=TRUE,
+                               get_travel=TRUE,
+                               n_top_dests=Inf, 
+                               travel_dispersion=3,
+                               param_list=list(incub_mean_log=log(5.89),
+                                               incub_sd_log=log(1.74),
+                                               inf_period_nohosp_mean=15,
+                                               inf_period_nohosp_sd=5,
+                                               inf_period_hosp_shape=0.75,
+                                               inf_period_hosp_scale=5.367,
+                                               p_report_source=c(0.05, 0.25),
+                                               shift_incid_days=-10,
+                                               delta=1))
+
+```
+
+
+## Run the Simulations
+
+```{r}
+
+sim_res <- covidImportation::run_importations(
+                             n_sim=10,
+                             cores=5,
+                             get_detection_time=FALSE,
+                             travel_dispersion=3,
+                             allow_travel_variance=FALSE,
+                             print_progress=TRUE,
+                             output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                             param_list=list(incub_mean_log=log(5.89),
+                                             incub_sd_log=log(1.74),
+                                             inf_period_nohosp_mean=15,
+                                             inf_period_nohosp_sd=5,
+                                             inf_period_hosp_shape=0.75,
+                                             inf_period_hosp_scale=5.367,
+                                             p_report_source=c(0.05, 0.25)))
+
+```
+    
+    
+    
+## Distribute the Simulated Importations into Airports to Counties
+We will just do this for 1 simulation for this example.
+
+```{r}
+
+    states_of_interest=c("CA","NV","WA","OR","AZ")
+    regioncode="west-coast-AZ-NV"
+    yr=2010
+    airport_monthly_mean_travelers_csv_file = file.path("output", 
+                                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
+                                                        "travel_mean.csv")
+    travelers_threshold=10000 ## airports must meet this average number of monthly travelers to be included
+    airport_cluster_threshold=80 # units: km. Airports that are separated by Haversine distance
+    imports_sim = file.path("output", 
+                            paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
+                            "imports_sim1.csv")
+    local_dir="data/"
+    plot=FALSE
+    
+    
+    
+    states_of_interest <- sort(states_of_interest)
+    county_pops_shp_path <- get_county_pops(states_of_interest, 
+                                            regioncode, yr, 
+                                            local_dir=local_dir)
+    airports_to_consider <- get_airports_to_consider(airport_monthly_mean_travelers_csv_file, 
+                                                     states_of_interest, travelers_threshold)
+    airport_attribution <- do_airport_attribution(airports_to_consider,
+                                                  airport_cluster_threshold,
+                                                  shapefile_path,
+                                                  regioncode,
+                                                  yr=yr,
+                                                  local_dir=local_dir,
+                                                  plot=plot)
+    
+    import_sims_clusters <- imports_airport_clustering(imports_sim, 
+                                                       airport_attribution, 
+                                                       regioncode, 
+                                                       local_dir=local_dir)
+    
+    county_imports <- distrib_county_imports(import_sims_clusters,
+                                             airport_attribution,
+                                             local_dir, 
+                                             regioncode,
+                                             yr=2010)
+    
+    i = 1
+    write_csv(county_imports, file.path("output",
+                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
+                                                        "imports_county_sim", i, ".csv"))
+
+```
+
+
+
+
+
