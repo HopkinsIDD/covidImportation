@@ -32,8 +32,8 @@ get_county_pops <- function(states_of_interest,
                             local_dir="data/", 
                             write_county_shapefiles=FALSE) {
     
-    census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", overwrite =TRUE, install = TRUE)
-    options(tigris_use_cache = TRUE)
+    #census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", overwrite =TRUE, install = TRUE)
+    #options(tigris_use_cache = TRUE)
     county_pops <- purrr::map(states_of_interest,
                               ~tidycensus::get_acs(geography = "county",
                                                    variables = "B01003_001", ## total population data
@@ -535,7 +535,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
-    county_pops_shp_path <- get_county_pops(states_of_interest, 
+    county_pops_df <- get_county_pops(states_of_interest, 
                                             regioncode, 
                                             yr, 
                                             write_county_shapefiles=FALSE,
@@ -600,7 +600,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                 county_imports <- county_imports %>% rename(place=GEOID, date=t, amount=imports)
                 
                 ## Save the new importation file
-                readr::write_csv(county_imports, file.path("model_output", "importation", paste0("importation_", n, ".csv")))
+                readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))
                 
                 #print("success")
                 

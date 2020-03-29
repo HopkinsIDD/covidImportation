@@ -8,6 +8,7 @@ This importation package runs a model to estimate importations of SARS-CoV-2 int
 ```{r setup}
 
 library(covidImportation)
+# options(tigris_use_cache = TRUE)
 
 ```
 
@@ -182,7 +183,11 @@ producing a CSV for each simulation to be then read during the SEIR simulations.
 
 
 ```{r}
+
 regioncode="west-coast-AZ-NV"
+
+census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+
 run_full_distrib_imports(states_of_interest=c("CA","NV","WA","OR","AZ"),
                                      regioncode="west-coast-AZ-NV",
                                      yr=2010,
