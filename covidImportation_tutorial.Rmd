@@ -181,5 +181,23 @@ producing a CSV for each simulation to be then read during the SEIR simulations.
 
 
 
+```{r}
+regioncode="west-coast-AZ-NV"
+run_full_distrib_imports(states_of_interest=c("CA","NV","WA","OR","AZ"),
+                                     regioncode="west-coast-AZ-NV",
+                                     yr=2010,
+                                     mean_travel_file = file.path("model_output", "importation", "travel_mean.csv"),
+                                     travelers_threshold=10000,
+                                     airport_cluster_threshold=80,
+                                     shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2010_", regioncode, ".shp")),
+                                     model_output_dir = file.path("model_output", "importation"),
+                                     local_dir="data/",
+                                     plot=FALSE,
+                                     cores=5,
+                                     n_sim=10)
+
+```
+
+
 
 
