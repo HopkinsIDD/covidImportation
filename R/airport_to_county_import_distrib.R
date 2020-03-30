@@ -201,7 +201,7 @@ do_airport_attribution <- function(airports_to_consider,
     ## 2) then remove clusters that are subsets of others
     
     rm_ix <- c()
-    joint_ls <- lapply(1:length(clusters_ls), function(i) {
+    joint_ls <- lapply(seq_len(length(clusters_ls)), function(i) {
         ix <- c()
         subi <- i:length(clusters_ls)
         for (j in subi[-1]) {
@@ -217,24 +217,28 @@ do_airport_attribution <- function(airports_to_consider,
     })
     
     ## identify indexes of clusters that are subsets of others
-    clusters_ls_cl <- lapply(1:length(joint_ls), function(i) { joint_ls[[i]][[1]] })
-    remove_indexes <- sort(unique(unlist(lapply(1:length(joint_ls), function(i) { joint_ls[[i]][[2]] }))))
+    clusters_ls_cl <- lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[1]] })
+    remove_indexes <- sort(unique(unlist(lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[2]] }))))
     
     ## remove clusters that are subsets of others
     clusters_ls_cl <- rlist::list.remove(clusters_ls_cl, range = remove_indexes)
     
     
     # Get centroid of airport coordinate clusters
-    cluster_ids <- purrr::map_dfr(1:length(clusters_ls_cl), function(i) {
+    cluster_ids <- purrr::map_dfr(seq_len(length(clusters_ls_cl)), function(i) {
         data.frame(iata_code = clusters_ls_cl[[i]], c_id = i, stringsAsFactors = FALSE)
     })
-    clustered_airports <- airports_to_consider %>%
-        dplyr::right_join(cluster_ids, by = c("iata_code")) %>%
-        dplyr::select(iata_code, c_id, coor_lat, coor_lon) %>%
-        dplyr::group_by(c_id) %>%
-        dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
-        dplyr::ungroup() %>% 
-        dplyr::select(iata_code, coor_lat, coor_lon)
+    if(nrow(cluster_ids) > 0){
+        clustered_airports <- airports_to_consider %>%
+            dplyr::right_join(cluster_ids, by = c("iata_code")) %>%
+            dplyr::select(iata_code, c_id, coor_lat, coor_lon) %>%
+            dplyr::group_by(c_id) %>%
+            dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
+            dplyr::ungroup() %>% 
+            dplyr::select(iata_code, coor_lat, coor_lon)
+    } else {
+      clustered_airports <- data_frame(iata_code = NA)[0,]
+    }
     
     ## remerge clustered airports with other airports
     airports_to_consider_cl <- airports_to_consider %>%
@@ -383,11 +387,11 @@ imports_airport_clustering <- function(imports_sim,
     cl_names <- airport_attribution %>%
         dplyr::filter(nchar(airport_iata)>3) %>%
         distinct(airport_iata) %>% unlist %>% unname
-    cl_names_ls <- lapply(1:length(cl_names), function(i) {
+    cl_names_ls <- lapply(seq_len(length(cl_names)), function(i) {
         unlist(strsplit(cl_names[i], "_"))
     })
     
-    imports_cluster <- purrr::map_dfr(1:length(cl_names_ls), function(i){
+    imports_cluster <- purrr::map_dfr(seq_len(length(cl_names_ls)), function(i){
         imports_sim_orig %>%
             dplyr::filter(airport %in% cl_names_ls[[i]]) %>%
             dplyr::group_by(date) %>%
@@ -446,7 +450,7 @@ distrib_county_imports <- function(import_sims_clusters,
     # Sample the importations out to counties based on population and attribution
     samp_res <- list()
     import_sims_clusters_no0 <- import_sims_clusters %>% filter(imports>0)
-    for (i in 1:nrow(import_sims_clusters_no0)){
+    for (i in seq_len(nrow(import_sims_clusters_no0))){
         imports_ <- import_sims_clusters_no0[i,]
         co_info <- airport_attribution %>% filter(airport_iata == imports_$airport)
         if (nrow(co_info)==0) next ## need to figure out why we lost some airports in the attribution (EAT)
@@ -579,7 +583,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     doParallel::registerDoParallel(cl)
     
     # Run the foreach loop to estimate importations for n simulations
-    foreach(n=1:n_sim,
+    foreach(n=seq_len(n_sim),
             .export=c("imports_airport_clustering", "distrib_county_imports"),
             .packages=c("dplyr","tidyr","readr")) %dopar% {
                 
