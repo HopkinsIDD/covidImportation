@@ -354,9 +354,28 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     }
     
     # Make all Diamond Princess Cases same source
-    jhucsse_case_data <- jhucsse_case_data %>% mutate(Province_State = ifelse(grepl("diamond princess", Province_State, ignore.case = TRUE), "Diamond Princess", Province_State))
+    jhucsse_case_data <- jhucsse_case_data %>% 
+        mutate(Province_State = ifelse(grepl("diamond princess", Province_State, ignore.case = TRUE), "Diamond Princess", Province_State))
 
-
+    # Fix US locations
+    jhucsse_case_data <- jhucsse_case_data %>% 
+        mutate(Province_State = ifelse(grepl("Seattle", Province_State, ignore.case = TRUE), 
+                                       "King County, WA", Province_State))
+    
+    # Fix counties
+    us_co_inds <- which(grepl("County", jhucsse_case_data$Province_State) & is.na(jhucsse_case_data$FIPS))
+    dat_ <- jhucsse_case_data[us_co_inds,] %>% separate(Province_State, c("county", "state"), sep=", ") %>%
+                mutate(county = gsub("\\.","",county))
+    
+    countystate_ <- paste0(dat_$county, ", ", dat_$state)
+    data("us_counties", package = "covidImportation") # load county info
+    us_counties <- us_counties %>% mutate(countystate = paste0(Name, " County, ", State))
+    FIPS_ <- us_counties$FIPS[match(countystate_, us_counties$countystate)]
+    
+    jhucsse_case_data$FIPS[us_co_inds] <- FIPS_
+    
+    
+    
     # Get US States ................
     # Separate out states
     jhucsse_case_data <- suppressWarnings(
@@ -401,31 +420,35 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     jhucsse_case_data <- jhucsse_case_data %>% mutate(source = ifelse(country=="USA" & !is.na(state), state,
                                                   ifelse(country=="CHN" & !is.na(Province_State), Province_State, country)))
 
+    # Manually get rid of bad data
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(!(Province_State %in% c("The Bahamas", "Republic of the Congo"))) %>%
+        dplyr::filter(!(Province_State=="UK" & Update=="2020-03-11 21:33:03")) %>%
+        mutate(Province_State = ifelse(Province_State=="United Kingdom", "UK", Province_State))
+    
     # Get rid of duplicate rows
     jhucsse_case_data <- jhucsse_case_data %>% distinct()
 
+    # Get new base location on which to run splines
+    jhucsse_case_data <- jhucsse_case_data %>% mutate(source_loc = ifelse(country =="USA" & !is.na(FIPS), FIPS, Province_State))
+    
     # Get incident cases, sum them, then get cumulative from that
-    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, Province_State, Update) %>%
-        group_by(Province_State, country) %>%
+    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
+        group_by(source_loc, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
 
     # Fix counts that go negative
     negs_ind <- which(jhucsse_case_data$incid_conf < 0)
     jhucsse_case_data$Confirmed[negs_ind - 1] <- jhucsse_case_data$Confirmed[negs_ind - 1] + jhucsse_case_data$incid_conf[negs_ind]
-    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, Province_State, Update) %>%
-        group_by(Province_State, country) %>%
+    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
+        group_by(source_loc, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(incid_conf>=0)
-
-    # Manually get rid of bad data
-    jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(!(Province_State %in% c("The Bahamas", "Republic of the Congo"))) %>%
-        dplyr::filter(!(Province_State=="UK" & Update=="2020-03-11 21:33:03")) %>%
-        mutate(Province_State = ifelse(Province_State=="United Kingdom", "UK", Province_State))
+    
 
 
     ## GET INCIDENCE FITS ..........................
     ## Estimate incidence using spline fits.
-    incid_data <- est_daily_incidence_corrected(jhucsse_case_data,
+    incid_data <- est_daily_incidence_corrected(jhucsse_case_data %>% mutate(Province_State=source),
                                                 first_date, last_date, tol=100, na_to_zeros=FALSE) %>%
         mutate(Incidence=round(Incidence, 2))
 

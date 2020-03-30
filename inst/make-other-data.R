@@ -292,3 +292,13 @@ usethis::use_data(usa_oag_aggr_travel, overwrite = TRUE)
 #write_csv(dest_data_aggr_usa, paste0("data_other/", "usa_oag_aggr_lite.csv"))
 #save(dest_data_aggr_usa, file=paste0("data_other/", "usa_oag_aggr_lite.rda"))
 
+
+
+
+
+
+# USA Counties ------------------------------------------------------------
+
+us_counties <- readr::read_csv("data-raw/us_counties.csv")
+us_counties <- us_counties %>% mutate(FIPS = paste0(0, FIPS))
+usethis::use_data(us_counties)
