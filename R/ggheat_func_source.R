@@ -43,13 +43,13 @@ ggheat <- function(m,
     ## this is just reshaping into a ggplot format matrix and making a ggplot layer
     rows <- dim(m)[1]
     cols <- dim(m)[2]
-    melt.m <- cbind(rowInd=rep(1:rows, times=cols), colInd=rep(1:cols, each=rows), reshape::melt(m))
+    melt.m <- cbind(rowInd=rep(seq_len(rows), times=cols), colInd=rep(seq_len(cols), each=rows), reshape::melt(m))
     g <- ggplot(data=melt.m)
 
     ## add the heat tiles with or without a white border for clarity
     myPallette <- rev(c(rev(brewer.pal((sum(zCuts>1)-1), "YlOrRd")), "white", brewer.pal((sum(zCuts<1)-1), "Blues")))
     #myPallette <- rev(c(rev(brewer.pal((length(zCuts)/2-1), "YlOrRd")), "white", brewer.pal((length(zCuts)/2-1), "Blues")))
-    cut.intervals <- sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1]))
+    cut.intervals <- sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1]))
 
     if(border==TRUE)
         g2 <- g + geom_rect(aes(xmin=colInd-1, xmax=colInd, ymin=rowInd-1, ymax=rowInd, fill=cut(value, zCuts, include.lowest=T)), colour='white') +
@@ -62,17 +62,17 @@ ggheat <- function(m,
 
     ## add axis labels either supplied or from the colnames rownames of the matrix
     if(labCol==T)
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=colnames(m))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=colnames(m))
     if(labCol==F)
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=rep('',cols))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=rep('',cols))
     if(labCol=='months')
         g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,t.skip), labels=colnames(m)[seq(1,cols,t.skip)])
     #g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,12), labels=substr(colnames(m),5,8)[seq(1,cols,12)]) # Only print years
 
     if(labRow==T)
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rownames(m))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rownames(m))
     if(labRow==F)
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rep('',rows))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rep('',rows))
 
     ## get rid of grey panel background and gridlines and tick marks
     g2 <- g2 + theme(panel.grid.major = element_blank(),
@@ -151,7 +151,7 @@ ggheat_import_monthyr <- function(data=import_results %>% dplyr::select(month_yr
     ## this is just reshaping into a ggplot format matrix and making a ggplot layer
     rows <- dim(m)[1] # state or country
     cols <- dim(m)[2] # month_yr or year
-    melt.m <- cbind(rowInd=rep(1:rows, times=cols), colInd=rep(1:cols, each=rows), reshape::melt(m))
+    melt.m <- cbind(rowInd=rep(seq_len(rows), times=cols), colInd=rep(seq_len(cols), each=rows), reshape::melt(m))
     melt.m$value[is.na(melt.m$value)] <- -100
 
 
@@ -164,14 +164,14 @@ ggheat_import_monthyr <- function(data=import_results %>% dplyr::select(month_yr
 
     # Interval labels on legend
     if (nas_in_data){
-        cut.intervals <- c("NA", sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c("NA", sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(-1001, zCuts)
         if (grepl("Reported", title)){
             cut.intervals <- c("NA", zCuts)
         }
     } else {
-        cut.intervals <- c(sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c(sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(zCuts)
         if (grepl("Reported", title)){
@@ -192,17 +192,17 @@ ggheat_import_monthyr <- function(data=import_results %>% dplyr::select(month_yr
 
     ## add axis labels either supplied or from the colnames rownames of the matrix
     if(labCol==T){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=colnames_)
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=colnames_)
     }else if(labCol==F){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=rep('',cols))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=rep('',cols))
     }else if(labCol=='months'){
         g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,t.skip), labels=colnames_[seq(1,cols,t.skip)])
         #g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,12), labels=substr(colnames(m),5,8)[seq(1,cols,12)]) # Only print years
     }
     if(labRow==T){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rownames_)
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rownames_)
     } else if(labRow==F){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rep('',rows))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rep('',rows))
     }
     ## get rid of grey panel background and gridlines and tick marks
     g2 <- g2 + theme(panel.grid.major = element_blank(),
@@ -256,7 +256,7 @@ ggheat_import <- function(data=import_results %>% dplyr::select(t, destination, 
     ## this is just reshaping into a ggplot format matrix and making a ggplot layer
     rows <- dim(m)[1] # state or country
     cols <- dim(m)[2] # month_yr or year
-    melt.m <- cbind(rowInd=rep(1:rows, times=cols), colInd=rep(1:cols, each=rows), reshape::melt(m))
+    melt.m <- cbind(rowInd=rep(seq_len(rows), times=cols), colInd=rep(seq_len(cols), each=rows), reshape::melt(m))
     melt.m$value[is.na(melt.m$value)] <- -100
 
 
@@ -269,14 +269,14 @@ ggheat_import <- function(data=import_results %>% dplyr::select(t, destination, 
 
     # Interval labels on legend
     if (nas_in_data){
-        cut.intervals <- c("NA", sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c("NA", sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(-1001, zCuts)
         if (grepl("Reported", title)){
             cut.intervals <- c("NA", zCuts)
         }
     } else {
-        cut.intervals <- c(sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c(sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(zCuts)
         if (grepl("Reported", title)){
@@ -296,17 +296,17 @@ ggheat_import <- function(data=import_results %>% dplyr::select(t, destination, 
 
     ## add axis labels either supplied or from the colnames rownames of the matrix
     if(labCol==T){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=colnames_)
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=colnames_)
     }else if(labCol==F){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=rep('',cols))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=rep('',cols))
     }else if(labCol=='t'){
         g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,t.skip), labels=colnames_[seq(1,cols,t.skip)])
         #g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,12), labels=substr(colnames(m),5,8)[seq(1,cols,12)]) # Only print years
     }
     if(labRow==T){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rownames_)
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rownames_)
     } else if(labRow==F){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rep('',rows))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rep('',rows))
     }
     ## get rid of grey panel background and gridlines and tick marks
     g2 <- g2 + theme(panel.grid.major = element_blank(),
@@ -364,7 +364,7 @@ ggheat_export <- function(data=import_results %>% dplyr::select(t, source, value
     ## this is just reshaping into a ggplot format matrix and making a ggplot layer
     rows <- dim(m)[1] # state or country
     cols <- dim(m)[2] # month_yr or year
-    melt.m <- cbind(rowInd=rep(1:rows, times=cols), colInd=rep(1:cols, each=rows), reshape::melt(m))
+    melt.m <- cbind(rowInd=rep(seq_len(rows), times=cols), colInd=rep(seq_len(cols), each=rows), reshape::melt(m))
     melt.m$value[is.na(melt.m$value)] <- -100
 
 
@@ -377,14 +377,14 @@ ggheat_export <- function(data=import_results %>% dplyr::select(t, source, value
 
     # Interval labels on legend
     if (nas_in_data){
-        cut.intervals <- c("NA", sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c("NA", sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(-1001, zCuts)
         if (grepl("Reported", title)){
             cut.intervals <- c("NA", zCuts)
         }
     } else {
-        cut.intervals <- c(sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+        cut.intervals <- c(sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
         # Add NA values to zCuts
         zCuts_mod <- c(zCuts)
         if (grepl("Reported", title)){
@@ -404,17 +404,17 @@ ggheat_export <- function(data=import_results %>% dplyr::select(t, source, value
 
     ## add axis labels either supplied or from the colnames rownames of the matrix
     if(labCol==T){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=colnames_)
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=colnames_)
     }else if(labCol==F){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=rep('',cols))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=rep('',cols))
     }else if(labCol=='t'){
         g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,t.skip), labels=colnames_[seq(1,cols,t.skip)])
         #g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,12), labels=substr(colnames(m),5,8)[seq(1,cols,12)]) # Only print years
     }
     if(labRow==T){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rownames_)
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rownames_)
     } else if(labRow==F){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rep('',rows))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rep('',rows))
     }
     ## get rid of grey panel background and gridlines and tick marks
     g2 <- g2 + theme(panel.grid.major = element_blank(),
@@ -490,12 +490,12 @@ ggheat_export_byregion <- function(data=export_results %>% dplyr::select(t, sour
     row_sapce_value <- -10000
     row_space <- as.data.frame(matrix(as.numeric(rep(row_sapce_value, ncol(m)*rowspaces)), nrow=rowspaces, ncol=ncol(m), dimnames = list(rep("",rowspaces), colnames_)))
     colnames(row_space) <- colnames_
-    m_spaced <- bind_rows(m[1:maxrows[1],], # Europe
+    m_spaced <- bind_rows(m[seq_len(maxrows[1]),], # Europe
                           row_space,
                           m[(maxrows[1]+1):maxrows[2],], # Asia
                           row_space,
                           m[(maxrows[2]+1):nrow(m),]) # Africa
-    rownames_ <- c(rownames_[1:maxrows[1]], # Europe
+    rownames_ <- c(rownames_[seq_len(maxrows[1])], # Europe
                    rep("",rowspaces),
                    rownames_[(maxrows[1]+1):maxrows[2]], # Asia
                    rep("",rowspaces),
@@ -504,7 +504,7 @@ ggheat_export_byregion <- function(data=export_results %>% dplyr::select(t, sour
     ## this is just reshaping into a ggplot format matrix and making a ggplot layer
     rows <- dim(m_spaced)[1] # state or country
     cols <- dim(m_spaced)[2] # month_yr or year
-    melt.m <- cbind(rowInd=rep(1:rows, times=cols), colInd=rep(1:cols, each=rows), reshape::melt(m_spaced))
+    melt.m <- cbind(rowInd=rep(seq_len(rows), times=cols), colInd=rep(seq_len(cols), each=rows), reshape::melt(m_spaced))
     melt.m$value[is.na(melt.m$value)] <- -100
 
 
@@ -515,7 +515,7 @@ ggheat_export_byregion <- function(data=export_results %>% dplyr::select(t, sour
         myPallette <- rev(c(rev(colorRampPalette(pal_colors)(length(zCuts))), na.value, "white"))
     }
 
-    cut.intervals <- c("", "NA", sapply(X=1:(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
+    cut.intervals <- c("", "NA", sapply(X=seq_len(length(zCuts)-1), FUN=function(x=X) paste0(zCuts[x],'-',zCuts[x+1])))
 
     # Add NA values to zCuts
     zCuts_mod <- c(-100001, -1001, zCuts)
@@ -532,17 +532,17 @@ ggheat_export_byregion <- function(data=export_results %>% dplyr::select(t, sour
 
     ## add axis labels either supplied or from the colnames rownames of the matrix
     if(labCol==T){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=colnames_)
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=colnames_)
     }else if(labCol==F){
-        g2 <- g2 + scale_x_continuous(breaks=(1:cols)-0.5, labels=rep('',cols))
+        g2 <- g2 + scale_x_continuous(breaks=seq_len(cols)-0.5, labels=rep('',cols))
     }else if(labCol=='months'){
         g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,t.skip), labels=colnames_[seq(1,cols,t.skip)])
         #g2 <- g2 + scale_x_continuous(breaks=seq(1,cols,12), labels=substr(colnames(m),5,8)[seq(1,cols,12)]) # Only print years
     }
     if(labRow==T){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rownames_)
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rownames_)
     } else if(labRow==F){
-        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=(1:rows)-0.5, labels=rep('',rows))
+        g2 <- g2 + scale_y_continuous(trans = "reverse", breaks=seq_len(rows)-0.5, labels=rep('',rows))
     }
     ## get rid of grey panel background and gridlines and tick marks
     g2 <- g2 + theme(panel.grid.major = element_blank(),

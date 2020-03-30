@@ -44,7 +44,7 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
     data_files <- data_files[!(dates_tocheck_ %in% files_in_dir_dates)]
     dates_tocheck_ <- dates_tocheck_[!(dates_tocheck_ %in% files_in_dir_dates)]
 
-    for (i in 1:length(data_files)){
+    for (i in seq_len(length(data_files))){
         file_name_ <- data_files[i]   # file to pull
         date_ <- dates_tocheck_[i]     # date formatted for saving csv
 
@@ -221,7 +221,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
     # pull and combine data from github
     rc <- list()
     
-    for (i in 1:length(data_files)){
+    for (i in seq_len(length(data_files))){
         file_name_ <- data_files[i]   # file to pull
         date_ <- dates_tocheck_[i]     # date formatted for saving csv
         
@@ -911,13 +911,13 @@ make_daily_travel <- function(travel_data, travel_dispersion=10){
     rows_ <- nrow(travel_data)
 
     # First sample out the monthly travelers into days
-    x <- as.integer(unlist(lapply(X=1:rows_,
+    x <- as.integer(unlist(lapply(X=seq_len(rows_),
                 FUN=function(x=X) rmultinom(n = 1, 
                                             size = travel_data$travelers_month[x],
                                             prob = rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
 
     # get an indicator for day of the month
-    t_day <- unlist(lapply(X=1:rows_, FUN=function(x=X) 1:travel_data$days_month[x]))
+    t_day <- unlist(lapply(X=seq_len(rows_), FUN=function(x=X) seq_len(travel_data$days_month[x])))
     # generate a daily dataset
     data_daily <- as.data.frame(lapply(travel_data, rep, travel_data$days_month))
     # Add new daily travel volume to it
@@ -948,7 +948,7 @@ make_daily_travel_faster <- function(travel_data, travel_data_daily, travel_disp
     rows_ <- nrow(travel_data)
 
     # First sample out the monthly travelers into days
-    x <- as.integer(unlist(lapply(X=1:rows_,
+    x <- as.integer(unlist(lapply(X=seq_len(rows_),
                                   FUN=function(x=X) rmultinom(1, travel_data$travelers_month[x],
                                                               rgamma(travel_data$days_month[x], shape=1/travel_dispersion)))))
 
@@ -971,7 +971,7 @@ expand_travel_restrict <- function(travel_restrictions){
     travel_restrictions <- travel_restrictions %>% mutate(min=as.Date(min),
                                                           max=as.Date(max))
     travel_restrict_ <- list()
-    for (r in 1:nrow(travel_restrictions)){
+    for (r in seq_len(nrow(travel_restrictions))){
         travel_restrict_[[r]] <- data.frame(loc=travel_restrictions$loc[r],
                                             p_travel=travel_restrictions$p_travel[r],
                                             t = seq(travel_restrictions$min[r], travel_restrictions$max[r], by="days"))
@@ -1032,7 +1032,7 @@ find_recent_file <- function(name_start, path, exclude=NULL){
                             pattern=paste0(name_start, "*"))
     ## remove files with unwanted patterns
     if(!is.null(exclude)){
-        for(i in 1:length(exclude))
+        for(i in seq_len(length(exclude)))
             file_list <- file_list[!grepl(pattern = exclude[i], file_list)]
     }
     if(length(file_list)==0){

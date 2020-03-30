@@ -54,7 +54,7 @@ est_imports_base <- function(input_data,
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
-    for (c in 1:length(cases)){
+    for (c in seq_len(length(cases))){
         this.sim[c] <- sum(rbinom(ceiling(meanD[c]),
                                   prob = prob_travel_n_detection[c],
                                   size = ceiling(cases[c]/u_origin[c])))
@@ -80,7 +80,7 @@ est_import_detect_dates <- function(sim_res, time_inftodetect, time_inftotravel)
     # Add detection times to importation dates
     time_dat <- data.frame(time_inftodetect, time_inftotravel) %>%
         dplyr::filter(time_inftodetect>=time_inftotravel & time_inftodetect<20)
-    samp <- sample(1:nrow(time_dat), length(import_dates), replace = TRUE)
+    samp <- sample(seq_len(nrow(time_dat)), length(import_dates), replace = TRUE)
     inf_dates <- import_dates - time_dat$time_inftotravel[samp] # calculate the date of infection
     detect_dates <- inf_dates + time_dat$time_inftodetect[samp] # calculate the date of detection
 
@@ -163,7 +163,7 @@ run_daily_import_model_par <- function(n_sim=10000,
 
     # Sims as multidimensional arrays
     importation_sim <- array(0, dim = c(length(sources_), length(dests_), length(t_), n_sim),
-                             dimnames = list(sources_, dests_, as.character(t_), 1:n_sim))
+                             dimnames = list(sources_, dests_, as.character(t_), seq_len(n_sim)))
 
     # make the function to bind each simulation array in the foreach loop
     acomb <- function(...) abind::abind(..., along=4)
@@ -176,7 +176,7 @@ run_daily_import_model_par <- function(n_sim=10000,
 
     # Run the foreach loop to estimate importations for n simulations
     importation_sim <-
-        foreach(n=1:n_sim, .combine = acomb,
+        foreach(n=seq_len(n_sim), .combine = acomb,
                 .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base"),
                 .packages=c("dplyr","tidyr")) %dopar% {
 
@@ -223,7 +223,7 @@ run_daily_import_model_par <- function(n_sim=10000,
         }
 
     # Give the sim dimension dimnames
-    dimnames(importation_sim)[[4]] <- 1:n_sim
+    dimnames(importation_sim)[[4]] <- seq_len(n_sim)
     # Replace NAs with 0. These are all pairs that did not have travel or cases
     importation_sim[is.na(importation_sim)] <- 0
 
@@ -237,10 +237,10 @@ run_daily_import_model_par <- function(n_sim=10000,
     if (get_detection_time){
 
       importation_detect <- array(0, dim = c(length(sources_), length(dests_), length(t_detect_), n_sim),
-                                  dimnames = list(sources_, dests_, as.character(t_detect_), 1:n_sim))
+                                  dimnames = list(sources_, dests_, as.character(t_detect_), seq_len(n_sim)))
 
 
-      importation_detect <- foreach(n=1:n_sim, .combine = acomb,
+      importation_detect <- foreach(n=seq_len(n_sim), .combine = acomb,
                                     .export=c("est_import_detect_dates"),
                                     .packages=c("dplyr","tidyr")) %dopar% {
 
@@ -268,7 +268,7 @@ run_daily_import_model_par <- function(n_sim=10000,
                                     }
 
         # Give the sim dimension dimnames
-        dimnames(importation_detect)[[4]] <- 1:n_sim
+        dimnames(importation_detect)[[4]] <- seq_len(n_sim)
         # Replace NAs with 0. These are all pairs that did not have travel or cases
         importation_detect[is.na(importation_detect)] <- 0
     }
@@ -338,13 +338,13 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
     # Suppress errors for this loop
     options(show.error.messages = FALSE)
     
-    import_pars_df_all <- foreach(t_=1:length(t), 
+    import_pars_df_all <- foreach(t_=seq_len(length(t)), 
                             .packages = "fitdistrplus",
                             .combine = "rbind") %dopar% {
         
         import_pars_df <- data.frame(destination=dests, t=t_, size=1, mu=0)
                               
-        for (d_ in 1:length(dests)){
+        for (d_ in seq_len(length(dests))){
 
             pars_ <- tryCatch ( {
                 fitdistrplus::fitdist(import_sim_dests[d_, t_, ], distr="nbinom", method="mle")$estimate
@@ -490,7 +490,7 @@ setup_and_run_importations <- function(dest="UT",
         arrange(desc(travelers))
     
     # Destinations to keep
-    dests_keep <- travel_mean$destination[1:min(c(nrow(travel_mean), n_top_dests))]
+    dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
     travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
     
     ## Travel data
@@ -772,7 +772,7 @@ setup_importations <- function(dest="UT",
   
   
   # Destinations to keep
-  dests_keep <- travel_mean$destination[1:min(c(nrow(travel_mean), n_top_dests))]
+  dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
   travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
   
   ## Travel data
@@ -1108,7 +1108,7 @@ run_importations <- function(n_sim=100,
   doParallel::registerDoParallel(cl)
   
   # Run the foreach loop to estimate importations for n simulations
-  foreach(n=1:n_sim,
+  foreach(n=seq_len(n_sim),
           .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base", "run_daily_import_model"),
           .packages=c("dplyr","tidyr")) %dopar% {
             

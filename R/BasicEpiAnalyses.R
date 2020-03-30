@@ -216,8 +216,8 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
   while (abs(diff_inferred)>tol) {
     to_add <- (incidence_data %>% dplyr::filter(Date<"2020-02-13"))$Incidence
     to_add <- to_add/sum(to_add) * diff_inferred
-    rc_incidence$Incidence[1:length(to_add)] <-
-      rc_incidence$Incidence[1:length(to_add)]+ to_add
+    rc_incidence$Incidence[seq_len(length(to_add))] <-
+      rc_incidence$Incidence[seq_len(length(to_add))]+ to_add
 
     ## create a new cumsum data
     tmp_cum_data <- data_frame(Update = rc_incidence$Date,
