@@ -435,6 +435,7 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
         group_by(source_loc, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
+    
 
     # Fix counts that go negative
     negs_ind <- which(jhucsse_case_data$incid_conf < 0)
@@ -444,11 +445,14 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(incid_conf>=0)
     
+    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source, Update) %>%
+        group_by(source, country) %>%
+        mutate(cum_incid = cumsum(incid_conf)) %>% ungroup()
 
 
     ## GET INCIDENCE FITS ..........................
     ## Estimate incidence using spline fits.
-    incid_data <- est_daily_incidence_corrected(jhucsse_case_data %>% mutate(Province_State=source),
+    incid_data <- est_daily_incidence_corrected(jhucsse_case_data %>% mutate(Province_State=source, Confirmed=cum_incid),
                                                 first_date, last_date, tol=100, na_to_zeros=FALSE) %>%
         mutate(Incidence=round(Incidence, 2))
 
