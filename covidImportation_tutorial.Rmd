@@ -8,7 +8,9 @@ This importation package runs a model to estimate importations of SARS-CoV-2 int
 ```{r setup}
 
 library(covidImportation)
-# options(tigris_use_cache = TRUE)
+
+states_of_interest=c("CA","NV","WA","OR","AZ")
+regioncode="west-coast-AZ-NV"
 
 ```
 
@@ -18,9 +20,8 @@ library(covidImportation)
     
 ```{r}
 
-dest=c("CA","OR","WA","NV","AZ")
 
-setup_res <- covidImportation::setup_importations(dest=dest,
+setup_res <- covidImportation::setup_importations(dest=states_of_interest,
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
@@ -28,7 +29,7 @@ setup_res <- covidImportation::setup_importations(dest=dest,
                                last_date = Sys.time(),
                                update_case_data=TRUE,
                                case_data_dir = "data/case_data",
-                               output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                               output_dir = file.path("model_output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
                                check_saved_data=TRUE,
                                save_case_data=TRUE,
                                get_travel=TRUE,
@@ -70,126 +71,16 @@ sim_res <- covidImportation::run_importations(
 ```
     
     
-    
+
+
 ## Distribute the Simulated Importations into Airports to Counties
-We will just do this for 1 simulation for this example.
 
 ```{r}
-
-    states_of_interest=c("CA","NV","WA","OR","AZ")
-    regioncode="west-coast-AZ-NV"
-    yr=2010
-    mean_travel_file = file.path("output", 
-                                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                                                        "travel_mean.csv")
-    travelers_threshold=10000 ## airports must meet this average number of monthly travelers to be included
-    airport_cluster_threshold=80 # units: km. Airports that are separated by Haversine distance
-    imports_sim = file.path("output", 
-                            paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                            "imports_sim1.csv")
-    local_dir="data/"
-    plot=FALSE
-    
-    
-    
-    states_of_interest <- sort(states_of_interest)
-    county_pops_shp_path <- get_county_pops(states_of_interest, 
-                                            regioncode, yr, 
-                                            local_dir=local_dir)
-    airports_to_consider <- get_airports_to_consider(mean_travel_file, 
-                                                     states_of_interest, travelers_threshold)
-    airport_attribution <- do_airport_attribution(airports_to_consider,
-                                                  airport_cluster_threshold,
-                                                  shapefile_path,
-                                                  regioncode,
-                                                  yr=yr,
-                                                  local_dir=local_dir,
-                                                  plot=plot)
-    
-    import_sims_clusters <- imports_airport_clustering(imports_sim, 
-                                                       airport_attribution, 
-                                                       regioncode, 
-                                                       local_dir=local_dir)
-    
-    county_imports <- distrib_county_imports(import_sims_clusters,
-                                             airport_attribution,
-                                             local_dir, 
-                                             regioncode,
-                                             yr=2010)
-    
-    i = 1
-    write_csv(county_imports, file.path("output",
-                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                                                        "imports_county_sim", i, ".csv"))
-
-```
-
-
-
-
-    
-## Distribute the Simulated Importations into Airports to Counties - ALL SIMULATIONS
-Here we run a function that runs in parallel to distribute simuated importations to counties for all simulations,
-producing a CSV for each simulation to be then read during the SEIR simulations.
-
-```{r}
-
-    states_of_interest=c("CA","NV","WA","OR","AZ")
-    regioncode="west-coast-AZ-NV"
-    yr=2010
-    mean_travel_file = file.path("output", 
-                                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                                                        "travel_mean.csv")
-    travelers_threshold=10000 ## airports must meet this average number of monthly travelers to be included
-    airport_cluster_threshold=80 # units: km. Airports that are separated by Haversine distance
-    imports_sim = file.path("output", 
-                            paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                            "imports_sim1.csv")
-    local_dir="data/"
-    plot=FALSE
-    
-    states_of_interest <- sort(states_of_interest)
-    county_pops_shp_path <- get_county_pops(states_of_interest, 
-                                            regioncode, yr, 
-                                            local_dir=local_dir)
-    airports_to_consider <- get_airports_to_consider(mean_travel_file, 
-                                                     states_of_interest, travelers_threshold)
-    airport_attribution <- do_airport_attribution(airports_to_consider,
-                                                  airport_cluster_threshold,
-                                                  shapefile_path,
-                                                  regioncode,
-                                                  yr=yr,
-                                                  local_dir=local_dir,
-                                                  plot=plot)
-    
-    import_sims_clusters <- imports_airport_clustering(imports_sim, 
-                                                       airport_attribution, 
-                                                       regioncode, 
-                                                       local_dir=local_dir)
-    
-    county_imports <- distrib_county_imports(import_sims_clusters,
-                                             airport_attribution,
-                                             local_dir, 
-                                             regioncode,
-                                             yr=2010)
-    
-    i = 1
-    write_csv(county_imports, file.path("output",
-                                        paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())), 
-                                                        "imports_county_sim", i, ".csv"))
-
-```
-
-
-
-```{r}
-
-regioncode="west-coast-AZ-NV"
 
 census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
 
-run_full_distrib_imports(states_of_interest=c("CA","NV","WA","OR","AZ"),
-                                     regioncode="west-coast-AZ-NV",
+run_full_distrib_imports(states_of_interest=states_of_interest,
+                                     regioncode=regioncode,
                                      yr=2010,
                                      mean_travel_file = file.path("model_output", "importation", "travel_mean.csv"),
                                      travelers_threshold=10000,

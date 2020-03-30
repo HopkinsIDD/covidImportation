@@ -359,9 +359,11 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     # Get US States ................
     # Separate out states
-    jhucsse_case_data <- jhucsse_case_data %>% separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
-        mutate(city = ifelse(is.na(state), NA, city))
-    # -- lots of NAs where no commas. Not a problem.
+    jhucsse_case_data <- suppressWarnings(
+        jhucsse_case_data %>% 
+            separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
+            mutate(city = ifelse(is.na(state), NA, city))
+        )
 
     # Get states where not already there
     jhucsse_case_data <- jhucsse_case_data %>% mutate(state_tmp = state.abb[match(Province_State, state.name)]) %>%
@@ -402,7 +404,7 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # Get rid of duplicate rows
     jhucsse_case_data <- jhucsse_case_data %>% distinct()
 
-    # Get incident cases, sum them , then get cumulative from that
+    # Get incident cases, sum them, then get cumulative from that
     jhucsse_case_data <- jhucsse_case_data %>% arrange(country, Province_State, Update) %>%
         group_by(Province_State, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
@@ -414,7 +416,6 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
         group_by(Province_State, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(incid_conf>=0)
-
 
     # Manually get rid of bad data
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(!(Province_State %in% c("The Bahamas", "Republic of the Congo"))) %>%

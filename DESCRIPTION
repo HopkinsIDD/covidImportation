@@ -13,11 +13,11 @@ Authors@R:
 Description: What the package does (one paragraph).
 Depends:
     R (>= 3.5),
-    tidyverse
+    tidyverse,
+    doParallel
 Imports:
     httr,
     lubridate,
-    doParallel,
     countrycode,
     globaltoolboxlite,
     fitdistrplus,
