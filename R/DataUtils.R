@@ -332,7 +332,9 @@ get_airport_country <- function(airport_code = "ORD"){
 #' @return
 #'
 #' @examples
+#' 
 #' @import globaltoolboxlite
+#' 
 #' @export
 #' 
 get_incidence_data <- function(first_date = ISOdate(2019,12,1),
@@ -359,9 +361,26 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     # Fix US locations
     jhucsse_case_data <- jhucsse_case_data %>% 
-        mutate(Province_State = ifelse(grepl("Seattle", Province_State, ignore.case = TRUE), 
-                                       "King County, WA", Province_State))
+        mutate(Province_State = ifelse(grepl("Seattle", Province_State, ignore.case = TRUE), "King County, WA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Chicago", Province_State, ignore.case = TRUE), "Cook County, IL", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("New York City", Province_State, ignore.case = TRUE), "New York County, NY", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Washington, D.C.", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Washington, DC", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
+        mutate(FIPS = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "11001", FIPS)) %>%
+        mutate(Admin2 = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "District of Columbia", Admin2)) %>%
+        mutate(Province_State = ifelse(grepl("Santa Clara", Province_State, ignore.case = TRUE), "Santa Clara County, CA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("San Mateo", Province_State, ignore.case = TRUE), "San Mateo County, CA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("San Benito", Province_State, ignore.case = TRUE), "San Benito County, CA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Portland", Province_State, ignore.case = TRUE), "Multnomah, OR", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Los Angeles", Province_State, ignore.case = TRUE), "Los Angeles County, CA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Boston", Province_State, ignore.case = TRUE), "Suffolk County, MA", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("San Antonio", Province_State, ignore.case = TRUE), "Bexar County, TX", Province_State)) %>%
+        mutate(Province_State = ifelse(grepl("Umatilla", Province_State, ignore.case = TRUE), "Umatilla County, CA", Province_State)) 
+        #mutate(US_county = ifelse(grepl("San Marino", Province_State, ignore.case = TRUE), "Los Angeles County, CA", Province_State)) %>%
+        #mutate(US_county = ifelse(grepl("Lackland", Province_State, ignore.case = TRUE), "Bexar County, CA", Province_State))
+        
     
+
     # Fix counties
     us_co_inds <- which(grepl("County", jhucsse_case_data$Province_State) & is.na(jhucsse_case_data$FIPS))
     dat_ <- jhucsse_case_data[us_co_inds,] %>% separate(Province_State, c("county", "state"), sep=", ") %>%
@@ -431,10 +450,12 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # Get new base location on which to run splines
     jhucsse_case_data <- jhucsse_case_data %>% mutate(source_loc = ifelse(country =="USA" & !is.na(FIPS), FIPS, Province_State))
     
-    # Get incident cases, sum them, then get cumulative from that
+    # Get incident cases by source_loc (US counties, Chinese provinces, Countries otherwise)
     jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
         group_by(source_loc, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
+    
+    
     
 
     # Fix counts that go negative
@@ -444,15 +465,22 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
         group_by(source_loc, country) %>%
         mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(incid_conf>=0)
+        
     
-    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source, Update) %>%
+    # Get cum incidence for states/provinces, countries
+    jhucsse_case_data_state <- jhucsse_case_data %>% 
+        arrange(country, source, Update) %>%
+        group_by(source, country, Update) %>%
+        summarise(incid_conf = sum(incid_conf)) %>%
+        ungroup() %>% 
         group_by(source, country) %>%
-        mutate(cum_incid = cumsum(incid_conf)) %>% ungroup()
+        mutate(cum_incid = cumsum(incid_conf)) %>% 
+        ungroup()
 
 
     ## GET INCIDENCE FITS ..........................
     ## Estimate incidence using spline fits.
-    incid_data <- est_daily_incidence_corrected(jhucsse_case_data %>% mutate(Province_State=source, Confirmed=cum_incid),
+    incid_data <- est_daily_incidence_corrected(jhucsse_case_data_state %>% mutate(Province_State=source, Confirmed=cum_incid),
                                                 first_date, last_date, tol=100, na_to_zeros=FALSE) %>%
         mutate(Incidence=round(Incidence, 2))
 
@@ -464,33 +492,34 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     # Add country_name back in
     incid_data <- left_join(incid_data,
-                            jhucsse_case_data %>% dplyr::select(Province_State, country_name, country, source_new=source) %>%
-                                mutate(prov_country = paste0(Province_State,"-", country_name)) %>%
+                            jhucsse_case_data %>% dplyr::select(source, country_name, country) %>%
+                                mutate(prov_country = paste0(source,"-", country_name)) %>%
                                 dplyr::filter(!duplicated(prov_country)) %>% dplyr::select(-prov_country),
-                            by=c("source"="Province_State"))
+                            by=c("source"="source"))
     # Add confirmed cases back in
     incid_data <- left_join(incid_data,
-                            jhucsse_case_data %>% mutate(t = as.Date(Update)) %>%
-                                dplyr::select(t, Province_State, country_name,incid_conf, Confirmed) %>%
-                                mutate(prov_country = paste0(Province_State,"-", country_name)) %>%
-                                dplyr::filter(!duplicated(prov_country)) %>% dplyr::select(-prov_country, -country_name),
-                            by=c("source"="Province_State", "t"="t"))
+                            jhucsse_case_data_state %>% mutate(t = as.Date(Update)) %>% 
+                                group_by(t, source, country) %>% 
+                                summarise(incid_conf = sum(incid_conf, na.rm=TRUE)) %>% arrange(country, source, t) %>%
+                                group_by(source, country) %>%
+                                mutate(cum_incid = cumsum(incid_conf)) %>% ungroup(),
+                            by=c("source"="source", "t"="t", "country"))
     incid_data <- incid_data %>% mutate(incid_conf=ifelse(is.na(incid_conf), 0, incid_conf))
 
-
-    # Group by source location, and add up incidence, then get cumulatives
-    incid_data <- incid_data  %>%  dplyr::select(-source) %>%
-        group_by(source_new, country, country_name, t) %>%
-        summarise(incid_est = sum(cases_incid)) %>%
-        as.data.frame() %>%
-        rename(source=source_new)
-
-
+    
     # Drop NA source
     #View(incid_data %>% dplyr::filter(is.na(source)))
     incid_data <- incid_data %>% dplyr::filter(!is.na(source))
+    
+    
+    # Get cumulative estimated incidence
+    incid_data <- incid_data %>% 
+        arrange(country, source, t) %>%
+        group_by(source, country) %>% 
+        mutate(cum_est_incid = cumsum(cases_incid)) %>% ungroup()
+        
 
-    return(list(incid_data=incid_data, jhucsse_case_data=jhucsse_case_data))
+    return(list(incid_data=incid_data, jhucsse_case_data=jhucsse_case_data, jhucsse_case_data_state=jhucsse_case_data_state))
 }
 
 

@@ -14,8 +14,7 @@ Description: What the package does (one paragraph).
 Depends:
     R (>= 3.5),
     tidyverse,
-    doParallel
-Imports:
+    doParallel,
     httr,
     lubridate,
     countrycode,
@@ -37,6 +36,7 @@ Imports:
     rlist,
     sf,
     tidycensus
+Imports:
 License: What license it uses
 Encoding: UTF-8
 LazyData: true

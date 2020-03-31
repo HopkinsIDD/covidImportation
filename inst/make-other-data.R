@@ -300,5 +300,7 @@ usethis::use_data(usa_oag_aggr_travel, overwrite = TRUE)
 # USA Counties ------------------------------------------------------------
 
 us_counties <- readr::read_csv("data-raw/us_counties.csv")
-us_counties <- us_counties %>% mutate(FIPS = paste0(0, FIPS))
-usethis::use_data(us_counties)
+us_counties <- us_counties %>% rowwise() %>% 
+  mutate(FIPS = as.character(FIPS)) %>%
+  mutate(FIPS = ifelse(stringr::str_length(FIPS)==4, paste0(0, FIPS), FIPS))
+usethis::use_data(us_counties, overwrite = TRUE)

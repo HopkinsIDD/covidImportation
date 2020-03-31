@@ -9,7 +9,7 @@ get_county_pops(
   regioncode,
   yr = 2010,
   local_dir = "data/",
-  write_county_shapefiles = FALSE
+  write_county_shapefiles = TRUE
 )
 }
 \arguments{

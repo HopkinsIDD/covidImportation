@@ -22,3 +22,6 @@ get_incidence_data(
 \description{
 Get incidence data from JHUCSSE
 }
+\examples{
+
+}

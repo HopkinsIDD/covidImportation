@@ -30,7 +30,7 @@ get_county_pops <- function(states_of_interest,
                             regioncode, 
                             yr=2010, 
                             local_dir="data/", 
-                            write_county_shapefiles=FALSE) {
+                            write_county_shapefiles=TRUE) {
     
     #census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", overwrite =TRUE, install = TRUE)
     #options(tigris_use_cache = TRUE)
@@ -42,7 +42,7 @@ get_county_pops <- function(states_of_interest,
                                                    keep_geo_vars = TRUE,
                                                    geometry = TRUE,
                                                    show_call = TRUE)) %>%
-        purrr::map2(states_of_interest, ~mutate(.x, id = .y))
+        purrr::map2(states_of_interest, ~dplyr::mutate(.x, id = .y))
     county_pops2 <- purrr::reduce(county_pops, rbind)
     
     ## write populations dataframe only
@@ -56,8 +56,8 @@ get_county_pops <- function(states_of_interest,
             dplyr::rename(NAME = NAME.x)
         
         shp_path <- paste0(local_dir, regioncode, "/shp/counties_", yr, "_", regioncode, ".shp")  
+        dir.create(paste0(local_dir, regioncode, "/shp"), recursive = TRUE)
         if (!file.exists(shp_path)) {
-            #TODO: jwills, consider forced overwrite, perhaps?
             sf::st_write(county_pops_sf, shp_path)
         }
     }
@@ -121,7 +121,7 @@ get_airports_to_consider <- function(mean_travel_file,
     # Airport data
     data("airport_data")
     
-    ## filter from all airports in region based on number of travelers
+    ## dplyr::filter from all airports in region based on number of travelers
     ## monthly mean travelers file like: paste0("data/", regioncode, "/airport_monthlymeantravelers.csv")
     big_airports_region <- readr::read_csv(mean_travel_file) %>%
         dplyr::rename(iata_code = destination) %>%
@@ -130,7 +130,8 @@ get_airports_to_consider <- function(mean_travel_file,
         dplyr::select(iata_code) %>% unlist %>% unname
     
     regions_of_interest <- paste("US", states_of_interest, sep = "-")
-    airports_to_consider <- airport_data %>%
+    airports_to_consider <- airport_data %>% 
+        dplyr::filter(!is.na(iata_code)) %>%
         dplyr::filter(iso_region %in% regions_of_interest) %>%
         dplyr::filter(iata_code %in% big_airports_region) %>%
         tidyr::separate(coordinates, sep = ',', c('coor_lat', 'coor_lon'), convert = TRUE) %>%
@@ -157,6 +158,8 @@ get_airports_to_consider <- function(mean_travel_file,
 ##' @param plot logical, whether to plot tesselation maps
 ##'
 ##' @return A data.frame of airports and counties with attributions
+##'
+##' @export
 ##'
 do_airport_attribution <- function(airports_to_consider, 
                                    airport_cluster_threshold=80, 
@@ -381,7 +384,7 @@ imports_airport_clustering <- function(imports_sim,
                                        model_output_dir="model_output/importation") {
     
     imports_sim_orig <- imports_sim %>% rename(airport = destination, date=t, imports=this.sim) %>% # read_csv(paste0("data/", regioncode, "/import_nb_params_nocluster.csv"))
-        group_by(airport, date) %>% 
+        dplyr::group_by(airport, date) %>% 
         summarise(imports = sum(imports, na.rm=TRUE)) %>% as.data.frame()
         
     cl_names <- airport_attribution %>%
@@ -395,8 +398,11 @@ imports_airport_clustering <- function(imports_sim,
         imports_sim_orig %>%
             dplyr::filter(airport %in% cl_names_ls[[i]]) %>%
             dplyr::group_by(date) %>%
-            dplyr::summarise(airport = paste(airport, collapse = "_"), imports = sum(imports)) 
+            dplyr::summarise(airports_incl = paste(airport, collapse = "_"), 
+                             imports = sum(imports),
+                             airport = cl_names[i]) 
     })
+    
     
     imports_sim_tot <- imports_sim_orig %>% 
         dplyr::filter(!(airport %in% unlist(purrr::flatten(cl_names_ls)))) %>%
@@ -440,19 +446,19 @@ distrib_county_imports <- function(import_sims_clusters,
     }
     
     # merge county pop
-    airport_attribution <- left_join(airport_attribution, county_pops_df %>% select(GEOID, population=estimate), by=c("county"="GEOID"))
+    airport_attribution <- dplyr::left_join(airport_attribution, county_pops_df %>% dplyr::select(GEOID, population=estimate), by=c("county"="GEOID"))
     airport_attribution <- airport_attribution %>% as.data.frame() %>%
-        mutate(pop_adj = as.numeric(population) * as.numeric(attribution)) %>%
-        group_by(airport_iata) %>% mutate(attribution = pop_adj/sum(pop_adj, na.rm = TRUE)) %>% ungroup() %>% 
-        select(-pop_adj) 
-    airport_attribution <- airport_attribution %>% mutate(attribution = round(attribution,4))
+        dplyr::mutate(pop_adj = as.numeric(population) * as.numeric(attribution)) %>%
+        dplyr::group_by(airport_iata) %>% dplyr::mutate(attribution = pop_adj/sum(pop_adj, na.rm = TRUE)) %>% ungroup() %>% 
+        dplyr::select(-pop_adj) %>% 
+        dplyr::mutate(attribution = round(attribution,4))
     
     # Sample the importations out to counties based on population and attribution
     samp_res <- list()
-    import_sims_clusters_no0 <- import_sims_clusters %>% filter(imports>0)
+    import_sims_clusters_no0 <- import_sims_clusters %>% dplyr::filter(imports>0)
     for (i in seq_len(nrow(import_sims_clusters_no0))){
         imports_ <- import_sims_clusters_no0[i,]
-        co_info <- airport_attribution %>% filter(airport_iata == imports_$airport)
+        co_info <- airport_attribution %>% dplyr::filter(airport_iata == imports_$airport)
         if (nrow(co_info)==0) next ## need to figure out why we lost some airports in the attribution (EAT)
         samp_ <- base::sample(co_info$county, imports_$imports, replace=TRUE, prob=co_info$attribution)
         samp_res[[i]] <- data.frame(GEOID=samp_, t=imports_$date)
@@ -542,7 +548,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     county_pops_df <- get_county_pops(states_of_interest, 
                                             regioncode, 
                                             yr, 
-                                            write_county_shapefiles=FALSE,
+                                            write_county_shapefiles=TRUE,
                                             local_dir=local_dir)
     
     
@@ -569,15 +575,13 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     ## Get filenames 
     import_files <- list.files(model_output_dir, "imports_sim*.*.csv$")
     if (length(import_files)!=n_sim){
-        print("Number of simulations changed to ",length(import_files)," to match the number of importation simulations.")
+        print(paste0("Number of simulations changed to ",length(import_files)," to match the number of importation simulations."))
         n_sim <- length(import_files)
     }
     
     
     # Setup parallelization    
     library(doParallel)
-    
-    # Set up the cluster for parallelization
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
@@ -594,6 +598,8 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                                                    airport_attribution=airport_attribution, 
                                                                    model_output_dir = model_output_dir)
                 
+                if (sum(import_sims_clusters$imports)==0) next
+                
                 ## Distribute the importations out to counties based on the tesselation and population
                 county_imports <- distrib_county_imports(import_sims_clusters,
                                                          airport_attribution=airport_attribution,
@@ -601,7 +607,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                                          regioncode=regioncode,
                                                          county_pops_df=county_pops_df,
                                                          yr=yr)
-                county_imports <- county_imports %>% rename(place=GEOID, date=t, amount=imports)
+                county_imports <- county_imports %>% dplyr::rename(place=GEOID, date=t, amount=imports)
                 
                 ## Save the new importation file
                 readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))

@@ -372,6 +372,11 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
 
 
 
+
+
+
+
+
 #' Set up and run importation sims
 #'
 #' @param dest character string, name of destination to simulate importations for
@@ -736,7 +741,10 @@ setup_importations <- function(dest="UT",
                                         save_data = save_case_data)
   
   incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
-  jhucsse <- incid_data_list$jhucsse
+  incid_data <- incid_data %>% rename(incid_est = cases_incid)
+  jhucsse <- incid_data_list$jhucsse_case_data
+  jhucsse_state <- incid_data_list$jhucsse_case_data_state
+  
   
   ## ~ Travel Data
   ## if travel data exists load it, otherwise download it
@@ -777,7 +785,7 @@ setup_importations <- function(dest="UT",
   
   ## Travel data
   ##  - Get daily for merging purposes
-  travel_data_daily <- make_daily_travel(travel_data_monthly, travel_dispersion=3)
+  travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=3)
   
   ## ~ Population Data
   data(pop_data, package="covidImportation")
@@ -820,7 +828,7 @@ setup_importations <- function(dest="UT",
   # incid_sources[!(incid_sources %in% pop_sources)]
   
   ## ~~ Merge it all
-  input_data <- make_input_data(incid_data, travel_data_daily, pop_data,
+  input_data <- covidImportation:::make_input_data(incid_data, travel_data_daily, pop_data,
                                 shift_incid_days=param_list$shift_incid_days,
                                 dest_aggr_level=dest_aggr_level) %>%
     mutate(p_report_source=ifelse(source=="Hubei",
@@ -1103,6 +1111,7 @@ run_importations <- function(n_sim=100,
   data("travel_restrictions")
 
   # Set up the cluster for parallelization
+  library(doParallel)
   print(paste0("Making a cluster of ", cores," for parallelization."))
   cl <- parallel::makeCluster(cores)
   doParallel::registerDoParallel(cl)
