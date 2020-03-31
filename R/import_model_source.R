@@ -252,8 +252,10 @@ run_daily_import_model_par <- function(n_sim=10000,
                                       this.sim <- this.sim_$this.sim
 
                                       # Detected Importations
-                                      if (sum(this.sim) == 0 ) next    # - if no importations, skip to next
-
+                                      if (sum(this.sim) == 0 ){
+                                        NULL    # - if no importations, skip to next
+                                      } else {
+                                      
                                       import_dates_ <- est_import_detect_dates(this.sim_)
 
                                       tmp <- data.frame(source=import_dates_$detect_sources,
@@ -265,6 +267,7 @@ run_daily_import_model_par <- function(n_sim=10000,
                                       importation_detect_tmp[dimnames(detect_array_)[[1]], dimnames(detect_array_)[[2]], dimnames(detect_array_)[[3]]] <- detect_array_
 
                                       importation_detect_tmp
+                                      }
                                     }
 
         # Give the sim dimension dimnames

@@ -1,6 +1,6 @@
 Package: covidImportation
 Title: Estimating the Number of Imported COVID-19 Cases
-Version: 1.0
+Version: 1.1
 Authors@R: 
     c(person(given = c("Shaun", "A."),
            family = "Truelove",

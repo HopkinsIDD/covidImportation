@@ -598,21 +598,24 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                                                    airport_attribution=airport_attribution, 
                                                                    model_output_dir = model_output_dir)
                 
-                if (sum(import_sims_clusters$imports)==0) next
+                if (sum(import_sims_clusters$imports)==0){
+                  NULL    # - if no importations, skip to next
+                } else {
                 
-                ## Distribute the importations out to counties based on the tesselation and population
-                county_imports <- distrib_county_imports(import_sims_clusters,
-                                                         airport_attribution=airport_attribution,
-                                                         local_dir=local_dir, 
-                                                         regioncode=regioncode,
-                                                         county_pops_df=county_pops_df,
-                                                         yr=yr)
-                county_imports <- county_imports %>% dplyr::rename(place=GEOID, date=t, amount=imports)
-                
-                ## Save the new importation file
-                readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))
-                
-                #print("success")
+                  ## Distribute the importations out to counties based on the tesselation and population
+                  county_imports <- distrib_county_imports(import_sims_clusters,
+                                                           airport_attribution=airport_attribution,
+                                                           local_dir=local_dir, 
+                                                           regioncode=regioncode,
+                                                           county_pops_df=county_pops_df,
+                                                           yr=yr)
+                  county_imports <- county_imports %>% dplyr::rename(place=GEOID, date=t, amount=imports)
+                  
+                  ## Save the new importation file
+                  readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))
+                  
+                  #print("success")
+                }
                 
             }
     parallel::stopCluster(cl)
