@@ -47,6 +47,7 @@ get_county_pops <- function(states_of_interest,
     
     ## write populations dataframe only
     county_pops_df <- sf::st_drop_geometry(county_pops2)
+    dir.create(file.path(local_dir, regioncode), recursive = TRUE, showWarnings = FALSE)
     write_csv(county_pops_df, paste0(local_dir, regioncode, "/county_pops_", yr, ".csv"))
     
     if (write_county_shapefiles){
