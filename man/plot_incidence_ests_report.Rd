@@ -17,6 +17,8 @@ plot_incidence_ests_report(
 \item{incid_ests}{Estimated incidence}
 
 \item{locations}{Locations to plot, can be a vector}
+
+\item{ncol_facet}{number of columns in the facet plotting}
 }
 \value{
 a corrected version of the inferred incidence data corrected for reporting changes in Hubei.

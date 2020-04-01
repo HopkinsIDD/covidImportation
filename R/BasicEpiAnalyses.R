@@ -10,6 +10,8 @@
 ##'
 ##' @return a function that takse in some number of dates and gives predictions on those
 ##'
+##' @export
+##' 
 fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
   require(nnls)
   require(splines2)
@@ -39,11 +41,13 @@ fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
 ##'
 ##' @param cum_data a data frame with cumulative case data in oit
 ##' @param first_date the first date to infer
-##' @param second_date the last date to infer...shold be iwthin data range
-##'
+##' @param last_date  the latest date to infer incidence over
+##' @param na_to_zeros logical; whether to turn NAs to 0s.
 ##'
 ##' @return a data frame with roughly estimated incidence in it
 ##'
+##' @export
+##' 
 est_daily_incidence <- function (cum_data,
                                  first_date,
                                  last_date,
@@ -85,74 +89,6 @@ est_daily_incidence <- function (cum_data,
 
 
 
-##'
-##' Function to automate the comparison of MERS-CoV deaths with
-##' that from the Kudos line list.
-##'
-##'
-##' @param kudos the data from the kudos line list.
-##'
-##' @return a list with a data frame of results and a ggplot object.
-##'
-compare_deaths_to_MERS <- function (kudos) {
-  mers_dat <- read_csv("data/MERSDeathPublic.csv",
-                       col_types = cols(age_class=col_factor(levels = c("0-9", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70+"))))
-
-  ##make look like the kudos dat enough for us to run same table
-  mers_dat <- mers_dat %>% rename(death=died) %>%
-    rename(age_cat=age_class)
-
-  mers_OR_tbl <- OR_table_age(mers_dat, combine_CIs = FALSE)
-
-  #make the nCoV table look like the MERS one for a more direct
-  #comparison.
-
-  kudos <- kudos %>%
-    mutate(age_cat=cut(age,breaks=c(0,10,20,30,40,50,60,70,1000),
-                       labels=c("0-9","10-19",
-                                "20-29","30-39",
-                                "40-49","50-59",
-                                "60-69","70+")))
-
-
-  age_OR_tbl <- OR_table_age(kudos, combine_CIs = FALSE)
-
-  ##Replace observations with no data wiht NAs
-  no_data_index <- which(age_OR_tbl$dead==0)
-  age_OR_tbl$OR[no_data_index] <- NA
-  age_OR_tbl$CI_low[no_data_index] <- NA
-  age_OR_tbl$CI_high[no_data_index] <- NA
-
-  ##combine to plot
-  comb_OR_tbl <- bind_rows(nCoV=age_OR_tbl,
-                           MERS=mers_OR_tbl, .id="disease")
-
-  comb_OR_tbl$label <- sprintf("%1.2f (%1.2f, %1.2f)",
-                               comb_OR_tbl$OR,
-                               comb_OR_tbl$CI_low,
-                               comb_OR_tbl$CI_high)
-  comb_OR_tbl$label[comb_OR_tbl$OR==1] <- NA
-
-  mers_comp_plt <- ggplot(comb_OR_tbl, aes(x=age_cat, y=OR, color=disease, label=label)) +
-    geom_pointrange(aes(ymin=CI_low, ymax=CI_high),
-                    position = position_dodge2(width = 0.5, padding = 0.5)) +
-    scale_y_log10() + ylab("OR of death")+
-    xlab("Age") +
-    theme_bw()
-
-  comb_OR_wide <- comb_OR_tbl %>%
-    dplyr::select(disease,age_cat,label) %>%
-    pivot_wider(names_from=disease, values_from = label)
-
-  comb_OR_wide[6,c("nCoV","MERS")] <- "1"
-  comb_OR_wide$nCoV[no_data_index] <- "-"
-
-  return(list(plt = mers_comp_plt, table = comb_OR_wide))
-}
-
-
-
-
 
 
 
@@ -162,9 +98,12 @@ compare_deaths_to_MERS <- function (kudos) {
 ##' @param cumdat data frame with the cumulative number of cases
 ##' @param first_date the first date to infer incidence over
 ##' @param last_date  the latest date to infer incidence over
+##' @param tol error tolerance, in terms of number of cases
 ##'
 ##' @return a version of the inferred incidence data corrected for reportin changes.
 ##'
+##' @export
+##' 
 correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=100) {
 
   ## Reduce to just Hubei
@@ -233,9 +172,7 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
     inferred_13_cum_data <- confirmed_13 -
       sum((rc_incidence %>% dplyr::filter(Date<"2020-02-13"))$Incidence)
 
-
     diff_inferred <- inferred_13_cum_data - inferred_13_smth +  inferred_14_cum_data - inferred_13_smth
-
 
     #print(diff_inferred)
   }
@@ -254,9 +191,12 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
 ##' @param cum_data   data frame with the cumulative number of cases
 ##' @param first_date the first date to infer incidence over
 ##' @param last_date  the latest date to infer incidence over
+##' @param tol error tolerance, in terms of number of cases
 ##'
 ##' @return a corrected version of the inferred incidence data corrected for reporting changes in Hubei.
 ##'
+##' @export
+##' 
 est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=100, na_to_zeros=FALSE){
 
   ## Get estimated daily incidence for all provinces
@@ -286,9 +226,12 @@ est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=1
 ##' @param conf_cases Confirmed case data from JHU CSSE
 ##' @param incid_ests Estimated incidence
 ##' @param locations  Locations to plot, can be a vector
+##' @param ncol_facet number of columns in the facet plotting
 ##'
 ##' @return a corrected version of the inferred incidence data corrected for reporting changes in Hubei.
 ##'
+##' @export
+##' 
 plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_data,
                                        locations="All", ncol_facet=2){
 
@@ -331,12 +274,20 @@ plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_
     p <- p + facet_wrap(vars(Province_State), ncol=ncol_facet)
   }
   return(p)
-  #plot(p)
 }
 
 
 
-
+##'
+##' Get cumulative case counts by Province_state
+##'
+##' @param df JHUCSSE cleaned data
+##' @param case_limit limit to Province_State locations above a certain case count
+##'
+##' @return Cumulative confirmed cases by Province_State.
+##'
+##' @export
+##' 
 get_global_cum <- function(df = jhucsse, case_limit=100){
 
   conf_cases_global <- df %>%

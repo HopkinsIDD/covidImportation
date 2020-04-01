@@ -14,7 +14,13 @@ get_incidence_data(
 )
 }
 \arguments{
-\item{pull_github_data}{}
+\item{update_case_data}{whether to update the case data from the JHUCSSE github or just use data that are part of this package}
+
+\item{case_data_dir}{directory where case data is being saved}
+
+\item{check_saved_data}{whether to check locally saved github data}
+
+\item{save_data}{whether to save data locally}
 }
 \value{
 

@@ -12,7 +12,9 @@ est_daily_incidence(cum_data, first_date, last_date, na_to_zeros = FALSE)
 
 \item{first_date}{the first date to infer}
 
-\item{second_date}{the last date to infer...shold be iwthin data range}
+\item{last_date}{the latest date to infer incidence over}
+
+\item{na_to_zeros}{logical; whether to turn NAs to 0s.}
 }
 \value{
 a data frame with roughly estimated incidence in it

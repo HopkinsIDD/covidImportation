@@ -18,6 +18,8 @@ est_daily_incidence_corrected(
 \item{first_date}{the first date to infer incidence over}
 
 \item{last_date}{the latest date to infer incidence over}
+
+\item{tol}{error tolerance, in terms of number of cases}
 }
 \value{
 a corrected version of the inferred incidence data corrected for reporting changes in Hubei.

@@ -11,6 +11,8 @@ correct_for_Hubei_reporting(cum_data, first_date, last_date, tol = 100)
 
 \item{last_date}{the latest date to infer incidence over}
 
+\item{tol}{error tolerance, in terms of number of cases}
+
 \item{cumdat}{data frame with the cumulative number of cases}
 }
 \value{

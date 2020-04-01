@@ -327,7 +327,10 @@ get_airport_country <- function(airport_code = "ORD"){
 #'
 #' @param first_date
 #' @param last_date
-#' @param pull_github_data
+#' @param update_case_data whether to update the case data from the JHUCSSE github or just use data that are part of this package
+#' @param case_data_dir directory where case data is being saved
+#' @param check_saved_data whether to check locally saved github data
+#' @param save_data whether to save data locally
 #'
 #' @return
 #'
