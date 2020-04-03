@@ -15,6 +15,7 @@
 ##' @return
 ##'
 ##' @importFrom truncnorm rtruncnorm
+##' 
 est_imports_base <- function(input_data,
                              tr_inf_redux = 0,
                              meanD,
@@ -28,10 +29,10 @@ est_imports_base <- function(input_data,
     # if allowing variance in travel, using travelers SE
     if (allow_travel_variance){
         Travelers_over_Population_and_days <-
-            rtnorm(dim(input_data)[1],
+          truncnorm::rtruncnorm(dim(input_data)[1],
                    mean = input_data$travelers,
                    sd = input_data$travelers_SE,
-                   lower = 0) / input_data$days_per_t / input_data$population
+                   a = 0) / input_data$days_per_t / input_data$population
     } else {
         Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
     }
@@ -42,7 +43,7 @@ est_imports_base <- function(input_data,
 
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
-        Travelers_over_Population_and_days <- rtruncnorm(dim(input_data)[1],
+        Travelers_over_Population_and_days <- truncnorm::rtruncnorm(dim(input_data)[1],
                                                          mean = input_data$travelers,
                                                          sd = input_data$travelers_SE,
                                                          a = 0) / input_data$days_per_t / input_data$population
@@ -69,6 +70,10 @@ est_imports_base <- function(input_data,
 ##' Estimate the detection dates of importations
 ##'
 ##' @param sim_res Vector of importation simulation results
+##' @param time_inftodetect
+##' @param time_inftotravel
+##' 
+##' @import dplyr
 ##'
 est_import_detect_dates <- function(sim_res, time_inftodetect, time_inftotravel){
 
@@ -117,7 +122,10 @@ est_import_detect_dates <- function(sim_res, time_inftodetect, time_inftotravel)
 ##'
 ##' @return list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
 ##'
-##' @import doParallel
+##' @import doParallel dplyr parallel foreach
+##' @importFrom abind abind
+##' @importFrom reshape2 acast
+##' @importFrom arrayhelpers array2df
 ##'
 ##' @export
 ##'
@@ -314,7 +322,8 @@ run_daily_import_model_par <- function(n_sim=10000,
 ##' @param importation_sim 4D array outputted from the importation model
 ##' @param cores number of cores to use in parallel. if not parallel, specify 1.
 ##' 
-##' @import doParallel
+##' @import doParallel parallel 
+##' @importFrom fitdistrplus fitdist
 ##'
 ##' @export
 ##'
@@ -333,7 +342,6 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
 
     
     # Set up the cluster for parallelization
-    library(doParallel)
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
@@ -412,6 +420,8 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
 #' }
 #'
 #' @return
+#' 
+#' @import dplyr 
 #'
 #' @export
 #' 
@@ -474,32 +484,32 @@ setup_and_run_importations <- function(dest="UT",
                                               dest_country=dest_country,
                                               dest_aggr_level=dest_aggr_level) %>% as.data.frame()
         travel_data_monthly <- travel_data_monthly %>%
-            mutate(t_year=2020) %>%
-            rename(source = dep_loc_aggr)
+            dplyr::mutate(t_year=2020) %>%
+            dplyr::rename(source = dep_loc_aggr)
         travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
+        
     } else{
-        travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
-                                      dest_aggr_level, "_oag_20172019.csv") %>%
-            read_csv(na=c(""," ","NA"))%>%
-            mutate(t_year=2020) %>%
-            mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
+        travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-", dest_aggr_level, "_oag_20172019.csv") %>%
+            readr::read_csv(na=c(""," ","NA"))%>%
+            dplyr::mutate(t_year=2020) %>%
+            dplyr::mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
                                     # Increase travel for Chinese New Year
                                     travelers*1.6, travelers)) %>%
-            rename(source = dep_loc_aggr)
+            dplyr::rename(source = dep_loc_aggr)
         travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
     }
 
     ## monthly average totals into destinations
     travel_mean <- travel_data_monthly %>%
-        group_by(destination, t_month) %>%
-        summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
-        group_by(destination) %>%
-        summarise(travelers = mean(travelers)) %>%
-        arrange(desc(travelers))
+        dplyr::group_by(destination, t_month) %>%
+        dplyr::summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
+        dplyr::group_by(destination) %>%
+        dplyr::summarise(travelers = mean(travelers)) %>%
+        dplyr::arrange(desc(travelers))
     
     # Destinations to keep
     dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
-    travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
+    travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
     
     ## Travel data
     ##  - Get daily for merging purposes
@@ -511,29 +521,29 @@ setup_and_run_importations <- function(dest="UT",
     ## ~~ First Check that the variables match up
     # Check that incidence data does not have duplicates
     incid_dups <- sum(incid_data %>%
-                          mutate(source_t = paste(source, t)) %>%
-                          mutate(dup_entry=duplicated(source_t)) %>%
-                          pull(dup_entry))
+                        dplyr::mutate(source_t = paste(source, t)) %>%
+                        dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+                        dplyr::pull(dup_entry))
     if(sum(incid_dups)>0){
         dup_entry <- incid_data %>%
-            mutate(source_t = paste(source, t)) %>%
-            mutate(dup_entry=duplicated(source_t)) %>%
-            dplyr::filter(dup_entry) %>% pull(source_t)
+            dplyr::mutate(source_t = paste(source, t)) %>%
+            dplyr::mutate(dup_entry = duplicated(source_t)) %>%
+            dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
         warning("There are duplicate entries in the incidence data.")
     }
     ## Check travel data
     travel_dups <- travel_data %>%
-        mutate(source_dest_t = paste(source, destination, t),
-               dup_entry=duplicated(source_dest_t)) %>%
-        pull(dup_entry) %>%
+        dplyr::mutate(source_dest_t = paste(source, destination, t),
+               dup_entry = duplicated(source_dest_t)) %>%
+        dplyr::pull(dup_entry) %>%
         sum()
     if(sum(travel_dups)>0){
         warning("There are duplicate entries in the travel data.")
     }
     ## Check Population data
     pop_dups <- pop_data %>%
-        mutate(dup_entry=duplicated(source)) %>%
-        pull(dup_entry) %>%
+        dplyr::mutate(dup_entry = duplicated(source)) %>%
+        dplyr::pull(dup_entry) %>%
         sum()
     if(sum(pop_dups)>0){
         warning("There are duplicate entries in the population data.")
@@ -549,7 +559,7 @@ setup_and_run_importations <- function(dest="UT",
     input_data <- make_input_data(incid_data, travel_data, pop_data,
                                   shift_incid_days=param_list$shift_incid_days,
                                   dest_aggr_level=dest_aggr_level) %>%
-        mutate(p_report_source=ifelse(source=="Hubei",
+        dplyr::mutate(p_report_source=ifelse(source=="Hubei",
                                       param_list$p_report_source[1],
                                       param_list$p_report_source[2]),
                # For first pass, reporting rate is just Hubei/not Hubei
@@ -583,14 +593,14 @@ setup_and_run_importations <- function(dest="UT",
     data("travel_restrictions")
 
     input_data <- input_data %>%
-        mutate(source = as.character(source),
+        dplyr::mutate(source = as.character(source),
                destination = as.character(destination))
 
     ## Filter to sources with cases -- to speed it up
     source_w_cases <- input_data %>%
         dplyr::filter(!duplicated(paste0(source, t))) %>%
-        group_by(source) %>%
-        summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
+        dplyr::group_by(source) %>%
+        dplyr::summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
         dplyr::filter(cum_cases>0)
     input_data <- input_data %>%
         dplyr::filter(source %in% source_w_cases$source)
@@ -704,6 +714,8 @@ setup_and_run_importations <- function(dest="UT",
 #' }
 #'
 #' @return
+#' 
+#' @import dplyr
 #'
 #' @export
 #' 
@@ -757,34 +769,34 @@ setup_importations <- function(dest="UT",
                                           dest_country=dest_country,
                                           dest_aggr_level=dest_aggr_level) %>% as.data.frame()
     travel_data_monthly <- travel_data_monthly %>%
-      mutate(t_year=2020) %>%
-      rename(source = dep_loc_aggr)
+      dplyr::mutate(t_year=2020) %>%
+      dplyr::rename(source = dep_loc_aggr)
     travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
   } else{
     travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
                                   dest_aggr_level, "_oag_20172019.csv") %>%
-      read_csv(na=c(""," ","NA"))%>%
-      mutate(t_year=2020) %>%
-      mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
+      readr::read_csv(na=c(""," ","NA"))%>%
+      dplyr::mutate(t_year=2020) %>%
+      dplyr::mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
                               # Increase travel for Chinese New Year
                               travelers*1.6, travelers)) %>%
-      rename(source = dep_loc_aggr)
+      dplyr::rename(source = dep_loc_aggr)
     travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
   }
   
   ## monthly average totals into destinations
   travel_mean <- travel_data_monthly %>%
-    group_by(destination, t_month) %>%
-    summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
-    group_by(destination) %>%
-    summarise(travelers = mean(travelers)) %>%
-    arrange(desc(travelers))
+    dplyr::group_by(destination, t_month) %>%
+    dplyr::summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
+    dplyr::group_by(destination) %>%
+    dplyr::summarise(travelers = mean(travelers)) %>%
+    dplyr::arrange(desc(travelers))
   
   
   
   # Destinations to keep
   dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
-  travel_data_monthly <- travel_data_monthly %>% filter(destination %in% dests_keep)
+  travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
   
   ## Travel data
   ##  - Get daily for merging purposes
@@ -796,29 +808,29 @@ setup_importations <- function(dest="UT",
   ## ~~ First Check that the variables match up
   # Check that incidence data does not have duplicates
   incid_dups <- sum(incid_data %>%
-                      mutate(source_t = paste(source, t)) %>%
-                      mutate(dup_entry=duplicated(source_t)) %>%
-                      pull(dup_entry))
+                      dplyr::mutate(source_t = paste(source, t)) %>%
+                      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+                      dplyr::pull(dup_entry))
   if(sum(incid_dups)>0){
     dup_entry <- incid_data %>%
-      mutate(source_t = paste(source, t)) %>%
-      mutate(dup_entry=duplicated(source_t)) %>%
-      dplyr::filter(dup_entry) %>% pull(source_t)
+      dplyr::mutate(source_t = paste(source, t)) %>%
+      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+      dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
     warning("There are duplicate entries in the incidence data.")
   }
   ## Check travel data
   travel_dups <- travel_data_daily %>%
-    mutate(source_dest_t = paste(source, destination, t),
+    dplyr::mutate(source_dest_t = paste(source, destination, t),
            dup_entry=duplicated(source_dest_t)) %>%
-    pull(dup_entry) %>%
+    dplyr::pull(dup_entry) %>%
     sum()
   if(sum(travel_dups)>0){
     warning("There are duplicate entries in the travel data.")
   }
   ## Check Population data
   pop_dups <- pop_data %>%
-    mutate(dup_entry=duplicated(source)) %>%
-    pull(dup_entry) %>%
+    dplyr::mutate(dup_entry=duplicated(source)) %>%
+    dplyr::pull(dup_entry) %>%
     sum()
   if(sum(pop_dups)>0){
     warning("There are duplicate entries in the population data.")
@@ -834,21 +846,21 @@ setup_importations <- function(dest="UT",
   input_data <- covidImportation:::make_input_data(incid_data, travel_data_daily, pop_data,
                                 shift_incid_days=param_list$shift_incid_days,
                                 dest_aggr_level=dest_aggr_level) %>%
-    mutate(p_report_source=ifelse(source=="Hubei",
+    dplyr::mutate(p_report_source=ifelse(source=="Hubei",
                                   param_list$p_report_source[1],
                                   param_list$p_report_source[2]),
            # For first pass, reporting rate is just Hubei/not Hubei
            days_per_t=param_list$delta # ~ delta: days per time period
     ) %>%
     dplyr::filter(t<=as.Date(last_date)) %>%
-    mutate(source = as.character(source),
+    dplyr::mutate(source = as.character(source),
            destination = as.character(destination))
   
   ## Filter to sources with cases -- to speed it up
   source_w_cases <- input_data %>%
     dplyr::filter(!duplicated(paste0(source, t))) %>%
-    group_by(source) %>%
-    summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
+    dplyr::group_by(source) %>%
+    dplyr::summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
     dplyr::filter(cum_cases>0)
   input_data <- input_data %>%
     dplyr::filter(source %in% source_w_cases$source)
@@ -906,7 +918,7 @@ setup_importations <- function(dest="UT",
 ##'
 ##' @return list consisting of two objects: 1) an array of importations by date, location, and simulation, 2) a dataframe with negative binomial parameters for each location and date
 ##'
-##' @import doParallel
+##' @import dplyr
 ##'
 ##' @export
 ##'
@@ -938,7 +950,7 @@ run_daily_import_model <- function(input_data,
   ##   from infection to isolation/quarantine for detected cases (typically hospitalized/reported),
   ##   travel restriction or a decision not to travel, or for cases with asymptomatic or very mild illness, until recovery.
   ##   This value is drawn from a combination of the other distributions show here.
-  meanD_mat <- covidImportation:::make_meanD(input_data, 1,
+  meanD_mat <- make_meanD(input_data, 1,
                                              param_list$incub_mean_log,
                                              param_list$incub_sd_log,
                                              param_list$inf_period_hosp_shape,
@@ -974,7 +986,7 @@ run_daily_import_model <- function(input_data,
   # Join sampled travel data back into input data
   input_data_sim <- input_data %>%
     dplyr::select(-travelers) %>%
-    left_join(travel_data_daily %>%
+    dplyr::left_join(travel_data_daily %>%
                 dplyr::select(source,destination,t,travelers),
               by=c("source", "destination", "t"))
   
@@ -1085,7 +1097,9 @@ run_daily_import_model <- function(input_data,
 #'
 #' @return
 #'
-#' @import doParallel
+#' @import doParallel dplyr parallel foreach
+#' @importFrom readr read_csv write_csv
+#' 
 #' @export
 #' 
 run_importations <- function(n_sim=100,
@@ -1114,7 +1128,6 @@ run_importations <- function(n_sim=100,
   data("travel_restrictions")
 
   # Set up the cluster for parallelization
-  library(doParallel)
   print(paste0("Making a cluster of ", cores," for parallelization."))
   cl <- parallel::makeCluster(cores)
   doParallel::registerDoParallel(cl)

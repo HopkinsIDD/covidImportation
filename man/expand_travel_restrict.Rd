@@ -9,6 +9,9 @@ expand_travel_restrict(travel_restrictions)
 \arguments{
 \item{travel_restrictions}{data.frame of travel restrictions with columns loc, min, max, p_travel}
 }
+\value{
+expanded data.frame of travel restrictions by day and source location
+}
 \description{
 Expand the travel restrictions to include every date, to allow for merging with travel data.
 }

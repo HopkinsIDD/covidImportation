@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 This importation package runs a model to estimate importations of SARS-CoV-2 into airports globally. The current package includes data to estimate importations into U.S. airports.
@@ -9,13 +11,14 @@ This importation package runs a model to estimate importations of SARS-CoV-2 int
 
 library(covidImportation)
 
-states_of_interest=c("NY","NJ","CT")
-regioncode="NYC"
+states_of_interest=c("MD", "VA", "DE", "PA", "NJ")
+regioncode="east-coast"
+
 
 ```
 
     
-    
+
 ## Setup the data for the importation model.
     
 ```{r, warning=FALSE, message=FALSE}
@@ -93,10 +96,6 @@ run_full_distrib_imports(states_of_interest=states_of_interest,
                                      n_sim=100)
 
 ```
-
-
-
-
 
 
 

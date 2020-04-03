@@ -12,7 +12,8 @@ do_airport_attribution(
   regioncode,
   yr = 2010,
   local_dir = "data/",
-  plot = FALSE
+  plot = FALSE,
+  print_attr_error = FALSE
 )
 }
 \arguments{

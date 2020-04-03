@@ -10,18 +10,18 @@
 ##'
 ##' @return a function that takse in some number of dates and gives predictions on those
 ##'
+##' @importFrom nnls nnls
+##' @importFrom splines2 iSpline
 ##' @export
 ##' 
 fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
-  require(nnls)
-  require(splines2)
 
   #first get the basis
-  h <- iSpline(as.numeric(dates), df=df, intercept=T)
+  h <- splines2::iSpline(as.numeric(dates), df=df, intercept=T)
 
 
   #fit the nnls model to the data
-  mdl <- nnls(h, obs)
+  mdl <- nnls::nnls(h, obs)
   coefs <- coef(mdl)
 
 
@@ -46,6 +46,8 @@ fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
 ##'
 ##' @return a data frame with roughly estimated incidence in it
 ##'
+##' @import purrr dplyr 
+##' 
 ##' @export
 ##' 
 est_daily_incidence <- function (cum_data,
@@ -55,7 +57,7 @@ est_daily_incidence <- function (cum_data,
   if (na_to_zeros) {
     analyze <-   cum_data %>% replace(is.na(.), 0)
   } else {
-    analyze <-   cum_data %>% drop_na(Confirmed)
+    analyze <-   cum_data %>% tidyr::drop_na(Confirmed)
   }
 
 
@@ -66,10 +68,10 @@ est_daily_incidence <- function (cum_data,
   ##Making sure only to infer over trhe suport
   tmp_dt_seq <- seq(first_date, last_date, "days")
   incidence_data<- analyze %>% nest(-Province_State) %>%
-    mutate(cs=map(data, ~fit_ispline(dates=.$Update, obs=.$Confirmed))) %>%
-    mutate(Incidence=map2(cs,data, ~data.frame(Date=tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)],
+    dplyr::mutate(cs = purrr::map(data, ~fit_ispline(dates=.$Update, obs=.$Confirmed))) %>%
+    dplyr::mutate(Incidence = purrr::map2(cs,data, ~data.frame(Date=tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)],
                                                Incidence= diff(c(0, pmax(0,.x(tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)]))))))) %>%
-    unnest(Incidence) %>% dplyr::select(-data) %>% dplyr::select(-cs)
+    tidyr::unnest(Incidence) %>% dplyr::select(-data) %>% dplyr::select(-cs)
 
   return(incidence_data)
 
@@ -134,7 +136,7 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
   #get incidence inferring only from after the 14th
   late_incidence <-  est_daily_incidence(cum_data %>%
                                            dplyr::filter(Update>"2020-02-14") %>%
-                                           mutate(Confirmed=Confirmed-confirmed_14),
+                                           dplyr::mutate(Confirmed=Confirmed-confirmed_14),
                                          first_date,
                                          last_date)
   #print(late_incidence)
@@ -195,6 +197,8 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
 ##'
 ##' @return a corrected version of the inferred incidence data corrected for reporting changes in Hubei.
 ##'
+##' @import dplyr
+##' 
 ##' @export
 ##' 
 est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=100, na_to_zeros=FALSE){
@@ -212,7 +216,7 @@ est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=1
   incid_data <- incid_data %>% mutate(Province_State = factor(Province_State,
                                                               labels = sort(unique(Province_State)),
                                                               levels = sort(unique(Province_State)))) %>%
-    arrange(Province_State, Date)
+    dplyr::arrange(Province_State, Date)
 
   return(incid_data)
 }
@@ -230,15 +234,18 @@ est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=1
 ##'
 ##' @return a corrected version of the inferred incidence data corrected for reporting changes in Hubei.
 ##'
+##' @importFrom tibble as_tibble
+##' @import dplyr ggplot2
+##' 
 ##' @export
 ##' 
 plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_data,
                                        locations="All", ncol_facet=2){
 
   if (locations=="All"){
-    incid_ests <- incid_ests %>% mutate(Incidence = ceiling(Incidence))
+    incid_ests <- incid_ests %>% dplyr::mutate(Incidence = ceiling(Incidence))
   } else {
-    incid_ests <- incid_ests %>% mutate(Incidence = ceiling(Incidence)) %>% dplyr::filter(Province_State %in% locations)
+    incid_ests <- incid_ests %>% dplyr::mutate(Incidence = ceiling(Incidence)) %>% dplyr::filter(Province_State %in% locations)
     conf_cases <- conf_cases %>% dplyr::filter(Province_State %in% locations)
   }
   incid_ests$Date <- as.Date(incid_ests$Date, "%m/%d/%Y", tz = "UTC")
@@ -246,14 +253,14 @@ plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_
   # Make conf_cases daily
   # Get daily calculated incidence (from reporting)
   conf_cases_daily <- conf_cases %>% dplyr::filter(!is.na(Confirmed)) %>%
-    mutate(Date = as.Date(Update)) %>% group_by(Province_State, Date) %>% dplyr::filter(Update == max(Update, na.rm=TRUE)) %>% ungroup()
-  conf_cases_daily <- conf_cases_daily %>% group_by(Province_State) %>% arrange(Date) %>% mutate(Incidence = diff(c(0, Confirmed))) %>% ungroup()
+    dplyr::mutate(Date = as.Date(Update)) %>% dplyr::group_by(Province_State, Date) %>% dplyr::filter(Update == max(Update, na.rm=TRUE)) %>% dplyr::ungroup()
+  conf_cases_daily <- conf_cases_daily %>% dplyr::group_by(Province_State) %>% dplyr::arrange(Date) %>% dplyr::mutate(Incidence = diff(c(0, Confirmed))) %>% dplyr::ungroup()
 
   # Merge in reported incidence
-  incid_data_ <- left_join(incid_ests, conf_cases_daily %>% rename(Incid_rep = Incidence), by=c("Province_State", "Date")) %>% as_tibble()
+  incid_data_ <- dplyr::left_join(incid_ests, conf_cases_daily %>% dplyr::rename(Incid_rep = Incidence), by=c("Province_State", "Date")) %>% tibble::as_tibble()
 
   if (locations=="All"){
-    incid_data_ <- incid_data_ %>% group_by(Date) %>% summarize(Incidence=sum(Incidence, na.rm = TRUE), Incid_rep=sum(Incid_rep, na.rm = TRUE))
+    incid_data_ <- incid_data_ %>% dplyr::group_by(Date) %>% dplyr::summarize(Incidence=sum(Incidence, na.rm = TRUE), Incid_rep=sum(Incid_rep, na.rm = TRUE))
   }
 
   # Plot
@@ -286,20 +293,22 @@ plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_
 ##'
 ##' @return Cumulative confirmed cases by Province_State.
 ##'
+##' @import dplyr
+##' 
 ##' @export
 ##' 
 get_global_cum <- function(df = jhucsse, case_limit=100){
 
   conf_cases_global <- df %>%
     dplyr::filter(Country_Region != "Mainland China" & !(Province_State %in% c("Hong Kong", "Macau", "Taiwan"))) %>%
-    mutate(t = as.Date(Update)) %>% arrange(Province_State, Country_Region, Update) %>%
-    group_by(Country_Region, Province_State) %>% mutate(Incidence = diff(c(0, Confirmed), na.rm=TRUE)) %>% ungroup() %>%
-    group_by(Country_Region, Province_State, t) %>% summarise(Incidence = sum(Incidence, na.rm = TRUE))
+    dplyr::mutate(t = as.Date(Update)) %>% dplyr::arrange(Province_State, Country_Region, Update) %>%
+    dplyr::group_by(Country_Region, Province_State) %>% dplyr::mutate(Incidence = diff(c(0, Confirmed), na.rm=TRUE)) %>% dplyr::ungroup() %>%
+    dplyr::group_by(Country_Region, Province_State, t) %>% dplyr::summarise(Incidence = sum(Incidence, na.rm = TRUE))
 
   conf_cases_global <- conf_cases_global %>% dplyr::filter(t >= as.Date("2020-01-01"))
   t_values <- as.character(sort(conf_cases_global$t))
-  conf_cases_global_cum <- conf_cases_global %>% group_by(Province_State) %>%
-    summarise(cum_cases = sum(Incidence)) %>% dplyr::filter(cum_cases>=case_limit)
+  conf_cases_global_cum <- conf_cases_global %>% dplyr::group_by(Province_State) %>%
+    dplyr::summarise(cum_cases = sum(Incidence)) %>% dplyr::filter(cum_cases>=case_limit)
 
   return(conf_cases_global_cum)
 }

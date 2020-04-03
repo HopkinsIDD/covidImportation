@@ -8,9 +8,9 @@ run_full_distrib_imports(
   states_of_interest = c("CA", "NV", "WA", "OR", "AZ"),
   regioncode = "west-coast-AZ-NV",
   yr = 2010,
-  mean_travel_file = file.path("model_output", "importation", "travel_mean.csv"),
   travelers_threshold = 10000,
   airport_cluster_threshold = 80,
+  mean_travel_file = file.path("data", "travel_mean.csv"),
   shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2010_",
     regioncode, ".shp")),
   model_output_dir = file.path("model_output", "importation"),
@@ -27,11 +27,11 @@ run_full_distrib_imports(
 
 \item{yr}{Year of county population data}
 
-\item{mean_travel_file}{Filename of monthly mean travelers into each airport in the region}
-
 \item{travelers_threshold}{Minimum monthly average travel volume to be included}
 
 \item{airport_cluster_threshold}{Distance by which airports can be separated to be in the same cluster, in km; Haversine distance.}
+
+\item{mean_travel_file}{Filename of monthly mean travelers into each airport in the region}
 
 \item{local_dir}{local data directory}
 

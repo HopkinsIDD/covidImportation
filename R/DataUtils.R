@@ -9,6 +9,9 @@
 ##'
 ##' @return NA (saves a CSV of the current data to the data directory)
 ##'
+##' @import httr lubridate dplyr
+##' @importFrom readr read_csv write_csv
+##' 
 ##' @export
 ##' 
 pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
@@ -17,7 +20,6 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
     dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
     print(paste0("Pulled JHUCSSE data files are saved in ", case_data_dir, "."))
     
-
     # First get a list of files so we can get the latest one
     req <- httr::GET("https://api.github.com/repos/CSSEGISandData/COVID-19/git/trees/master?recursive=1")
 
@@ -30,7 +32,6 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
     dates_tocheck_ <- paste(lubridate::month(dates_reformat_), 
                             lubridate::day(dates_reformat_), 
                             lubridate::year(dates_reformat_), sep="-")
-
 
     # Check which we have already
     #dir.create(file.path("data"), recursive = TRUE, showWarnings = FALSE)
@@ -57,6 +58,9 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
     }
 }
 
+
+
+
 ##'
 ##' Reads in the JHUCSSE total case count data up
 ##' until (and including) a given dat.
@@ -67,6 +71,9 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
 ##' @param print_file_path logical whether or not to print the file path
 ##'
 ##' @return a data frame with the basic data.
+##' 
+##' @import dplyr lubridate
+##' @importFrom readr read_csv write_csv
 ##'
 ##' @export
 ##' 
@@ -100,38 +107,38 @@ read_JHUCSSE_cases <- function(last_date=Sys.Date(),
 
         colnames(tmp) <- colnames_
 
-        tmp <- tmp %>% mutate(Update=lubridate::parse_date_time(Update,
+        tmp <- tmp %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
                                  c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
         rc[[f]] <- tmp
     }
     rc <- data.table::rbindlist(rc, fill = TRUE)
     
     ##Now drop any after the date given
-    rc <- rc %>% as.data.frame() %>% mutate(Update = lubridate::ymd_hms(Update)) %>%
+    rc <- rc %>% as.data.frame() %>% dplyr::mutate(Update = lubridate::ymd_hms(Update)) %>%
         dplyr::filter(as.Date(Update) <= as.Date(last_date))
 
     # Fix Chinese provinces and 
     rc <- rc %>%
-        mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
-        mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
+        dplyr::mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
+        dplyr::mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
 
     # Fix bad locations
     rc <- rc %>% dplyr::filter(!(Province_State %in% c("US"))) %>%
-        mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
-        mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
-        mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
+        dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
     
     
     if (append_wiki) {
         data("wikipedia_cases", package="covidImportation")
-        rc <- bind_rows(rc,wikipedia_cases)
+        rc <- dplyr::bind_rows(rc,wikipedia_cases)
     }
     # Remove any duplicate rows
-    rc <- rc %>% distinct()
+    rc <- rc %>% dplyr::distinct()
         
     return(rc)
 }
@@ -147,6 +154,10 @@ read_JHUCSSE_cases <- function(last_date=Sys.Date(),
 ##' @param last_date last date for which to include case data
 ##' @param check_saved_data whether to check for existing saved case data
 ##' @param save_data whether to save the cleaned and combined data
+##' 
+##' @import dplyr httr lubridate
+##' @importFrom readr read_csv write_csv
+##' @importFrom data.table rbindlist
 ##' 
 ##' @return NA (saves a CSV of the current data to the data directory)
 ##'
@@ -240,7 +251,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         colnames_[grepl("Long", colnames_)] <- "Longitude"
         colnames(case_data) <- colnames_
         
-        case_data <- case_data %>% mutate(Update=lubridate::parse_date_time(Update,
+        case_data <- case_data %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
                                                                 c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
         rc[[i]] <- case_data
     }
@@ -252,27 +263,27 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
     
     # Fix Chinese provinces and autonomous regions
     rc <- rc %>%
-        mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
-        mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
-        mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
+        dplyr::mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
+        dplyr::mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
     
     # Fix bad locations
     rc <- rc %>% dplyr::filter(!(Province_State %in% c("US"))) %>%
-        mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
-        mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
-        mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
+        dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
     
     
     # merge with data from the package
-    rc <- bind_rows(jhucsse_case_data, rc) %>% distinct()
+    rc <- dplyr::bind_rows(jhucsse_case_data, rc) %>% dplyr::distinct()
     
     
     # Save if desired
     if (save_data){
-        write_csv(rc, file.path(case_data_dir,"jhucsse_case_data.csv"))
+        readr::write_csv(rc, file.path(case_data_dir,"jhucsse_case_data.csv"))
     }
     
     return(rc)
@@ -286,6 +297,8 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
 ##' These functions are all vectorized
 ##'
 ##' @param airport_code character, airport code
+##' 
+##' @import dplyr
 ##'
 ##' @return City of the aiport
 ##'
@@ -299,6 +312,8 @@ get_airport_city <- function(airport_code = "ORD"){
 #' Get airport state
 #'
 #' @param airport_code character, airport code
+#' 
+#' @import dplyr
 #'
 #' @return State/province of the airport
 #'
@@ -314,6 +329,8 @@ get_airport_state <- function(airport_code = "ORD"){
 #' @param airport_code character, airport code
 #'
 #' @return ISO3 code for the country where the airport is
+#' 
+#' @import dplyr
 #'
 #' @examples get_airport_country()
 #'
@@ -321,6 +338,7 @@ get_airport_country <- function(airport_code = "ORD"){
     data(airport_data)
     return((airport_data %>% dplyr::filter(iata_code %in% airport_code))$iso_country)
 }
+
 
 
 #' Get incidence data from JHUCSSE
@@ -336,7 +354,8 @@ get_airport_country <- function(airport_code = "ORD"){
 #'
 #' @examples
 #' 
-#' @import globaltoolboxlite
+#' @import globaltoolboxlite dplyr tidyr
+#' @importFrom globaltoolboxlite get_country_name_ISO3 get_iso
 #' 
 #' @export
 #' 
@@ -360,25 +379,25 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     
     # Make all Diamond Princess Cases same source
     jhucsse_case_data <- jhucsse_case_data %>% 
-        mutate(Province_State = ifelse(grepl("diamond princess", Province_State, ignore.case = TRUE), "Diamond Princess", Province_State))
+       dplyr::mutate(Province_State = ifelse(grepl("diamond princess", Province_State, ignore.case = TRUE), "Diamond Princess", Province_State))
 
     # Fix US locations
     jhucsse_case_data <- jhucsse_case_data %>% 
-        mutate(Province_State = ifelse(grepl("Seattle", Province_State, ignore.case = TRUE), "King County, WA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Chicago", Province_State, ignore.case = TRUE), "Cook County, IL", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("New York City", Province_State, ignore.case = TRUE), "New York County, NY", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Washington, D.C.", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Washington, DC", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
-        mutate(FIPS = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "11001", FIPS)) %>%
-        mutate(Admin2 = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "District of Columbia", Admin2)) %>%
-        mutate(Province_State = ifelse(grepl("Santa Clara", Province_State, ignore.case = TRUE), "Santa Clara County, CA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("San Mateo", Province_State, ignore.case = TRUE), "San Mateo County, CA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("San Benito", Province_State, ignore.case = TRUE), "San Benito County, CA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Portland", Province_State, ignore.case = TRUE), "Multnomah, OR", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Los Angeles", Province_State, ignore.case = TRUE), "Los Angeles County, CA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Boston", Province_State, ignore.case = TRUE), "Suffolk County, MA", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("San Antonio", Province_State, ignore.case = TRUE), "Bexar County, TX", Province_State)) %>%
-        mutate(Province_State = ifelse(grepl("Umatilla", Province_State, ignore.case = TRUE), "Umatilla County, CA", Province_State)) 
+       dplyr::mutate(Province_State = ifelse(grepl("Seattle", Province_State, ignore.case = TRUE), "King County, WA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State, ignore.case = TRUE), "Cook County, IL", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("New York City", Province_State, ignore.case = TRUE), "New York County, NY", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Washington, D.C.", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Washington, DC", Province_State, ignore.case = TRUE), "District of Columbia", Province_State)) %>%
+       dplyr::mutate(FIPS = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "11001", FIPS)) %>%
+       dplyr::mutate(Admin2 = ifelse(grepl("District of Columbia", Province_State, ignore.case = TRUE), "District of Columbia", Admin2)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Santa Clara", Province_State, ignore.case = TRUE), "Santa Clara County, CA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("San Mateo", Province_State, ignore.case = TRUE), "San Mateo County, CA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("San Benito", Province_State, ignore.case = TRUE), "San Benito County, CA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Portland", Province_State, ignore.case = TRUE), "Multnomah, OR", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Los Angeles", Province_State, ignore.case = TRUE), "Los Angeles County, CA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Boston", Province_State, ignore.case = TRUE), "Suffolk County, MA", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("San Antonio", Province_State, ignore.case = TRUE), "Bexar County, TX", Province_State)) %>%
+       dplyr::mutate(Province_State = ifelse(grepl("Umatilla", Province_State, ignore.case = TRUE), "Umatilla County, CA", Province_State)) 
         #mutate(US_county = ifelse(grepl("San Marino", Province_State, ignore.case = TRUE), "Los Angeles County, CA", Province_State)) %>%
         #mutate(US_county = ifelse(grepl("Lackland", Province_State, ignore.case = TRUE), "Bexar County, CA", Province_State))
         
@@ -386,12 +405,12 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 
     # Fix counties
     us_co_inds <- which(grepl("County", jhucsse_case_data$Province_State) & is.na(jhucsse_case_data$FIPS))
-    dat_ <- jhucsse_case_data[us_co_inds,] %>% separate(Province_State, c("county", "state"), sep=", ") %>%
-                mutate(county = gsub("\\.","",county))
+    dat_ <- jhucsse_case_data[us_co_inds,] %>% tidyr::separate(Province_State, c("county", "state"), sep=", ") %>%
+               dplyr::mutate(county = gsub("\\.","",county))
     
     countystate_ <- paste0(dat_$county, ", ", dat_$state)
     data("us_counties", package = "covidImportation") # load county info
-    us_counties <- us_counties %>% mutate(countystate = paste0(Name, " County, ", State))
+    us_counties <- us_counties %>% dplyr::mutate(countystate = paste0(Name, " County, ", State))
     FIPS_ <- us_counties$FIPS[match(countystate_, us_counties$countystate)]
     
     jhucsse_case_data$FIPS[us_co_inds] <- FIPS_
@@ -399,18 +418,18 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     
     
     # Get US States ................
-    # Separate out states
+    # tidyr::separate out states
     jhucsse_case_data <- suppressWarnings(
         jhucsse_case_data %>% 
-            separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
-            mutate(city = ifelse(is.na(state), NA, city))
+            tidyr::separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
+           dplyr::mutate(city = ifelse(is.na(state), NA, city))
         )
 
     # Get states where not already there
-    jhucsse_case_data <- jhucsse_case_data %>% mutate(state_tmp = state.abb[match(Province_State, state.name)]) %>%
-        mutate(state = ifelse(!is.na(state_tmp) & is.na(state), state_tmp, state)) %>%
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(state_tmp = state.abb[match(Province_State, state.name)]) %>%
+       dplyr::mutate(state = ifelse(!is.na(state_tmp) & is.na(state), state_tmp, state)) %>%
         dplyr::select(-state_tmp) %>%
-        mutate(state = ifelse(state=="D.C.", "DC", state))
+       dplyr::mutate(state = ifelse(state=="D.C.", "DC", state))
 
     # # Australian states .............
     #  --(for now we will just use the country of Australia. need to change to state eventually)
@@ -419,17 +438,17 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # Fix China ..............
     #unique(grep("China", incid_data$Country_Region, value = TRUE, ignore.case = TRUE))
     jhucsse_case_data <- jhucsse_case_data %>%
-        mutate(Country_Region = ifelse(Province_State %in% c("Inner Mongolia"),
+       dplyr::mutate(Country_Region = ifelse(Province_State %in% c("Inner Mongolia"),
                                        "China", Country_Region)) %>%
-        mutate(Country_Region = ifelse(Country_Region %in% c("Mainland China", "Hong Kong", "Macau", "Taiwan", "Nei Mongol"),
+       dplyr::mutate(Country_Region = ifelse(Country_Region %in% c("Mainland China", "Hong Kong", "Macau", "Taiwan", "Nei Mongol"),
                                        "China", Country_Region))
 
 
     # Get ISO Code .....................
     jhucsse_case_data <- jhucsse_case_data %>%
-        mutate(country = globaltoolboxlite::get_iso(Country_Region)) %>%
-        mutate(country_name = globaltoolboxlite::get_country_name_ISO3(country))
-    jhucsse_case_data <- jhucsse_case_data %>% mutate(country_name = ifelse(country=="KOS", "Kosovo", country_name))
+       dplyr::mutate(country = globaltoolboxlite::get_iso(Country_Region)) %>%
+       dplyr::mutate(country_name = globaltoolboxlite::get_country_name_ISO3(country))
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(country_name = ifelse(country=="KOS", "Kosovo", country_name))
     #unique((incid_data %>% dplyr::filter(is.na(country)))$source)
     # country_ <- countrycode::countrycode(unique(jhucsse_case_data$Country_Region),
     #                                      origin="country.name", destination = "iso3c",
@@ -439,75 +458,74 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # - USA: States used for source
     # - China: Provinces used for source
     # - Others: Country used for source
-    jhucsse_case_data <- jhucsse_case_data %>% mutate(source = ifelse(country=="USA" & !is.na(state), state,
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(source = ifelse(country=="USA" & !is.na(state), state,
                                                   ifelse(country=="CHN" & !is.na(Province_State), Province_State, country)))
 
     # Manually get rid of bad data
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(!(Province_State %in% c("The Bahamas", "Republic of the Congo"))) %>%
         dplyr::filter(!(Province_State=="UK" & Update=="2020-03-11 21:33:03")) %>%
-        mutate(Province_State = ifelse(Province_State=="United Kingdom", "UK", Province_State))
+       dplyr::mutate(Province_State = ifelse(Province_State=="United Kingdom", "UK", Province_State))
     
     # Get rid of duplicate rows
     jhucsse_case_data <- jhucsse_case_data %>% distinct()
 
     # Get new base location on which to run splines
-    jhucsse_case_data <- jhucsse_case_data %>% mutate(source_loc = ifelse(country =="USA" & !is.na(FIPS), FIPS, Province_State))
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(source_loc = ifelse(country =="USA" & !is.na(FIPS), FIPS, Province_State))
     
     # Get incident cases by source_loc (US counties, Chinese provinces, Countries otherwise)
-    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
-        group_by(source_loc, country) %>%
-        mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
-    
-    
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::arrange(country, source_loc, Update) %>%
+         dplyr::group_by(source_loc, country) %>%
+       dplyr::mutate(incid_conf = diff(c(0,Confirmed))) %>% dplyr::ungroup()
     
 
     # Fix counts that go negative
     negs_ind <- which(jhucsse_case_data$incid_conf < 0)
     jhucsse_case_data$Confirmed[negs_ind - 1] <- jhucsse_case_data$Confirmed[negs_ind - 1] + jhucsse_case_data$incid_conf[negs_ind]
-    jhucsse_case_data <- jhucsse_case_data %>% arrange(country, source_loc, Update) %>%
-        group_by(source_loc, country) %>%
-        mutate(incid_conf = diff(c(0,Confirmed))) %>% ungroup()
+    jhucsse_case_data <- jhucsse_case_data %>% dplyr::arrange(country, source_loc, Update) %>%
+         dplyr::group_by(source_loc, country) %>%
+       dplyr::mutate(incid_conf = diff(c(0,Confirmed))) %>% dplyr::ungroup()
     jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(incid_conf>=0)
         
     
     # Get cum incidence for states/provinces, countries
     jhucsse_case_data_state <- jhucsse_case_data %>% 
-        arrange(country, source, Update) %>%
-        group_by(source, country, Update) %>%
-        summarise(incid_conf = sum(incid_conf)) %>%
-        ungroup() %>% 
-        group_by(source, country) %>%
-        mutate(cum_incid = cumsum(incid_conf)) %>% 
-        ungroup()
+        dplyr::arrange(country, source, Update) %>%
+        dplyr::group_by(source, country, Update) %>%
+        dplyr::summarise(incid_conf = sum(incid_conf)) %>%
+        dplyr::ungroup() %>% 
+        dplyr::group_by(source, country) %>%
+        dplyr::mutate(cum_incid = cumsum(incid_conf)) %>% 
+        dplyr::ungroup()
 
 
     ## GET INCIDENCE FITS ..........................
     ## Estimate incidence using spline fits.
-    incid_data <- est_daily_incidence_corrected(jhucsse_case_data_state %>% mutate(Province_State=source, Confirmed=cum_incid),
+    incid_data <- est_daily_incidence_corrected(jhucsse_case_data_state %>% dplyr::mutate(Province_State=source, Confirmed=cum_incid),
                                                 first_date, last_date, tol=100, na_to_zeros=FALSE) %>%
-        mutate(Incidence=round(Incidence, 2))
+       dplyr::mutate(Incidence=round(Incidence, 2))
 
     ## Incidence Data
-    incid_data <- incid_data %>% rename(source=Province_State, cases_incid=Incidence) %>%
-        mutate(source = as.character(source),
+    incid_data <- incid_data %>% dplyr::rename(source=Province_State, cases_incid=Incidence) %>%
+       dplyr::mutate(source = as.character(source),
                t = as.Date(Date)) %>%
         as.data.frame()
 
     # Add country_name back in
     incid_data <- left_join(incid_data,
                             jhucsse_case_data %>% dplyr::select(source, country_name, country) %>%
-                                mutate(prov_country = paste0(source,"-", country_name)) %>%
+                               dplyr::mutate(prov_country = paste0(source,"-", country_name)) %>%
                                 dplyr::filter(!duplicated(prov_country)) %>% dplyr::select(-prov_country),
                             by=c("source"="source"))
     # Add confirmed cases back in
     incid_data <- left_join(incid_data,
-                            jhucsse_case_data_state %>% mutate(t = as.Date(Update)) %>% 
-                                group_by(t, source, country) %>% 
-                                summarise(incid_conf = sum(incid_conf, na.rm=TRUE)) %>% arrange(country, source, t) %>%
-                                group_by(source, country) %>%
-                                mutate(cum_incid = cumsum(incid_conf)) %>% ungroup(),
+                            jhucsse_case_data_state %>% dplyr::mutate(t = as.Date(Update)) %>% 
+                                 dplyr::group_by(t, source, country) %>% 
+                                 dplyr::summarise(incid_conf = sum(incid_conf, na.rm=TRUE)) %>% 
+                                 dplyr::arrange(country, source, t) %>%
+                                 dplyr::group_by(source, country) %>%
+                                 dplyr::mutate(cum_incid = cumsum(incid_conf)) %>% dplyr::ungroup(),
                             by=c("source"="source", "t"="t", "country"))
-    incid_data <- incid_data %>% mutate(incid_conf=ifelse(is.na(incid_conf), 0, incid_conf))
+    incid_data <- incid_data %>% dplyr::mutate(incid_conf=ifelse(is.na(incid_conf), 0, incid_conf))
 
     
     # Drop NA source
@@ -517,9 +535,9 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     
     # Get cumulative estimated incidence
     incid_data <- incid_data %>% 
-        arrange(country, source, t) %>%
-        group_by(source, country) %>% 
-        mutate(cum_est_incid = cumsum(cases_incid)) %>% ungroup()
+        dplyr::arrange(country, source, t) %>%
+        dplyr::group_by(source, country) %>% 
+        dplyr::mutate(cum_est_incid = cumsum(cases_incid)) %>% dplyr::ungroup()
         
 
     return(list(incid_data=incid_data, jhucsse_case_data=jhucsse_case_data, jhucsse_case_data_state=jhucsse_case_data_state))
@@ -537,7 +555,12 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
 ##' @param dest_0_type default=NULL; must specify if specifying a `dest_0` option.
 ##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
 ##'
+##' @import dplyr
+##' @importFrom readr read_csv write_csv 
+##' @importFrom countrycode countrycode
+##' 
 ##' @export
+##' 
 get_oag_travel_fulldata <- function(destination=c("CA"),
                            destination_type="state",
                            dest_0=NULL,
@@ -552,7 +575,7 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
     
     # Read full data
     # these data are clean in  `oag_data_cleaning.R`
-    data_travel_all <- read_csv(oag_file, na=c(""," ", "NA"),
+    data_travel_all <- readr::read_csv(oag_file, na=c(""," ", "NA"),
                                 col_types = list(
                                     `Dep Airport Code` = col_character(),
                                     `Dep City Name` = col_character(),
@@ -601,20 +624,20 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
     data(airport_attribution)
 
     # merge with travel data
-    dest_data <- left_join(dest_data,
+    dest_data <- dplyr::left_join(dest_data,
                            airport_attribution,
                            by=c("Dep Airport Code"="airport_iata"))
     # Adjust travel volume based on attribution
     dest_data <- dest_data %>%
-        replace_na(list(attribution=1)) %>%
-        mutate(`Total Est. Pax` = `Total Est. Pax` * attribution) %>%
+        tidyr::replace_na(list(attribution=1)) %>%
+        dplyr::mutate(`Total Est. Pax` = `Total Est. Pax` * attribution) %>%
         dplyr::select(-attribution, pop)
 
 
     # Get us State codes for departures
     data(airport_data)
     airport_data <- airport_data %>%
-        mutate(iso_country = ifelse(iso_country=="XK", "KOS",
+       dplyr::mutate(iso_country = ifelse(iso_country=="XK", "KOS",
                                     countrycode::countrycode(iso_country,
                                                              origin = "iso2c",
                                                              destination = "iso3c")))
@@ -622,14 +645,14 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
         dplyr::filter(iso_country=="USA")
 
     dest_data <- dest_data %>%
-        left_join(airport_data_us %>%
-                      mutate(state = substr(iso_region, 4,5)) %>%
+        dplyr::left_join(airport_data_us %>%
+                     dplyr::mutate(state = substr(iso_region, 4,5)) %>%
                       dplyr::select(state, iata_code),
                   by=c("Dep Airport Code"="iata_code")) %>%
-        mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state),
+       dplyr::mutate(`Dep State Code`=ifelse(is.na(`Dep State Code`) & !is.na(state),
                                        state, `Dep State Code`)) %>%
         # Aggregate SOURCE LOCATION to province (China) or state (US) or country (all others) for source
-        rename(dep_airport = `Dep Airport Code`,
+       dplyr::rename(dep_airport = `Dep Airport Code`,
                dep_state = `Dep State Code`,
                dep_country = `Dep Country Code`,
                dep_city = `Dep City Name`,
@@ -642,11 +665,11 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
                yr_month = `Time Series`,
                dep_province = Province) %>%
         # Fix US cities with "(US) [STATE]" in name
-        mutate(arr_city = gsub(" \\(US\\).*", "", arr_city)) %>%
+       dplyr::mutate(arr_city = gsub(" \\(US\\).*", "", arr_city)) %>%
         # Aggregate to dest_aggr_level, then get mean across 3 years ..............
 
     dest_data_aggr <- dest_data %>%
-        mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
+       dplyr::mutate(dep_loc_aggr = ifelse(dep_country=="CHN", dep_province, ifelse(dep_country=="USA", dep_state, dep_country)),
                t_year = substr(yr_month, 1,4),
                t_month = as.character(substr(yr_month, 5,6)))    # Get year and month variables
 
@@ -654,19 +677,19 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
     # Get Metro areas (only available for CA currently)
     if (length(destination)==1 && destination=="CA"){
 
-        ca_airport_attibution <- read_csv("data/ca/airport_attribution.csv")
-        ca_airport_attibution <- ca_airport_attibution %>% mutate(metrop_labels=ifelse(is.na(metrop_labels), "Other", metrop_labels))
+        ca_airport_attibution <- readr::read_csv("data/ca/airport_attribution.csv")
+        ca_airport_attibution <- ca_airport_attibution %>% dplyr::mutate(metrop_labels=ifelse(is.na(metrop_labels), "Other", metrop_labels))
 
         # choose 1 place to give attribution
-        ca_airport_attibution <- ca_airport_attibution %>% group_by(metrop_labels, airport_iata) %>%
-            summarise(attribution = sum(attribution, na.rm = TRUE))
-        ca_airport_attibution <- ca_airport_attibution %>% group_by(airport_iata) %>% dplyr::filter(attribution==max(attribution)) %>% ungroup()
+        ca_airport_attibution <- ca_airport_attibution %>% dplyr::group_by(metrop_labels, airport_iata) %>%
+            dplyr::summarise(attribution = sum(attribution, na.rm = TRUE))
+        ca_airport_attibution <- ca_airport_attibution %>% dplyr::group_by(airport_iata) %>% dplyr::filter(attribution==max(attribution)) %>% dplyr::ungroup()
 
-        dest_data_aggr <- left_join(dest_data_aggr,
+        dest_data_aggr <- dplyr::left_join(dest_data_aggr,
                                     ca_airport_attibution %>% dplyr::select(airport_iata, metrop_labels),
                                     by=c("arr_airport"="airport_iata")) %>%
-            rename(arr_metro = metrop_labels)
-        dest_data_aggr <- dest_data_aggr %>% mutate(arr_metro = ifelse(is.na(arr_metro), "Other", arr_metro))
+           dplyr::rename(arr_metro = metrop_labels)
+        dest_data_aggr <- dest_data_aggr %>% dplyr::mutate(arr_metro = ifelse(is.na(arr_metro), "Other", arr_metro))
     }
 
     # aggregation levels for destination
@@ -675,27 +698,27 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
     loc_vars_aggr <- loc_vars_aggr[loc_vars_aggr %in% colnames(dest_data_aggr)]
     other_vars_aggr <- c("yr_month", "t_year", "t_month", "dep_loc_aggr", "dep_country")
 
-    dest_data_aggr <- dest_data_aggr %>% group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
-        summarise(travelers = sum(travelers, na.rm = TRUE))
+    dest_data_aggr <- dest_data_aggr %>% dplyr::group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
+        dplyr::summarise(travelers = sum(travelers, na.rm = TRUE))
 
     # Get Monthly means across the 3 year (using geometric means)
     other_vars_aggr <- c("t_month", "dep_loc_aggr", "dep_country")
     dest_data_aggr <- dest_data_aggr %>%
-        group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
-        summarise(travelers_sd = sd(travelers),
+        dplyr::group_by(.dots = c(other_vars_aggr, loc_vars_aggr)) %>%
+        dplyr::summarise(travelers_sd = sd(travelers),
                   travelers_mean = exp(mean(log(travelers+1)))-1)
 
-    dest_data_aggr <- dest_data_aggr %>% mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
+    dest_data_aggr <- dest_data_aggr %>% dplyr::mutate(travelers_sd = ifelse(is.nan(travelers_sd), travelers_mean/1.96, travelers_sd)) # for those with only 1 value for travel, just use that /2 for the SD
 
     # Save it
-    write_csv(dest_data_aggr, paste0("data/", paste(destination, collapse = "+"), "-", dest_aggr_level, "_oag_20172019.csv"))
+    readr::write_csv(dest_data_aggr, paste0("data/", paste(destination, collapse = "+"), "-", dest_aggr_level, "_oag_20172019.csv"))
 
 }
 
 
 # # Save CA cities
 # dest_data_aggr <- get_oag_travel(destination="CA", destination_type="state", dest_aggr_level="airport")
-# ca_airports <- dest_data_aggr %>% group_by(arr_airport, arr_city, arr_state, arr_country) %>% summarise(n_occur = n())
+# ca_airports <- dest_data_aggr %>%  dplyr::group_by(arr_airport, arr_city, arr_state, arr_country) %>%  dplyr::summarise(n_occur = n())
 # write_csv(ca_airports, "data/ca_airports.csv")
 
 
@@ -713,6 +736,10 @@ get_oag_travel_fulldata <- function(destination=c("CA"),
 ##' @param dest_0 default=NULL; change to specify higher level destination (i.e. dest_0="USA")
 ##' @param dest_0_type default=NULL; must specify if specifying a `dest_0` option.
 ##' @param dest_aggr_level level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
+##' 
+##' @import dplyr
+##' 
+
 
 get_oag_travel <- function(destination=c("CA"),
                            destination_type="state",
@@ -743,8 +770,6 @@ get_oag_travel <- function(destination=c("CA"),
     
     return(dest_data)
 }
-
-
 
 
 
@@ -805,6 +830,8 @@ get_CA_metro_labels <- function(data){
 #' @param dest_aggr_level
 #' @param shift_incid_days
 #'
+#' @import dplyr
+#' @importFrom lubridate epiweek
 #' @return
 #'
 #' @examples
@@ -817,7 +844,7 @@ make_input_data <- function(incid_data,
     ## Incidence data
     #  - Shift incid_data dates to align with incubation period
     if (!is.na(shift_incid_days)){
-        incid_data <- incid_data %>% mutate(t = as.Date(t) + shift_incid_days)
+        incid_data <- incid_data %>% dplyr::mutate(t = as.Date(t) + shift_incid_days)
     }
 
     # Drop the cruise ship
@@ -825,9 +852,9 @@ make_input_data <- function(incid_data,
                                             !grepl("diamond princess", source, ignore.case = TRUE))
 
     # merge data (delimit it by travel data)
-    pop_data    <- pop_data %>% mutate(source = as.character(source)) %>%
+    pop_data    <- pop_data %>% dplyr::mutate(source = as.character(source)) %>%
         dplyr::select(source, dep_country=country, population=pop)
-    incid_data  <- incid_data %>% mutate(source = as.character(source)) %>%
+    incid_data  <- incid_data %>% dplyr::mutate(source = as.character(source)) %>%
         dplyr::select(source, t, incid_est, dep_country=country)
 
 
@@ -836,17 +863,17 @@ make_input_data <- function(incid_data,
 
     duplicates <- c(
         # Check that incidence data does not have duplicates
-        sum(incid_data %>% mutate(source_t = paste(source, t)) %>%
-                mutate(dup_entry=duplicated(source_t)) %>% pull(dup_entry)),
+        sum(incid_data %>% dplyr::mutate(source_t = paste(source, t)) %>%
+               dplyr::mutate(dup_entry=duplicated(source_t)) %>% dplyr::pull(dup_entry)),
         ## --> no duplicates at the moment...
 
         # Check travel data
-        sum(travel_data %>% mutate(source_dest_t = paste(source, arr_airport, t)) %>%
-                mutate(dup_entry=duplicated(source_dest_t)) %>% pull(dup_entry)),
+        sum(travel_data %>% dplyr::mutate(source_dest_t = paste(source, arr_airport, t)) %>%
+               dplyr::mutate(dup_entry=duplicated(source_dest_t)) %>% dplyr::pull(dup_entry)),
         ## --> no duplicates at the moment...
 
         # Check Population data
-        sum(pop_data %>% mutate(dup_entry=duplicated(source)) %>% pull(dup_entry))
+        sum(pop_data %>% dplyr::mutate(dup_entry=duplicated(source)) %>% dplyr::pull(dup_entry))
         ## --> no duplicates at the moment...
     )
 
@@ -864,14 +891,14 @@ make_input_data <- function(incid_data,
     all_vars <- c(other_vars, arr_vars)
     all_vars <- all_vars[all_vars %in% colnames(travel_data)]
 
-    travel_data <- travel_data %>% mutate(source = as.character(source)) %>%
+    travel_data <- travel_data %>% dplyr::mutate(source = as.character(source)) %>%
         dplyr::select(all_vars)
 
     # combine them all
-    input_data <- full_join(
-        right_join(pop_data, travel_data, by=c("source", "dep_country")),
+    input_data <- dplyr::full_join(
+        dplyr::right_join(pop_data, travel_data, by=c("source", "dep_country")),
         incid_data, by=c("source", "dep_country", "t"))
-    input_data <- input_data %>% rename(cases_incid=incid_est)
+    input_data <- input_data %>% dplyr::rename(cases_incid=incid_est)
 
     start_date <- min((input_data %>% dplyr::filter(cases_incid>0))$t)
 
@@ -879,7 +906,7 @@ make_input_data <- function(incid_data,
     input_data <- input_data %>%
         #dplyr::filter(t > as.Date("2019-12-31")) %>%
         dplyr::filter(t >= as.Date(start_date)) %>%
-        mutate(cases_incid=ifelse(is.na(cases_incid), 0, cases_incid),
+       dplyr::mutate(cases_incid=ifelse(is.na(cases_incid), 0, cases_incid),
                epiweek = lubridate::epiweek(t))
     input_data <- input_data %>% dplyr::filter(!is.na(travelers))
 
@@ -915,6 +942,8 @@ make_input_data <- function(incid_data,
 #' @param inf_period_hosp_scale
 #' @param inf_period_nohosp_mean
 #' @param inf_period_nohosp_sd
+#'
+#' @importFrom truncnorm rtruncnorm
 #'
 #' @return
 #'
@@ -959,14 +988,16 @@ make_meanD <- function(input_data,
 ##'  -- Set to 3  for moderate
 ##'  -- Set to .01 for none (evenly mixed across days)
 ##'
+##' @import dplyr 
+##' @importFrom lubridate days_in_month
 ##'
 ##' @return a data frame with randomly distributed travel into days
 ##'
 make_daily_travel <- function(travel_data, travel_dispersion=10){
 
     travel_data <- travel_data %>%
-        rename(travelers_month = travelers) %>%
-        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
+       dplyr::rename(travelers_month = travelers) %>%
+       dplyr::mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
 
     rows_ <- nrow(travel_data)
 
@@ -983,7 +1014,7 @@ make_daily_travel <- function(travel_data, travel_dispersion=10){
     # Add new daily travel volume to it
     data_daily <- data.frame(data_daily, t_day=t_day, travelers=x)
 
-    data_daily <- data_daily %>% mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
+    data_daily <- data_daily %>% dplyr::mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
     return(data_daily)
 }
 
@@ -999,11 +1030,16 @@ make_daily_travel <- function(travel_data, travel_dispersion=10){
 ##' @param travel_data_daily Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
 ##' @param travel_dispersion Numeric. Value defining how evenly distributed daily travel is across a month.
 ##'
+##' @importFrom lubridate days_in_month 
+##' @import dplyr
+##' 
+##' @return data.frame of daily travel data
+##' 
 make_daily_travel_faster <- function(travel_data, travel_data_daily, travel_dispersion=10){
 
     travel_data <- travel_data %>%
-        rename(travelers_month = travelers) %>%
-        mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
+       dplyr::rename(travelers_month = travelers) %>%
+       dplyr::mutate(days_month = lubridate::days_in_month(as.integer(t_month)))
 
     rows_ <- nrow(travel_data)
 
@@ -1024,11 +1060,15 @@ make_daily_travel_faster <- function(travel_data, travel_data_daily, travel_disp
 ##' Expand the travel restrictions to include every date, to allow for merging with travel data.
 ##'
 ##' @param travel_restrictions data.frame of travel restrictions with columns loc, min, max, p_travel
-##'
+##' 
+##' @import dplyr
+##' @importFrom data.table rbindlist
+##' 
+##' @return expanded data.frame of travel restrictions by day and source location
 ##'
 expand_travel_restrict <- function(travel_restrictions){
 
-    travel_restrictions <- travel_restrictions %>% mutate(min=as.Date(min),
+    travel_restrictions <- travel_restrictions %>% dplyr::mutate(min=as.Date(min),
                                                           max=as.Date(max))
     travel_restrict_ <- list()
     for (r in seq_len(nrow(travel_restrictions))){
@@ -1039,7 +1079,7 @@ expand_travel_restrict <- function(travel_restrictions){
     travel_restrict_ <- data.table::rbindlist(travel_restrict_)
     
     # Throw an error if duplicates of days for locations
-    dupls_ <- sum(duplicated(travel_restrict_ %>% mutate(loc_t = paste(loc, t)) %>% pull(loc_t)))
+    dupls_ <- sum(duplicated(travel_restrict_ %>% dplyr::mutate(loc_t = paste(loc, t)) %>% dplyr::pull(loc_t)))
     if (dupls_>0){
         stop("Duplicates in travel restrictions. Fix the travel_restrictions file.", call. = FALSE)
     }
@@ -1060,12 +1100,14 @@ expand_travel_restrict <- function(travel_restrictions){
 ##' @param travel_data Data.frame. Daily travel data that was previously built. We replace the travelers column in this.
 ##' @param travel_restrictions_long Data.frame. Daily travel restrictions, including dates, source location, and proportion of cases.
 ##'
+##' @import dplyr
+##'
 apply_travel_restrictions <- function(travel_data, travel_restrictions_long){
-    travel_restrictions_long <- travel_restrictions_long %>% distinct()
-    travel_data <- left_join(travel_data, 
+    travel_restrictions_long <- travel_restrictions_long %>% dplyr::distinct()
+    travel_data <- dplyr::left_join(travel_data, 
                              travel_restrictions_long, by=c("t","source"="loc")) %>%
-                                    replace_na(list(p_travel=1)) %>%
-                                    mutate(travelers=travelers*p_travel)
+                                    tidyr::replace_na(list(p_travel=1)) %>%
+                                   dplyr::mutate(travelers=travelers*p_travel)
 
     return(travel_data)
 }

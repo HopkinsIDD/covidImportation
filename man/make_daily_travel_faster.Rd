@@ -18,6 +18,9 @@ make_daily_travel_faster(
 
 \item{travel_dispersion}{Numeric. Value defining how evenly distributed daily travel is across a month.}
 }
+\value{
+data.frame of daily travel data
+}
 \description{
 Convert monthly travel to daily travel data -- fast
 - When we have already built the daily data, we reuse that and just fill in the new daily volume each time

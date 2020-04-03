@@ -8,6 +8,8 @@ est_import_detect_dates(sim_res, time_inftodetect, time_inftotravel)
 }
 \arguments{
 \item{sim_res}{Vector of importation simulation results}
+
+\item{time_inftotravel}{}
 }
 \description{
 Estimate the detection dates of importations
