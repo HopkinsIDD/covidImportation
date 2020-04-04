@@ -7,8 +7,7 @@
 do_airport_attribution(
   airports_to_consider,
   airport_cluster_threshold = 80,
-  shapefile_path = paste0("data/", regioncode, "/shp/", "counties_2010_", regioncode,
-    ".shp"),
+  shapefile_path = paste0("data/shp/", "counties_2010_", regioncode, ".shp"),
   regioncode,
   yr = 2010,
   local_dir = "data/",
