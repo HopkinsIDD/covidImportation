@@ -26,6 +26,7 @@
 ##' 
 ##' @import purrr sf dplyr
 ##' @importFrom tidycensus get_acs
+##' @importFrom readr write_csv
 ##' 
 ##' 
 ##' @export
@@ -52,7 +53,7 @@ get_county_pops <- function(states_of_interest,
     ## write populations dataframe only
     county_pops_df <- sf::st_drop_geometry(county_pops2)
     dir.create(file.path(local_dir), recursive = TRUE, showWarnings = FALSE)
-    write_csv(county_pops_df, paste0(local_dir, "/county_pops_", yr, ".csv"))
+    readr::write_csv(county_pops_df, paste0(local_dir, "/county_pops_", yr, ".csv"))
     
     if (write_county_shapefiles){
         ## write shapefiles for counties in region of interest
@@ -65,6 +66,8 @@ get_county_pops <- function(states_of_interest,
         if (!file.exists(shp_path)) {
             sf::st_write(county_pops_sf, shp_path)
         }
+        
+        print(paste0("Shapefile written to: ",shp_path))
     }
     
     return(county_pops_df)
@@ -180,7 +183,7 @@ get_airports_to_consider <- function(mean_travel_file,
 ##'
 do_airport_attribution <- function(airports_to_consider, 
                                    airport_cluster_threshold=80, 
-                                   shapefile_path = paste0('data/', regioncode, '/shp/','counties_2010_', regioncode, '.shp'), 
+                                   shapefile_path = paste0('data/shp/','counties_2010_', regioncode, '.shp'), 
                                    regioncode, 
                                    yr=2010, 
                                    local_dir="data/", 
@@ -557,14 +560,17 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                      travelers_threshold=10000,
                                      airport_cluster_threshold=80, 
                                      mean_travel_file = file.path("data", "travel_mean.csv"),
-                                     shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2010_", regioncode, ".shp")),
+                                     shapefile_path = NULL, ## This is no longer needed but left to not break it.
                                      model_output_dir = file.path("model_output", "importation"),
                                      local_dir="data/",
                                      plot=FALSE,
                                      cores=5,
                                      n_sim=10){
     
-    
+  if (!is.null(shapefile_path)){
+    print("Manual shapefile path is depricated. Shapefile will be pulled, built, and saved automatically.")  
+  }
+  
     ## -- Set up the attribution/distribution for all the simulations -- 
     
     # sort the states
@@ -590,13 +596,16 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     ## Cluster Airports in close proximity
     airport_attribution <- do_airport_attribution(airports_to_consider,
                                                   airport_cluster_threshold,
-                                                  shapefile_path,
+                                                  shapefile_path = paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),  
                                                   regioncode,
                                                   yr=yr,
                                                   local_dir=local_dir,
                                                   plot=FALSE,
                                                   print_attr_error=FALSE)
     # This is saved to paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
+    
+    print(paste0("Shapefile saved to: ", paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp")))
+    
     print("Airport attribution: Success")
     
     
