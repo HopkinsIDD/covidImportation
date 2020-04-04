@@ -120,10 +120,10 @@ print(paste0("Mean time to recovery: ", round(mean(inf_nohosp),1), " days"))
 #### Infectious period - hospitalized (time to hospitalization)
 ```{r infectperiod_hosp, echo=FALSE}
 
-inf_period_hosp_shape <- 0.75 # increased based on Shenzhen (this is going to be a bit fluid)
-inf_period_hosp_scale <- 5.367
+inf_period_hosp_mean_log <- 1.23 # increased based on Shenzhen (this is going to be a bit fluid)
+inf_period_hosp_sd_log <- 0.79
 
-inf_hosp <- rgamma(1000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+inf_hosp <- rlnorm(1000, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log)
 
 quantile(inf_hosp, probs=c(0.025, .5,  0.975))
 print(paste0("Mean time to hospitalization: ", round(mean(inf_hosp),1), " days"))
@@ -580,7 +580,7 @@ input_data$days_per_t <- delta
 # Mean D -- This is a combination of incubation period, time to hospitalization, and time to recovery
 meanD <- round(
   exp(rnorm(n_sim, mean = incub_mean_log, sd = incub_sd_log)) +
-    p_report_source[1]*rgamma(n_sim, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale) +
+    p_report_source[1]*rlnorm(n_sim, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log) +
     (1-p_report_source[1])*MCMCglmm::rtnorm(n_sim, inf_period_nohosp_mean, inf_period_nohosp_sd, lower=0))
 
 
@@ -591,7 +591,7 @@ input_data <- input_data %>% mutate(p_report_source = ifelse(source=="Hubei", p_
 # Sample the components of meanD -- will apply the p_report_source to these
 meanD_mat_ <- cbind(
   exp(rnorm(n_sim, mean = incub_mean_log, sd = incub_sd_log)),
-  rgamma(n_sim, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale),
+  rlnorm(n_sim, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log),
   MCMCglmm::rtnorm(n_sim, inf_period_nohosp_mean, inf_period_nohosp_sd, lower=0))
 
 
@@ -614,7 +614,7 @@ rm(meanD_mat_)
 # -- because we are only worried about those who are detected, we can ignore time to recover
 
 time_inftodetect <- exp(rnorm(10000, mean = incub_mean_log, sd = incub_sd_log)) + 
-  rgamma(10000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+  rlnorm(10000, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log)
 hist(time_inftodetect, breaks=100)
 
 # We assume people can and do travel during their incubation period and 

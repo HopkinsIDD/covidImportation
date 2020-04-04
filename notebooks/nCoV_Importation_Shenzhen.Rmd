@@ -83,10 +83,10 @@ print(paste0("Mean time to recovery: ", round(mean(inf_nohosp),1), " days"))
 #### Infectious period - hospitalized (time to hospitalization)
 ```{r infectperiod_hosp, echo=TRUE}
 
-inf_period_hosp_shape <- 0.46  
-inf_period_hosp_scale <- 5.367
+inf_period_hosp_mean_log <- 1.23  
+inf_period_hosp_sd_log <- 0.79
 
-inf_hosp <- rgamma(1000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+inf_hosp <- rlnorm(1000, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log)
 
 quantile(inf_hosp, probs=c(0.025, .5,  0.975))
 print(paste0("Mean time to hospitalization: ", round(mean(inf_hosp),1), " days"))

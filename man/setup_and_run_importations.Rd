@@ -27,9 +27,9 @@ setup_and_run_importations(
   allow_travel_variance = FALSE,
   print_progress = TRUE,
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
-    inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_shape = 0.75,
-    inf_period_hosp_scale = 5.367, p_report_source = c(0.05, 0.25), shift_incid_days =
-    -10, delta = 1)
+    inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_mean_log =
+    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25), shift_incid_days
+    = -10, delta = 1)
 )
 }
 \arguments{
@@ -65,8 +65,8 @@ setup_and_run_importations(
   \item \code{incub_sd_log} numeric, the sd_log parameter for the lnorm distribution for the incubation period
   \item \code{inf_period_nohosp_mean} numeric, the mean parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
   \item \code{inf_period_nohosp_sd} numeric, the sd parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
-  \item \code{inf_period_hosp_shape} numeric, the shape parameter of a Gamma distribution for the infectious period for time to hospitalization
-  \item \code{inf_period_hosp_scale} numeric, the scale parameter of a Gamma distribution for the infectious period for time to hospitalization
+  \item \code{inf_period_hosp_mean_log} numeric, the log-mean parameter of a log-normal distribution for the infectious period for time to hospitalization
+  \item \code{inf_period_hosp_sd_log} numeric, the log-sd parameter of a log-normal distribution for the infectious period for time to hospitalization
   \item \code{p_report_source} numeric vector of length 2, currently the probability of reporting by source with the first indicating Hubei reporting and second indicating everywhere else (UPDATE WITH THESE https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html)
   \item \code{shift_incid_days} lag from infection to report
   \item \code{delta} days per time period

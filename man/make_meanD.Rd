@@ -9,8 +9,8 @@ make_meanD(
   n_sim,
   incub_mean_log,
   incub_sd_log,
-  inf_period_hosp_shape,
-  inf_period_hosp_scale,
+  inf_period_hosp_mean_log,
+  inf_period_hosp_sd_log,
   inf_period_nohosp_mean,
   inf_period_nohosp_sd
 )
