@@ -1,0 +1,115 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This importation package runs a model to estimate importations of SARS-CoV-2 into airports globally. The current package includes data to estimate importations into U.S. airports.
+
+```{r setup}
+
+library(covidImportation)
+
+states_of_interest=c("WI","IL","MN","IA")
+regioncode="wisconsin"
+
+```
+
+    
+    
+## Setup the data for the importation model.
+    
+```{r, warning=FALSE, message=FALSE}
+
+
+setup_res <- covidImportation::setup_importations(dest=states_of_interest,
+                               dest_type=c("state"), #,"city","airport", "country"),
+                               dest_country="USA",
+                               dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+                               first_date = ISOdate(2019,12,1),
+                               last_date = Sys.time(),
+                               update_case_data=TRUE,
+                               case_data_dir = "data/case_data",
+                               output_dir = file.path("importation",regioncode),
+                               check_saved_data=TRUE,
+                               save_case_data=TRUE,
+                               get_travel=TRUE,
+                               n_top_dests=Inf, 
+                               travel_dispersion=3,
+                               param_list=list(incub_mean_log=log(5.89),
+                                               incub_sd_log=log(1.74),
+                                               inf_period_nohosp_mean=15,
+                                               inf_period_nohosp_sd=5,
+                                               inf_period_hosp_shape=0.75,
+                                               inf_period_hosp_scale=5.367,
+                                               p_report_source=c(0.05, 0.25),
+                                               shift_incid_days=-10,
+                                               delta=1))
+
+```
+
+
+## Run the Simulations
+
+```{r, warning=FALSE, message=FALSE}
+
+sim_res <- covidImportation::run_importations(
+                             n_sim=10,
+                             cores=5,
+                             get_detection_time=FALSE,
+                             travel_dispersion=3,
+                             allow_travel_variance=FALSE,
+                             print_progress=TRUE,
+                             output_dir = file.path("importation",regioncode),
+                             param_list=list(incub_mean_log=log(5.89),
+                                             incub_sd_log=log(1.74),
+                                             inf_period_nohosp_mean=15,
+                                             inf_period_nohosp_sd=5,
+                                             inf_period_hosp_shape=0.75,
+                                             inf_period_hosp_scale=5.367,
+                                             p_report_source=c(0.05, 0.25)))
+
+```
+    
+    
+## Get shapefiles
+
+```{r, warning=FALSE, message=FALSE}
+
+tidycensus::census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+
+countypops <- get_county_pops(states_of_interest=states_of_interest, 
+                            regioncode = regioncode, 
+                            yr=2018, 
+                            local_dir="data/", 
+                            write_county_shapefiles=TRUE)
+
+```
+
+## Distribute the Simulated Importations into Airports to Counties
+
+```{r, warning=FALSE, message=FALSE}
+
+tidycensus::census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+
+run_full_distrib_imports(states_of_interest=states_of_interest,
+                                     regioncode=regioncode,
+                                     yr=2018,
+                                     mean_travel_file = file.path("importation", regioncode, "travel_mean.csv"),
+                                     travelers_threshold=10000,
+                                     airport_cluster_threshold=80,
+                                     shapefile_path = NULL,
+                                     model_output_dir = file.path("importation", regioncode),
+                                     local_dir="data/",
+                                     plot=FALSE,
+                                     cores=5,
+                                     n_sim=100)
+
+```
+
+
+
+
+
+
+
+
