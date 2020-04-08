@@ -186,7 +186,8 @@ do_airport_attribution <- function(airports_to_consider,
                                    shapefile_path = paste0('data/shp/','counties_2010_', regioncode, '.shp'), 
                                    regioncode, 
                                    yr=2010, 
-                                   local_dir="data/", 
+                                   local_dir="data/",
+				   cores=4,
                                    plot=FALSE,
                                    print_attr_error=FALSE) {
     
@@ -275,6 +276,7 @@ do_airport_attribution <- function(airports_to_consider,
     
     # ~ Get Shapefile 
     # shape file at adm1 and adm0 level
+    print(paste("Reading in shapefile_path:", shapefile_path))
     loc_map <- rgdal::readOGR(shapefile_path) 
     adm0_loc <- maptools::unionSpatialPolygons(loc_map, loc_map@data$STATEFP)
     adm1_loc <- maptools::unionSpatialPolygons(loc_map, loc_map@data$GEOID)
@@ -292,32 +294,29 @@ do_airport_attribution <- function(airports_to_consider,
     reg_loc <- rgeos::gBuffer(reg_loc, byid=TRUE, width=0)
     raster::projection(reg_loc) <- crs_shp
     
-    airport_attribution <- tibble::tribble(~county, ~airport_iata, ~attribution)
-    
-    foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %dopar% {
-        cksum <- 0      # to test if there is no error
-        foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %:% {
+    cl <- parallel::makeCluster(cores)
+    doParallel::registerDoParallel(cl)
+
+    print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
+    airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
+        foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
             airport_attribution <- NULL
             if (!is.na(iata)) {
-                inter <- tryCatch({ 
+                inter <- tryCatch({
                     raster::intersect(reg_loc[iata], adm1_loc[co])
                 }, error = function(err) { NULL })
                 if (!is.null(inter)) {
                     if (length(inter@polygons)>0) {
                         percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
-                        cksum <- cksum + percent_to_iata
                         airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
+	                write.table(data.frame(), file=paste0("/tmp/co_iata_", co, "_", iata))
                     }
                 }
             }
             airport_attribution
-        }
-        if (print_attr_error){
-          if (cksum < 0.999) print(paste("ERROR ATTRIBUTION -", cksum, co))
-          if (cksum > 1.001) print(paste("ERROR ATTRIBUTION +", cksum, co)) ## positive errors add people. small positive errors are okay
-        }
     }
-    
+    parallel::stopCluster(cl)
+
     ## for loop over voronoi_tess@data$iata_code introduced duplicates (1 part of a county per adjacenet airport)
     lhs <- nrow(distinct(airport_attribution, county, airport_iata))
     rhs <- nrow(distinct(airport_attribution, county, airport_iata, attribution))
@@ -360,7 +359,7 @@ do_airport_attribution <- function(airports_to_consider,
     dir.create(file.path(local_dir, regioncode), recursive=TRUE, showWarnings = FALSE)
     path <- paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
     print(paste("Saving airport attribution to path", path))
-    write.csv(airport_attribution, file=path, row.names=FALSE)
+    data.table::fwrite(airport_attribution, file=path, row.names=FALSE)
     
     if (plot) {
         airport_map <- ggplot2::ggplot() + 
@@ -539,12 +538,9 @@ setup_airport_attribution <- function(
   airport_cluster_threshold = 80,
   shapefile_path = NULL,  
   plot=FALSE,
-  print_attr_error=FALSE
+  print_attr_error=FALSE,
+  cores=4
 ){
-  if (!is.null(shapefile_path)){
-    print("Manual shapefile path is depricated. Shapefile will be pulled, built, and saved automatically.")  
-  }
-  
     ## -- Set up the attribution/distribution for all the simulations -- 
     
     # sort the states
@@ -553,11 +549,12 @@ setup_airport_attribution <- function(
     
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
-    county_pops_df <- get_county_pops(states_of_interest, 
-                                      regioncode, 
-                                      yr, 
-                                      write_county_shapefiles=write_county_shapefiles,
-                                      local_dir=local_dir)
+    county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+    #county_pops_df <- get_county_pops(states_of_interest, 
+    #                                  regioncode, 
+    #                                  yr, 
+    #                                  write_county_shapefiles=write_county_shapefiles,
+    #                                  local_dir=local_dir)
     print("County populations: Success")
     
     ## Query the census API to get the county populations for the states of interest, assigned
@@ -569,13 +566,14 @@ setup_airport_attribution <- function(
     
     ## Cluster Airports in close proximity
     do_airport_attribution(airports_to_consider,
-                                                  airport_cluster_threshold,
-                                                  shapefile_path = shapefile_path,  
-                                                  regioncode,
-                                                  yr=yr,
-                                                  local_dir=local_dir,
-                                                  plot=plot,
-                                                  print_attr_error=print_attr_error)
+                           airport_cluster_threshold,
+                           regioncode,
+                           yr=yr,
+			   shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
+                           local_dir=local_dir,
+                           plot=plot,
+                           cores=cores,
+                           print_attr_error=print_attr_error)
     # This is saved to paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
     print(paste0("Shapefile saved to: ", paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp")))
 }
