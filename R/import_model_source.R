@@ -919,15 +919,6 @@ run_daily_import_model <- function(input_data,
     }
     travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
 
-    sources_ <- sort(unique(input_data$source))
-    dests_ <- sort(unique(input_data$destination))
-    t_ <- sort(unique(input_data$t))
-    t_detect_ <- seq(as.Date(min(t_)), as.Date(max(t_))+30, by="days") # this might need to increased past 15 days, not sure
-
-    # Sims in longform
-    sim <- input_data %>% dplyr::select(source, destination, t) %>% data.table::as.data.table()
-
-
     # Simulate the daily travel from monthly
     travel_data_daily <- make_daily_travel_faster(travel_data=travel_data_monthly,
                                                   travel_data_daily=travel_data_daily,
@@ -952,7 +943,7 @@ run_daily_import_model <- function(input_data,
                                  allow_travel_variance=allow_travel_variance)
 
     ## Estimate dates of importation and detection of the simulated importations
-    importation_sim <- data.frame(sim, this.sim)
+    importation_sim <- data.frame(input_data %>% dplyr::select(source, destination, t), this.sim)
 
 
     # Now lets get detections ........................................
@@ -1086,10 +1077,10 @@ run_importations <- function(n_sim=100,
         }
 
         if (!exists("input_data")) {
-	          input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
             travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
             travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-	      }
+	}
 
         ## ~ Travel restrictions
         data("travel_restrictions")
