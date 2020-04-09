@@ -53,6 +53,7 @@ get_county_pops <- function(states_of_interest,
     ## write populations dataframe only
     county_pops_df <- sf::st_drop_geometry(county_pops2)
     dir.create(file.path(local_dir), recursive = TRUE, showWarnings = FALSE)
+    print(paste("population frame written to",paste0(local_dir, "/county_pops_", yr, ".csv")))
     readr::write_csv(county_pops_df, paste0(local_dir, "/county_pops_", yr, ".csv"))
     
     if (write_county_shapefiles){
@@ -553,8 +554,9 @@ setup_airport_attribution <- function(
     county_pops_df <- get_county_pops(states_of_interest, 
                                       regioncode, 
                                       yr, 
+                                      local_dir=local_dir
                                       write_county_shapefiles=write_county_shapefiles,
-                                      local_dir=local_dir)
+                                      )
     print("County populations: Success")
     
     ## Query the census API to get the county populations for the states of interest, assigned
@@ -631,15 +633,15 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
       airport_attribution <- readr::read_csv(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
     }, error <- function(e){
       setup_airport_attribution(
-        states_of_interest,
-        regioncode,
-        yr,
-        local_dir,
-        write_county_shapefiles,
-        mean_travel_file,
-        travelers_threshold,
-        airport_cluster_threshold,
-        shapefile_path,
+        states_of_interest = states_of_interest,
+        regioncode = regioncode,
+        yr = yr,
+        local_dir = local_dir,
+        write_county_shapefiles = write_county_shapefiles,
+        mean_travel_file = mean_travel_file,
+        travelers_threshold = travelers_threshold,
+        airport_cluster_threshold = airport_cluster_threshold,
+        shapefile_path = shapefile_path,
         plot=FALSE,
         print_attr_error=FALSE
       )
