@@ -1107,10 +1107,10 @@ run_importations <- function(n_sim=100,
         }
 
         if (!exists("input_data")) {
-	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+	          input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
             travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
             travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-	}
+	      }
 
         ## ~ Travel restrictions
         data("travel_restrictions")
