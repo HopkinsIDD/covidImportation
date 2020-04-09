@@ -55,11 +55,7 @@ est_imports_base <- function(input_data,
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
-    for (c in seq_len(length(cases))){
-        this.sim[c] <- sum(rbinom(ceiling(meanD[c]),
-                                  prob = prob_travel_n_detection[c],
-                                  size = ceiling(cases[c]/u_origin[c])))
-    }
+    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_detection)
     this.sim[is.na(this.sim)] <- 0
 
     return(this.sim)
