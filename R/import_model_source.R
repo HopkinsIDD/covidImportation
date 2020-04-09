@@ -23,23 +23,6 @@ est_imports_base <- function(input_data,
                              allow_travel_variance=FALSE){
 
     cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
-    # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
-    # if allowing variance in travel, using travelers SE
-    if (allow_travel_variance){
-        Travelers_over_Population_and_days <-
-            truncnorm::rtruncnorm(dim(input_data)[1],
-                                  mean = input_data$travelers,
-                                  sd = input_data$travelers_SE,
-                                  a = 0) / input_data$days_per_t / input_data$population
-    } else {
-        Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
-    }
-
-    cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
 
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
@@ -55,7 +38,7 @@ est_imports_base <- function(input_data,
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
-    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_detection)
+    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_n_detection)
     this.sim[is.na(this.sim)] <- 0
 
     return(this.sim)
