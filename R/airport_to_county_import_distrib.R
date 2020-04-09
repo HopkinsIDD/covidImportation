@@ -549,12 +549,12 @@ setup_airport_attribution <- function(
     
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
-    county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
-    #county_pops_df <- get_county_pops(states_of_interest, 
-    #                                  regioncode, 
-    #                                  yr, 
-    #                                  write_county_shapefiles=write_county_shapefiles,
-    #                                  local_dir=local_dir)
+    # county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+    county_pops_df <- get_county_pops(states_of_interest, 
+                                      regioncode, 
+                                      yr, 
+                                      write_county_shapefiles=write_county_shapefiles,
+                                      local_dir=local_dir)
     print("County populations: Success")
     
     ## Query the census API to get the county populations for the states of interest, assigned
