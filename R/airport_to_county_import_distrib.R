@@ -310,7 +310,6 @@ do_airport_attribution <- function(airports_to_consider,
                     if (length(inter@polygons)>0) {
                         percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
                         airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
-	                write.table(data.frame(), file=paste0("/tmp/co_iata_", co, "_", iata))
                     }
                 }
             }
