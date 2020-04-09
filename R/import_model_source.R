@@ -1094,14 +1094,6 @@ run_importations <- function(n_sim=100,
 
     t.start <- proc.time() # start timer to measure this
 
-    # Read the saved setup data that we will pass to the model
-    .GlobalEnv$input_data <- readr::read_csv(file.path(output_dir, "input_data.csv"))
-    .GlobalEnv$travel_data_monthly <- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
-    .GlobalEnv$travel_data_daily <- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-
-    ## ~ Travel restrictions
-    data("travel_restrictions")
-
     # Set up the cluster for parallelization
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
@@ -1114,11 +1106,19 @@ run_importations <- function(n_sim=100,
             if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
         }
 
-        ## Might need to move .GlobalEnv writes into loops
+        if (!exists("input_data")) {
+	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+            travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
+            travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
+	}
+
+        ## ~ Travel restrictions
+        data("travel_restrictions")
+
         import_est_run <- run_daily_import_model(
-            .GlobalEnv$input_data,
-            .GlobalEnv$travel_data_monthly,
-            .GlobalEnv$travel_data_daily,
+            input_data,
+            travel_data_monthly,
+            travel_data_daily,
             travel_dispersion=travel_dispersion,
             travel_restrictions=travel_restrictions,
             allow_travel_variance=allow_travel_variance,
@@ -1132,6 +1132,8 @@ run_importations <- function(n_sim=100,
         } else {
             data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
         }
+	# Null return value here
+	NULL
     }
 
     parallel::stopCluster(cl)
