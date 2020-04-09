@@ -492,7 +492,7 @@ distrib_county_imports <- function(import_sims_clusters,
         imports_ <- import_sims_clusters_no0[i,]
         co_info <- airport_attribution %>% dplyr::filter(airport_iata == imports_$airport)
         if (nrow(co_info)==0) next ## need to figure out why we lost some airports in the attribution (EAT)
-        samp_ <- base::sample(co_info$county, imports_$imports, replace=TRUE, prob=co_info$attribution)
+        samp_ <- co_info$county[base::sample(length(co_info$county), imports_$imports, replace=TRUE, prob=co_info$attribution)]
         samp_res[[i]] <- data.frame(GEOID=samp_, t=imports_$date)
     }
     samp_res <- data.table::rbindlist(samp_res)
@@ -542,6 +542,7 @@ setup_airport_attribution <- function(
   print_attr_error=FALSE,
   cores=4
 ){
+    print("HERE")
     ## -- Set up the attribution/distribution for all the simulations -- 
     
     # sort the states
@@ -551,12 +552,13 @@ setup_airport_attribution <- function(
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
     # county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
-    county_pops_df <- get_county_pops(states_of_interest, 
-                                      regioncode, 
-                                      yr, 
-                                      local_dir=local_dir
-                                      write_county_shapefiles=write_county_shapefiles,
-                                      )
+    county_pops_df <- get_county_pops(
+        states_of_interest, 
+        regioncode, 
+        yr, 
+        local_dir=local_dir,
+        write_county_shapefiles=write_county_shapefiles
+    )
     print("County populations: Success")
     
     ## Query the census API to get the county populations for the states of interest, assigned
@@ -628,16 +630,16 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     
     print("Airport attribution: Success")
     
-    tryCatch({
-      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
-      airport_attribution <- readr::read_csv(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
-    }, error <- function(e){
+    if(!(
+      file.exists(paste0(local_dir, "/county_pops_", yr, ".csv")) & 
+      file.exists(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
+    )){
       setup_airport_attribution(
         states_of_interest = states_of_interest,
         regioncode = regioncode,
         yr = yr,
         local_dir = local_dir,
-        write_county_shapefiles = write_county_shapefiles,
+        write_county_shapefiles = TRUE,
         mean_travel_file = mean_travel_file,
         travelers_threshold = travelers_threshold,
         airport_cluster_threshold = airport_cluster_threshold,
@@ -645,9 +647,9 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
         plot=FALSE,
         print_attr_error=FALSE
       )
-      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
-      airport_attribution <- readr::read_csv(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
-    }, silent = TRUE)
+    }
+    county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+    airport_attribution <- readr::read_csv(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
     
     
     ## --- Run through the full set of simulations and make new versions distributed out to counties instead of airports ---
@@ -674,9 +676,11 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                 
                 ## Sum importation counts to airport attribution clusters
                 ##  - these still need to be distributed out to the counties
-                import_sims_clusters <- imports_airport_clustering(imports_sim = readr::read_csv(file.path(model_output_dir, paste0("imports_sim",n,".csv"))), 
-                                                                   airport_attribution=airport_attribution, 
-                                                                   model_output_dir = model_output_dir)
+                import_sims_clusters <- imports_airport_clustering(
+                    imports_sim = readr::read_csv(file.path(model_output_dir, paste0("imports_sim",n,".csv"))), 
+                    airport_attribution=airport_attribution, 
+                    model_output_dir = model_output_dir
+                )
                 
                 if (sum(import_sims_clusters$imports)==0){
                   NULL    # - if no importations, skip to next
