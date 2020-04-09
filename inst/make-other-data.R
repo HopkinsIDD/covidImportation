@@ -273,6 +273,12 @@ make_aggr_oag_travel <- function(){
   return(dest_data_aggr)
 }
 
+
+
+
+
+# ~ Make USA Data ---------------------------------------------------------
+
 dest_data_aggr_orig <- make_aggr_oag_travel()
 dest_data_aggr <- dest_data_aggr_orig %>% 
   as.data.frame() %>%
@@ -292,6 +298,17 @@ usethis::use_data(usa_oag_aggr_travel, overwrite = TRUE)
 #write_csv(dest_data_aggr_usa, paste0("data_other/", "usa_oag_aggr_lite.csv"))
 #save(dest_data_aggr_usa, file=paste0("data_other/", "usa_oag_aggr_lite.rda"))
 
+
+
+# ~ Make Territory Data ---------------------------------------------------------
+
+dest_data_aggr <- readr::read_csv(paste0("data_other/", "complete_oag_aggr_lite.csv"))
+
+us_terr_oag_aggr_travel <- dest_data_aggr %>% filter(arr_country %in% c("GUM","VIR","PRI","ASM","MNP"))
+format(object.size(us_terr_oag_aggr_travel), "Mb")
+#usethis::use_data(us_terr_oag_aggr_travel, overwrite = TRUE)
+write_csv(us_terr_oag_aggr_travel, paste0("data_other/", "us_terr_oag_aggr_travel.csv"))
+#save(dest_data_aggr_usa, file=paste0("data_other/", "usa_oag_aggr_lite.rda"))
 
 
 

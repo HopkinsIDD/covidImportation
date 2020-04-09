@@ -142,10 +142,10 @@ We are currently assuming a mean time to recovery of `r round(mean(inf_nohosp),1
 ##### Infectious period - hospitalized (time to hospitalization)
 ```{r infectperiod_hosp, echo=FALSE}
 
-inf_period_hosp_shape <- 0.75 # increased based on Shenzhen (this is going to be a bit fluid)
-inf_period_hosp_scale <- 5.367
+inf_period_hosp_mean_log <- 1.23 # increased based on Shenzhen (this is going to be a bit fluid)
+inf_period_hosp_sd_log <- 0.79
 
-inf_hosp <- rgamma(1000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+inf_hosp <- rlnorm(1000, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log)
 quantile(inf_hosp, probs=c(0.025, .5,  0.975))
 print(paste0("Mean time to hospitalization: ", round(mean(inf_hosp),1), " days"))
 
@@ -361,7 +361,7 @@ input_data$days_per_t <- delta
 
 meanD_mat <- make_meanD(input_data, n_sim, 
                         incub_mean_log, incub_sd_log,
-                        inf_period_hosp_shape, inf_period_hosp_scale,
+                        inf_period_hosp_mean_log, inf_period_hosp_sd_log,
                         inf_period_nohosp_mean, inf_period_nohosp_sd)
 
 par(mfrow=c(2,2))
@@ -375,7 +375,7 @@ hist(as.numeric(meanD_mat), breaks=100)
 # -- because we are only worried about those who are detected, we can ignore time to recover
 
 time_inftodetect <- exp(rnorm(10000, mean = incub_mean_log, sd = incub_sd_log)) + 
-  rgamma(10000, shape=inf_period_hosp_shape, scale=inf_period_hosp_scale)
+  rlnorm(10000, meanlog=inf_period_hosp_mean_log, sdlog=inf_period_hosp_sd_log)
 hist(time_inftodetect, breaks=100)
 
 # We assume people can and do travel during their incubation period and 

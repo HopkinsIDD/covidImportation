@@ -39,8 +39,8 @@ setup_res <- covidImportation::setup_importations(dest=states_of_interest,
                                                incub_sd_log=log(1.74),
                                                inf_period_nohosp_mean=15,
                                                inf_period_nohosp_sd=5,
-                                               inf_period_hosp_shape=0.75,
-                                               inf_period_hosp_scale=5.367,
+                                               inf_period_hosp_mean_log=1.23,
+                                               inf_period_hosp_sd_log=0.79,
                                                p_report_source=c(0.05, 0.25),
                                                shift_incid_days=-10,
                                                delta=1))
@@ -64,8 +64,8 @@ sim_res <- covidImportation::run_importations(
                                              incub_sd_log=log(1.74),
                                              inf_period_nohosp_mean=15,
                                              inf_period_nohosp_sd=5,
-                                             inf_period_hosp_shape=0.75,
-                                             inf_period_hosp_scale=5.367,
+                                             inf_period_hosp_mean_log=1.23,
+                                             inf_period_hosp_sd_log=0.79,
                                              p_report_source=c(0.05, 0.25)))
 
 ```

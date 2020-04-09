@@ -14,8 +14,8 @@ run_daily_import_model(
   tr_inf_redux = 0,
   get_detection_time = FALSE,
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
-    inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_shape = 0.75,
-    inf_period_hosp_scale = 5.367)
+    inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_mean_log =
+    1.23, inf_period_hosp_sd_log = 0.79)
 )
 }
 \arguments{
@@ -45,9 +45,9 @@ run_daily_import_model(
 
 \item{incub_sd_log}{log sd of incubation period}
 
-\item{inf_period_hosp_shape}{infectious period of hospitalized, shape}
+\item{inf_period_hosp_mean_log}{infectious period of hospitalized, log-mean}
 
-\item{inf_period_hosp_scale}{infectious period of hospitalized, scale}
+\item{inf_period_hosp_sd_log}{infectious period of hospitalized, log-sd}
 
 \item{inf_period_nohosp_mean}{infectious period of non-hospitalized, shape}
 

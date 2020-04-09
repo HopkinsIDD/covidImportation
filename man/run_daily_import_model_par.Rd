@@ -18,12 +18,6 @@ run_daily_import_model_par(
   get_detection_time = FALSE,
   time_inftotravel,
   time_inftodetect,
-  incub_mean_log,
-  incub_sd_log,
-  inf_period_hosp_shape,
-  inf_period_hosp_scale,
-  inf_period_nohosp_mean,
-  inf_period_nohosp_sd,
   project_name = NULL,
   batch = NULL,
   version = NULL,
@@ -56,18 +50,6 @@ run_daily_import_model_par(
 \item{time_inftotravel}{time from infection to traveling}
 
 \item{time_inftodetect}{Time from infection to detection}
-
-\item{incub_mean_log}{log mean incubation period}
-
-\item{incub_sd_log}{log sd of incubation period}
-
-\item{inf_period_hosp_shape}{infectious period of hospitalized, shape}
-
-\item{inf_period_hosp_scale}{infectious period of hospitalized, scale}
-
-\item{inf_period_nohosp_mean}{infectious period of non-hospitalized, shape}
-
-\item{inf_period_nohosp_sd}{infectious period of non-hospitalized, scale}
 
 \item{project_name}{project name, if saving in the function}
 

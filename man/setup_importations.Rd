@@ -20,10 +20,7 @@ setup_importations(
   get_travel = TRUE,
   n_top_dests = Inf,
   travel_dispersion = 3,
-  param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
-    inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_shape = 0.75,
-    inf_period_hosp_scale = 5.367, p_report_source = c(0.05, 0.25), shift_incid_days =
-    -10, delta = 1)
+  param_list = list(p_report_source = c(0.05, 0.25), shift_incid_days = -10, delta = 1)
 )
 }
 \arguments{
@@ -39,12 +36,6 @@ setup_importations(
 
 \item{param_list}{list, with the following elements
 \itemize{
-  \item \code{incub_mean_log} numeric, the mean_log parameter for the lnorm distribution for the incubation period
-  \item \code{incub_sd_log} numeric, the sd_log parameter for the lnorm distribution for the incubation period
-  \item \code{inf_period_nohosp_mean} numeric, the mean parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
-  \item \code{inf_period_nohosp_sd} numeric, the sd parameter of a truncated normal distribution for the infectious period for non-hospitalized infections
-  \item \code{inf_period_hosp_shape} numeric, the shape parameter of a Gamma distribution for the infectious period for time to hospitalization
-  \item \code{inf_period_hosp_scale} numeric, the scale parameter of a Gamma distribution for the infectious period for time to hospitalization
   \item \code{p_report_source} numeric vector of length 2, currently the probability of reporting by source with the first indicating Hubei reporting and second indicating everywhere else (UPDATE WITH THESE https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html)
   \item \code{shift_incid_days} lag from infection to report
   \item \code{delta} days per time period

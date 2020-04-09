@@ -720,28 +720,29 @@ setup_and_run_importations <- function(dest="UT",
 #' @export
 #' 
 setup_importations <- function(dest="UT",
-                                       dest_type=c("state"), #,"city","airport", "country"),
-                                       dest_country="USA",
-                                       dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
-                                       first_date = ISOdate(2019,12,1),
-                                       last_date = Sys.time(),
-                                       update_case_data=TRUE,
-                                       case_data_dir = "data/case_data",
-                                       output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
-                                       check_saved_data=TRUE,
-                                       save_case_data=TRUE,
-                                       get_travel=TRUE,
-                                       n_top_dests=Inf, 
-                                       travel_dispersion=3,
-                                       param_list=list(incub_mean_log=log(5.89),
-                                                       incub_sd_log=log(1.74),
-                                                       inf_period_nohosp_mean=15,
-                                                       inf_period_nohosp_sd=5,
-                                                       inf_period_hosp_shape=0.75,
-                                                       inf_period_hosp_scale=5.367,
-                                                       p_report_source=c(0.05, 0.25),
-                                                       shift_incid_days=-10,
-                                                       delta=1)){
+                               dest_type=c("state"), #,"city","airport", "country"),
+                               dest_country="USA",
+                               dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+                               first_date = ISOdate(2019,12,1),
+                               last_date = Sys.time(),
+                               update_case_data=TRUE,
+                               case_data_dir = "data/case_data",
+                               output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                               check_saved_data=TRUE,
+                               save_case_data=TRUE,
+                               get_travel=TRUE,
+                               n_top_dests=Inf, 
+                               travel_dispersion=3,
+                               param_list=list(incub_mean_log=log(5.89),
+                                               incub_sd_log=log(1.74),
+                                               inf_period_nohosp_mean=15,
+                                               inf_period_nohosp_sd=5,
+                                               inf_period_hosp_shape=0.75,
+                                               inf_period_hosp_scale=5.367,
+                                               p_report_source=c(0.05, 0.25),
+                                               shift_incid_days=-10,
+                                               delta=1),
+                               pop_additional = NULL){
 
   ## Create needed directories
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -755,7 +756,7 @@ setup_importations <- function(dest="UT",
                                         check_saved_data = check_saved_data,
                                         save_data = save_case_data)
   
-  incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
+  incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA") # get rid of generic "USA"
   incid_data <- incid_data %>% rename(incid_est = cases_incid)
   jhucsse <- incid_data_list$jhucsse_case_data
   jhucsse_state <- incid_data_list$jhucsse_case_data_state
@@ -804,6 +805,9 @@ setup_importations <- function(dest="UT",
   
   ## ~ Population Data
   data(pop_data, package="covidImportation")
+  pop_data <- bind_rows(pop_data, pop_additional)
+  
+  
   
   ## ~~ First Check that the variables match up
   # Check that incidence data does not have duplicates

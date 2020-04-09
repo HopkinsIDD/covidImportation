@@ -1,0 +1,402 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This importation package runs a model to estimate importations of SARS-CoV-2 into airports globally. The current package includes data to estimate importations into U.S. airports.
+
+```{r setup}
+
+library(covidImportation)
+packageVersion("covidImportation")
+
+
+locs_of_interest <- c("GUM","VIR","ASM","MNP")
+states_of_interest <- c("GU", "VI", "AS", "MP")
+regioncode="usa_territories"
+
+```
+
+    
+
+# Function to get data for Territories
+```{r}
+
+get_oag_travel <- function(destination=c("CA"),
+                           destination_type="state",
+                           dest_country="USA",
+                           dest_aggr_level="city"){
+    
+    # # check if destination is in the USA
+    # # -- only US aggregated data are available in the package
+    # if (dest_country!="USA"){
+    #     print("Only aggregated, averaged travel data for travel into the USA are included in this package. 
+    #           For other countries, provide your own data and use 'get_oag_travel_fulldata' or contact Shaun Truelove (shauntruelove@jhu.edu).")
+    #     return(NA)
+    # }
+    
+    # Load the data
+    # load_travel_dat <- function(dest_country){
+    #     env <- new.env()
+    #     dest_data <- data(list=tolower(paste0(dest_country, "_oag_aggr_travel")), 
+    #                       package = "covidImportation", 
+    #                       envir = env)[1]
+    #     return(env[[dest_data]])
+    # }
+    # dest_data <- load_travel_dat(dest_country)
+    
+    dest_data <- readr::read_csv("data_other/us_terr_oag_aggr_travel.csv")
+    
+    # subset to the destination of interest
+    dest_data <- dest_data %>% as.data.frame() %>% 
+        dplyr::filter(get(paste0("arr_",destination_type)) %in% destination) #%>%
+        #select(-rr_state)
+    
+    return(dest_data)
+}
+
+
+```
+
+    
+
+    
+## Setup the data for the importation model.
+    
+```{r, warning=FALSE, message=FALSE}
+
+# 
+# setup_res <- covidImportation::setup_importations(dest=locs_of_interest,
+#                                dest_type=c("country"), #,"city","airport", "country"),
+#                                dest_country=locs_of_interest,
+#                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+#                                first_date = ISOdate(2019,12,1),
+#                                last_date = Sys.time(),
+#                                update_case_data=TRUE,
+#                                case_data_dir = "data/case_data",
+#                                output_dir = file.path("importation",regioncode),
+#                                check_saved_data=TRUE,
+#                                save_case_data=TRUE,
+#                                get_travel=TRUE,
+#                                n_top_dests=Inf, 
+#                                travel_dispersion=3,
+#                                param_list=list(incub_mean_log=log(5.89),
+#                                                incub_sd_log=log(1.74),
+#                                                inf_period_nohosp_mean=15,
+#                                                inf_period_nohosp_sd=5,
+#                                                inf_period_hosp_shape=0.75,
+#                                                inf_period_hosp_scale=5.367,
+#                                                p_report_source=c(0.05, 0.25),
+#                                                shift_incid_days=-10,
+#                                                delta=1))
+
+
+
+dest=locs_of_interest
+                               dest_type=c("country")#"city","airport", "country"),
+                               dest_country=locs_of_interest
+                               dest_aggr_level=c("airport")# "city", "state", "country", "metro"),
+                               first_date = ISOdate(2019,12,1)
+                               last_date = Sys.time()
+                               update_case_data=TRUE
+                               case_data_dir = "data/case_data"
+                               output_dir = file.path("importation",regioncode)
+                               check_saved_data=TRUE
+                               save_case_data=TRUE
+                               get_travel=TRUE
+                               n_top_dests=Inf 
+                               travel_dispersion=3
+                               param_list=list(incub_mean_log=log(5.89),
+                                               incub_sd_log=log(1.74),
+                                               inf_period_nohosp_mean=15,
+                                               inf_period_nohosp_sd=5,
+                                               inf_period_hosp_shape=0.75,
+                                               inf_period_hosp_scale=5.367,
+                                               p_report_source=c(0.05, 0.25),
+                                               shift_incid_days=-10,
+                                               delta=1)
+
+
+# setup_importations <- function(dest="UT",
+#                                dest_type=c("state"), #,"city","airport", "country"),
+#                                dest_country="USA",
+#                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
+#                                first_date = ISOdate(2019,12,1),
+#                                last_date = Sys.time(),
+#                                update_case_data=TRUE,
+#                                case_data_dir = "data/case_data",
+#                                output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+#                                check_saved_data=TRUE,
+#                                save_case_data=TRUE,
+#                                get_travel=TRUE,
+#                                n_top_dests=Inf, 
+#                                travel_dispersion=3,
+#                                param_list=list(incub_mean_log=log(5.89),
+#                                                incub_sd_log=log(1.74),
+#                                                inf_period_nohosp_mean=15,
+#                                                inf_period_nohosp_sd=5,
+#                                                inf_period_hosp_shape=0.75,
+#                                                inf_period_hosp_scale=5.367,
+#                                                p_report_source=c(0.05, 0.25),
+#                                                shift_incid_days=-10,
+#                                                delta=1),
+#                                pop_additional = NULL){
+
+  ## Create needed directories
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  ## DATA
+  ## ~ Incidence data
+  incid_data_list <- get_incidence_data(first_date = first_date,
+                                        last_date = last_date,
+                                        update_case_data = update_case_data,
+                                        case_data_dir = case_data_dir,
+                                        check_saved_data = check_saved_data,
+                                        save_data = save_case_data)
+  
+  incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA") # get rid of generic "USA"
+  incid_data <- incid_data %>% rename(incid_est = cases_incid)
+  jhucsse <- incid_data_list$jhucsse_case_data
+  jhucsse_state <- incid_data_list$jhucsse_case_data_state
+  
+  
+  ## ~ Travel Data
+  ## if travel data exists load it, otherwise download it
+  if(get_travel) {
+    travel_data_monthly <- get_oag_travel(destination=dest,
+                                          destination_type=dest_type,
+                                          dest_country=dest_country,
+                                          dest_aggr_level=dest_aggr_level) %>% as.data.frame()
+    travel_data_monthly <- travel_data_monthly %>%
+      dplyr::mutate(t_year=2020) %>%
+      dplyr::rename(source = dep_loc_aggr)
+    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
+  } else{
+    travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
+                                  dest_aggr_level, "_oag_20172019.csv") %>%
+      readr::read_csv(na=c(""," ","NA"))%>%
+      dplyr::mutate(t_year=2020) %>%
+      dplyr::mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
+                              # Increase travel for Chinese New Year
+                              travelers*1.6, travelers)) %>%
+      dplyr::rename(source = dep_loc_aggr)
+    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
+  }
+  
+  ## monthly average totals into destinations
+  travel_mean <- travel_data_monthly %>%
+    dplyr::group_by(destination, t_month) %>%
+    dplyr::summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
+    dplyr::group_by(destination) %>%
+    dplyr::summarise(travelers = mean(travelers)) %>%
+    dplyr::arrange(desc(travelers))
+  
+  
+  
+  # Destinations to keep
+  dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
+  travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
+  
+  ## Travel data
+  ##  - Get daily for merging purposes
+  travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=3)
+  
+  ## ~ Population Data
+  data(pop_data, package="covidImportation")
+  pop_data <- bind_rows(pop_data, pop_additional)
+  
+  
+  ## ~~ First Check that the variables match up
+  # Check that incidence data does not have duplicates
+  incid_dups <- sum(incid_data %>%
+                      dplyr::mutate(source_t = paste(source, t)) %>%
+                      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+                      dplyr::pull(dup_entry))
+  
+  if(sum(incid_dups)>0){
+    dup_entry <- incid_data %>%
+      dplyr::mutate(source_t = paste(source, t)) %>%
+      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+      dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
+    warning("There are duplicate entries in the incidence data.")
+  }
+  ## Check travel data
+  travel_dups <- travel_data_daily %>%
+    dplyr::mutate(source_dest_t = paste(source, destination, t),
+           dup_entry=duplicated(source_dest_t)) %>%
+    dplyr::pull(dup_entry) %>%
+    sum()
+  if(sum(travel_dups)>0){
+    warning("There are duplicate entries in the travel data.")
+  }
+  ## Check Population data
+  pop_dups <- pop_data %>%
+    dplyr::mutate(dup_entry=duplicated(source)) %>%
+    dplyr::pull(dup_entry) %>%
+    sum()
+  if(sum(pop_dups)>0){
+    warning("There are duplicate entries in the population data.")
+  }
+  # we really just need to make sure there are travel data and pop data for all source locations with incidence
+  # incid_sources <- sort(unique(incid_data$source))
+  # travel_sources <- sort(unique(travel_data_daily$source))
+  # pop_sources <- sort(unique(pop_data$source))
+  # incid_sources[!(incid_sources %in% travel_sources)]
+  # incid_sources[!(incid_sources %in% pop_sources)]
+  
+  ## ~~ Merge it all
+  input_data <- covidImportation:::make_input_data(incid_data, travel_data_daily, pop_data,
+                                shift_incid_days=param_list$shift_incid_days,
+                                dest_aggr_level=dest_aggr_level) %>%
+    dplyr::mutate(p_report_source=ifelse(source=="Hubei",
+                                  param_list$p_report_source[1],
+                                  param_list$p_report_source[2]),
+           # For first pass, reporting rate is just Hubei/not Hubei
+           days_per_t=param_list$delta # ~ delta: days per time period
+    ) %>%
+    dplyr::filter(t<=as.Date(last_date)) %>%
+    dplyr::mutate(source = as.character(source),
+           destination = as.character(destination))
+  
+  ## Filter to sources with cases -- to speed it up
+  source_w_cases <- input_data %>%
+    dplyr::filter(!duplicated(paste0(source, t))) %>%
+    dplyr::group_by(source) %>%
+    dplyr::summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
+    dplyr::filter(cum_cases>0)
+  input_data <- input_data %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  travel_data_monthly <- travel_data_monthly %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  travel_data_daily <- travel_data_daily %>%
+    dplyr::filter(source %in% source_w_cases$source)
+  
+  
+  # save the data that we will pass to the model
+  readr::write_csv(input_data, file.path(output_dir, "input_data.csv"))
+  readr::write_csv(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
+  readr::write_csv(travel_mean, file.path(output_dir, "travel_mean.csv"))
+  readr::write_csv(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
+  
+  print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
+
+  
+  
+
+
+```
+
+
+## Run the Simulations
+
+```{r, warning=FALSE, message=FALSE}
+
+sim_res <- covidImportation::run_importations(
+                             n_sim=1000,
+                             cores=5,
+                             get_detection_time=FALSE,
+                             travel_dispersion=3,
+                             allow_travel_variance=FALSE,
+                             print_progress=TRUE,
+                             output_dir = file.path("importation",regioncode),
+                             param_list=list(incub_mean_log=log(5.89),
+                                             incub_sd_log=log(1.74),
+                                             inf_period_nohosp_mean=15,
+                                             inf_period_nohosp_sd=5,
+                                             inf_period_hosp_shape=0.75,
+                                             inf_period_hosp_scale=5.367,
+                                             p_report_source=c(0.05, 0.25)))
+
+```
+    
+    
+## Get shapefiles
+# DONT NEED THIS HERE
+
+```{r, warning=FALSE, message=FALSE, eval=FALSE}
+
+tidycensus::census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+
+countypops <- get_county_pops(states_of_interest=states_of_interest, 
+                            regioncode = regioncode, 
+                            yr=2018, 
+                            local_dir="data/", 
+                            write_county_shapefiles=TRUE)
+
+
+```
+
+
+
+## Distribute the Simulated Importations into Airports to Counties
+
+```{r, warning=FALSE, message=FALSE, eval=FALSE}
+
+tidycensus::census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+
+run_full_distrib_imports(states_of_interest=states_of_interest,
+                                     regioncode=regioncode,
+                                     yr=2018,
+                                     mean_travel_file = file.path("importation", regioncode, "travel_mean.csv"),
+                                     travelers_threshold=10000,
+                                     airport_cluster_threshold=80,
+                                     shapefile_path = NULL,
+                                     model_output_dir = file.path("importation", regioncode),
+                                     local_dir="data/",
+                                     plot=FALSE,
+                                     cores=5,
+                                     n_sim=100)
+
+```
+
+
+```{r}
+
+
+FIPS_data <- readr::read_csv("data_other/us_terr_airports.csv") #%>% filter(state!="PR")
+
+library(doParallel)
+cores=5
+print(paste0("Making a cluster of ", cores," for parallelization."))
+cl <- parallel::makeCluster(cores)
+doParallel::registerDoParallel(cl)
+n_sim=1000
+
+yr=2018
+airport_cluster_threshold=80
+mean_travel_file = file.path("data", "travel_mean.csv")
+shapefile_path = NULL ## This is no longer needed but left to not break it.
+model_output_dir = file.path("importation")
+local_dir="data/"
+
+
+# Run the foreach loop to estimate importations for n simulations
+foreach(n=seq_len(n_sim),
+        .packages=c("dplyr","tidyr","readr")) %dopar% {
+    
+    imports_sim <- readr::read_csv(file.path(model_output_dir, regioncode, paste0("imports_sim",n,".csv"))) %>%
+        rename(amount = this.sim, date=t)
+    imports_sim <- left_join(imports_sim, FIPS_data, by="destination") %>%
+        filter(state !="PR") %>% 
+        group_by(date, FIPS) %>%
+        summarise(amount = sum(amount)) %>%
+        rename(place = FIPS) %>%
+        select(place, date, amount)
+    
+    write_csv(imports_sim, file.path(model_output_dir, regioncode, paste0("importation_",n,".csv")))
+        }
+
+parallel::stopCluster(cl)
+
+
+
+
+```
+
+
+
+
+
+
+
+
