@@ -23,23 +23,6 @@ est_imports_base <- function(input_data,
                              allow_travel_variance=FALSE){
 
     cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
-    # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
-    # if allowing variance in travel, using travelers SE
-    if (allow_travel_variance){
-        Travelers_over_Population_and_days <-
-            truncnorm::rtruncnorm(dim(input_data)[1],
-                                  mean = input_data$travelers,
-                                  sd = input_data$travelers_SE,
-                                  a = 0) / input_data$days_per_t / input_data$population
-    } else {
-        Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
-    }
-
-    cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
 
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
@@ -55,7 +38,7 @@ est_imports_base <- function(input_data,
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
-    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_detection)
+    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_n_detection)
     this.sim[is.na(this.sim)] <- 0
 
     return(this.sim)
@@ -936,15 +919,6 @@ run_daily_import_model <- function(input_data,
     }
     travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
 
-    sources_ <- sort(unique(input_data$source))
-    dests_ <- sort(unique(input_data$destination))
-    t_ <- sort(unique(input_data$t))
-    t_detect_ <- seq(as.Date(min(t_)), as.Date(max(t_))+30, by="days") # this might need to increased past 15 days, not sure
-
-    # Sims in longform
-    sim <- input_data %>% dplyr::select(source, destination, t) %>% data.table::as.data.table()
-
-
     # Simulate the daily travel from monthly
     travel_data_daily <- make_daily_travel_faster(travel_data=travel_data_monthly,
                                                   travel_data_daily=travel_data_daily,
@@ -969,7 +943,7 @@ run_daily_import_model <- function(input_data,
                                  allow_travel_variance=allow_travel_variance)
 
     ## Estimate dates of importation and detection of the simulated importations
-    importation_sim <- data.frame(sim, this.sim)
+    importation_sim <- data.frame(input_data %>% dplyr::select(source, destination, t), this.sim)
 
 
     # Now lets get detections ........................................
@@ -1103,10 +1077,10 @@ run_importations <- function(n_sim=100,
         }
 
         if (!exists("input_data")) {
-	          input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
             travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
             travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-	      }
+	}
 
         ## ~ Travel restrictions
         data("travel_restrictions")
