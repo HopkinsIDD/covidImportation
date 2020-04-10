@@ -1014,7 +1014,7 @@ make_daily_travel <- function(travel_data, travel_dispersion=10){
     # Add new daily travel volume to it
     data_daily <- data.frame(data_daily, t_day=t_day, travelers=x)
 
-    data_daily <- data_daily %>% dplyr::mutate(t = as.Date(paste(t_year, t_month, t_day, sep="-")))
+    data_daily <- data_daily %>% dplyr::mutate(t = lubridate::ymd(paste(t_year, t_month, t_day, sep="-")))
     return(data_daily)
 }
 

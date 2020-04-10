@@ -23,23 +23,6 @@ est_imports_base <- function(input_data,
                              allow_travel_variance=FALSE){
 
     cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
-    # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
-    # if allowing variance in travel, using travelers SE
-    if (allow_travel_variance){
-        Travelers_over_Population_and_days <-
-            truncnorm::rtruncnorm(dim(input_data)[1],
-                                  mean = input_data$travelers,
-                                  sd = input_data$travelers_SE,
-                                  a = 0) / input_data$days_per_t / input_data$population
-    } else {
-        Travelers_over_Population_and_days <- input_data$travelers / input_data$days_per_t / input_data$population
-    }
-
-    cases <- input_data$cases_incid
-    this.sim <- rep(0, length(cases))
-
 
     # Get p_s,d,t  (probability of infected individual traveling from d to s during time t
     if (allow_travel_variance){  # if allowing variance in travel, using travelers SE
@@ -55,11 +38,7 @@ est_imports_base <- function(input_data,
     prob_travel_n_detection <- (1-tr_inf_redux) * Travelers_over_Population_and_days
 
     # Run simulations by day, in case travel likelihood is affected by symptoms on a day to day basis
-    for (c in seq_len(length(cases))){
-        this.sim[c] <- sum(rbinom(ceiling(meanD[c]),
-                                  prob = prob_travel_n_detection[c],
-                                  size = ceiling(cases[c]/u_origin[c])))
-    }
+    this.sim <- rbinom(length(meanD), size = ceiling(meanD) * ceiling(cases / u_origin), prob = prob_travel_n_detection)
     this.sim[is.na(this.sim)] <- 0
 
     return(this.sim)
@@ -696,6 +675,7 @@ setup_and_run_importations <- function(dest="UT",
 #'
 #' @export
 #'
+## a few minutes now
 setup_importations <- function(dest="UT",
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
@@ -864,7 +844,8 @@ setup_importations <- function(dest="UT",
                                travel_dispersion=3,
                                param_list=list(p_report_source=c(0.05, 0.25),
                                                shift_incid_days=-10,
-                                               delta=1)){
+                                               delta=1),
+                               check_errors = TRUE){
 
     ## Create needed directories
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -929,34 +910,36 @@ setup_importations <- function(dest="UT",
     data(pop_data, package="covidImportation")
 
     ## ~~ First Check that the variables match up
-    # Check that incidence data does not have duplicates
-    incid_dups <- sum(incid_data %>%
-                          dplyr::mutate(source_t = paste(source, t)) %>%
-                          dplyr::mutate(dup_entry=duplicated(source_t)) %>%
-                          dplyr::pull(dup_entry))
-    if(sum(incid_dups)>0){
-        dup_entry <- incid_data %>%
-            dplyr::mutate(source_t = paste(source, t)) %>%
-            dplyr::mutate(dup_entry=duplicated(source_t)) %>%
-            dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
-        warning("There are duplicate entries in the incidence data.")
-    }
-    ## Check travel data
-    travel_dups <- travel_data_daily %>%
-        dplyr::mutate(source_dest_t = paste(source, destination, t),
-                      dup_entry=duplicated(source_dest_t)) %>%
-        dplyr::pull(dup_entry) %>%
-        sum()
-    if(sum(travel_dups)>0){
-        warning("There are duplicate entries in the travel data.")
-    }
-    ## Check Population data
-    pop_dups <- pop_data %>%
-        dplyr::mutate(dup_entry=duplicated(source)) %>%
-        dplyr::pull(dup_entry) %>%
-        sum()
-    if(sum(pop_dups)>0){
-        warning("There are duplicate entries in the population data.")
+    if(check_errors){
+      # Check that incidence data does not have duplicates
+      incid_dups <- sum(incid_data %>%
+                            dplyr::mutate(source_t = paste(source, t)) %>%
+                            dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+                            dplyr::pull(dup_entry))
+      if(sum(incid_dups)>0){
+          dup_entry <- incid_data %>%
+              dplyr::mutate(source_t = paste(source, t)) %>%
+              dplyr::mutate(dup_entry=duplicated(source_t)) %>%
+              dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
+          warning("There are duplicate entries in the incidence data.")
+      }
+      ## Check travel data
+      travel_dups <- travel_data_daily %>%
+          dplyr::mutate(source_dest_t = paste(source, destination, t),
+                        dup_entry=duplicated(source_dest_t)) %>%
+          dplyr::pull(dup_entry) %>%
+          sum()
+      if(sum(travel_dups)>0){
+          warning("There are duplicate entries in the travel data.")
+      }
+      ## Check Population data
+      pop_dups <- pop_data %>%
+          dplyr::mutate(dup_entry=duplicated(source)) %>%
+          dplyr::pull(dup_entry) %>%
+          sum()
+      if(sum(pop_dups)>0){
+          warning("There are duplicate entries in the population data.")
+      }
     }
     # we really just need to make sure there are travel data and pop data for all source locations with incidence
     # incid_sources <- sort(unique(incid_data$source))
@@ -994,10 +977,10 @@ setup_importations <- function(dest="UT",
 
 
     # save the data that we will pass to the model
-    readr::write_csv(input_data, file.path(output_dir, "input_data.csv"))
-    readr::write_csv(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
-    readr::write_csv(travel_mean, file.path(output_dir, "travel_mean.csv"))
-    readr::write_csv(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
+    data.table::fwrite(input_data, file.path(output_dir, "input_data.csv"))
+    data.table::fwrite(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
+    data.table::fwrite(travel_mean, file.path(output_dir, "travel_mean.csv"))
+    data.table::fwrite(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
 
     print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
 >>>>>>> b3b4fe072f9f65bff16b3e000bb84296eff80cad
@@ -1089,15 +1072,6 @@ run_daily_import_model <- function(input_data,
     }
     travel_restrictions_long <- expand_travel_restrict(travel_restrictions)
 
-    sources_ <- sort(unique(input_data$source))
-    dests_ <- sort(unique(input_data$destination))
-    t_ <- sort(unique(input_data$t))
-    t_detect_ <- seq(as.Date(min(t_)), as.Date(max(t_))+30, by="days") # this might need to increased past 15 days, not sure
-
-    # Sims in longform
-    sim <- input_data %>% dplyr::select(source, destination, t) %>% data.table::as.data.table()
-
-
     # Simulate the daily travel from monthly
     travel_data_daily <- make_daily_travel_faster(travel_data=travel_data_monthly,
                                                   travel_data_daily=travel_data_daily,
@@ -1122,7 +1096,7 @@ run_daily_import_model <- function(input_data,
                                  allow_travel_variance=allow_travel_variance)
 
     ## Estimate dates of importation and detection of the simulated importations
-    importation_sim <- data.frame(sim, this.sim)
+    importation_sim <- data.frame(input_data %>% dplyr::select(source, destination, t), this.sim)
 
 
     # Now lets get detections ........................................
@@ -1243,14 +1217,6 @@ run_importations <- function(n_sim=100,
 
     t.start <- proc.time() # start timer to measure this
 
-    # Read the saved setup data that we will pass to the model
-    input_data <- readr::read_csv(file.path(output_dir, "input_data.csv"))
-    travel_data_monthly <- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
-    travel_data_daily <- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-
-    ## ~ Travel restrictions
-    data("travel_restrictions")
-
     # Set up the cluster for parallelization
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
@@ -1263,28 +1229,34 @@ run_importations <- function(n_sim=100,
             if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
         }
 
+        if (!exists("input_data")) {
+	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+            travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
+            travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
+	}
+
+        ## ~ Travel restrictions
+        data("travel_restrictions")
+
         import_est_run <- run_daily_import_model(
             input_data,
             travel_data_monthly,
             travel_data_daily,
             travel_dispersion=travel_dispersion,
             travel_restrictions=travel_restrictions,
-            allow_travel_variance=FALSE,
+            allow_travel_variance=allow_travel_variance,
             tr_inf_redux=0,
-            get_detection_time=FALSE,
-            param_list=list(incub_mean_log=param_list$incub_mean_log,
-                            incub_sd_log=param_list$incub_sd_log,
-                            inf_period_nohosp_mean=param_list$inf_period_nohosp_mean,
-                            inf_period_nohosp_sd=param_list$inf_period_nohosp_sd,
-                            inf_period_hosp_mean_log=param_list$inf_period_hosp_mean_log,
-                            inf_period_hosp_sd_log=param_list$inf_period_hosp_sd_log))
+            get_detection_time=get_detection_time,
+            param_list=param_list)
 
         if(get_detection_time){
-            readr::write_csv(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
-            readr::write_csv(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
+            data.table::fwrite(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
+            data.table::fwrite(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
         } else {
-            readr::write_csv(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
+            data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
         }
+	# Null return value here
+	NULL
     }
 
     parallel::stopCluster(cl)
