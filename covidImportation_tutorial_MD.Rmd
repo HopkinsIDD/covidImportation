@@ -82,6 +82,7 @@ sim_res <- covidImportation::run_importations(
 
 tidycensus::census_api_key(key="[ENTER KEY HERE]")
 
+
 run_full_distrib_imports(states_of_interest=states_of_interest,
                                      regioncode=regioncode,
                                      yr=2010,

@@ -687,158 +687,6 @@ setup_importations <- function(dest="UT",
                                check_saved_data=TRUE,
                                save_case_data=TRUE,
                                get_travel=TRUE,
-<<<<<<< HEAD
-                               n_top_dests=Inf, 
-                               travel_dispersion=3,
-                               param_list=list(incub_mean_log=log(5.89),
-                                               incub_sd_log=log(1.74),
-                                               inf_period_nohosp_mean=15,
-                                               inf_period_nohosp_sd=5,
-                                               inf_period_hosp_shape=0.75,
-                                               inf_period_hosp_scale=5.367,
-                                               p_report_source=c(0.05, 0.25),
-                                               shift_incid_days=-10,
-                                               delta=1),
-                               pop_additional = NULL){
-
-  ## Create needed directories
-  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-
-  ## DATA
-  ## ~ Incidence data
-  incid_data_list <- get_incidence_data(first_date = first_date,
-                                        last_date = last_date,
-                                        update_case_data = update_case_data,
-                                        case_data_dir = case_data_dir,
-                                        check_saved_data = check_saved_data,
-                                        save_data = save_case_data)
-  
-  incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA") # get rid of generic "USA"
-  incid_data <- incid_data %>% rename(incid_est = cases_incid)
-  jhucsse <- incid_data_list$jhucsse_case_data
-  jhucsse_state <- incid_data_list$jhucsse_case_data_state
-  
-  
-  ## ~ Travel Data
-  ## if travel data exists load it, otherwise download it
-  if(get_travel) {
-    travel_data_monthly <- get_oag_travel(destination=dest,
-                                          destination_type=dest_type,
-                                          dest_country=dest_country,
-                                          dest_aggr_level=dest_aggr_level) %>% as.data.frame()
-    travel_data_monthly <- travel_data_monthly %>%
-      dplyr::mutate(t_year=2020) %>%
-      dplyr::rename(source = dep_loc_aggr)
-    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
-  } else{
-    travel_data_monthly <- paste0("data/", paste(dest, collapse = "+"), "-",
-                                  dest_aggr_level, "_oag_20172019.csv") %>%
-      readr::read_csv(na=c(""," ","NA"))%>%
-      dplyr::mutate(t_year=2020) %>%
-      dplyr::mutate(travelers=ifelse(t_month == "01" & dep_country=="CHN",
-                              # Increase travel for Chinese New Year
-                              travelers*1.6, travelers)) %>%
-      dplyr::rename(source = dep_loc_aggr)
-    travel_data_monthly$destination <- travel_data_monthly[,paste0("arr_", dest_aggr_level),drop=T]
-  }
-  
-  ## monthly average totals into destinations
-  travel_mean <- travel_data_monthly %>%
-    dplyr::group_by(destination, t_month) %>%
-    dplyr::summarise(travelers = sum(travelers_mean,na.rm=TRUE)) %>%
-    dplyr::group_by(destination) %>%
-    dplyr::summarise(travelers = mean(travelers)) %>%
-    dplyr::arrange(desc(travelers))
-  
-  
-  
-  # Destinations to keep
-  dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
-  travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
-  
-  ## Travel data
-  ##  - Get daily for merging purposes
-  travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=3)
-  
-  ## ~ Population Data
-  data(pop_data, package="covidImportation")
-  pop_data <- bind_rows(pop_data, pop_additional)
-  
-  
-  
-  ## ~~ First Check that the variables match up
-  # Check that incidence data does not have duplicates
-  incid_dups <- sum(incid_data %>%
-                      dplyr::mutate(source_t = paste(source, t)) %>%
-                      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
-                      dplyr::pull(dup_entry))
-  if(sum(incid_dups)>0){
-    dup_entry <- incid_data %>%
-      dplyr::mutate(source_t = paste(source, t)) %>%
-      dplyr::mutate(dup_entry=duplicated(source_t)) %>%
-      dplyr::filter(dup_entry) %>% dplyr::pull(source_t)
-    warning("There are duplicate entries in the incidence data.")
-  }
-  ## Check travel data
-  travel_dups <- travel_data_daily %>%
-    dplyr::mutate(source_dest_t = paste(source, destination, t),
-           dup_entry=duplicated(source_dest_t)) %>%
-    dplyr::pull(dup_entry) %>%
-    sum()
-  if(sum(travel_dups)>0){
-    warning("There are duplicate entries in the travel data.")
-  }
-  ## Check Population data
-  pop_dups <- pop_data %>%
-    dplyr::mutate(dup_entry=duplicated(source)) %>%
-    dplyr::pull(dup_entry) %>%
-    sum()
-  if(sum(pop_dups)>0){
-    warning("There are duplicate entries in the population data.")
-  }
-  # we really just need to make sure there are travel data and pop data for all source locations with incidence
-  # incid_sources <- sort(unique(incid_data$source))
-  # travel_sources <- sort(unique(travel_data_daily$source))
-  # pop_sources <- sort(unique(pop_data$source))
-  # incid_sources[!(incid_sources %in% travel_sources)]
-  # incid_sources[!(incid_sources %in% pop_sources)]
-  
-  ## ~~ Merge it all
-  input_data <- covidImportation:::make_input_data(incid_data, travel_data_daily, pop_data,
-                                shift_incid_days=param_list$shift_incid_days,
-                                dest_aggr_level=dest_aggr_level) %>%
-    dplyr::mutate(p_report_source=ifelse(source=="Hubei",
-                                  param_list$p_report_source[1],
-                                  param_list$p_report_source[2]),
-           # For first pass, reporting rate is just Hubei/not Hubei
-           days_per_t=param_list$delta # ~ delta: days per time period
-    ) %>%
-    dplyr::filter(t<=as.Date(last_date)) %>%
-    dplyr::mutate(source = as.character(source),
-           destination = as.character(destination))
-  
-  ## Filter to sources with cases -- to speed it up
-  source_w_cases <- input_data %>%
-    dplyr::filter(!duplicated(paste0(source, t))) %>%
-    dplyr::group_by(source) %>%
-    dplyr::summarise(cum_cases = sum(cases_incid, na.rm=TRUE)) %>%
-    dplyr::filter(cum_cases>0)
-  input_data <- input_data %>%
-    dplyr::filter(source %in% source_w_cases$source)
-  travel_data_monthly <- travel_data_monthly %>%
-    dplyr::filter(source %in% source_w_cases$source)
-  travel_data_daily <- travel_data_daily %>%
-    dplyr::filter(source %in% source_w_cases$source)
-  
-  
-  # save the data that we will pass to the model
-  readr::write_csv(input_data, file.path(output_dir, "input_data.csv"))
-  readr::write_csv(travel_data_monthly, file.path(output_dir, "travel_data_monthly.csv"))
-  readr::write_csv(travel_mean, file.path(output_dir, "travel_mean.csv"))
-  readr::write_csv(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
-  
-  print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
-=======
                                n_top_dests=Inf,
                                travel_dispersion=3,
                                param_list=list(p_report_source=c(0.05, 0.25),
@@ -862,7 +710,8 @@ setup_importations <- function(dest="UT",
     incid_data <- incid_data %>% rename(incid_est = cases_incid)
     jhucsse <- incid_data_list$jhucsse_case_data
     jhucsse_state <- incid_data_list$jhucsse_case_data_state
-
+    
+    print("Successfully pulled and cleaned case data.")
 
     ## ~ Travel Data
     ## if travel data exists load it, otherwise download it
@@ -895,7 +744,8 @@ setup_importations <- function(dest="UT",
         dplyr::summarise(travelers = mean(travelers)) %>%
         dplyr::arrange(desc(travelers))
 
-
+    print("Successfully set up travel data.")
+    
 
     # Destinations to keep
     dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
@@ -961,6 +811,9 @@ setup_importations <- function(dest="UT",
         dplyr::mutate(source = as.character(source),
                       destination = as.character(destination))
 
+    print("Successfully set up combined input data.")
+    
+    
     ## Filter to sources with cases -- to speed it up
     source_w_cases <- input_data %>%
         dplyr::filter(!duplicated(paste0(source, t))) %>%
@@ -982,7 +835,6 @@ setup_importations <- function(dest="UT",
     data.table::fwrite(travel_data_daily, file.path(output_dir, "travel_data_daily.csv"))
 
     print(paste0("Input and Travel data setup successfully and saved in ", output_dir, "."))
->>>>>>> b3b4fe072f9f65bff16b3e000bb84296eff80cad
 }
 
 

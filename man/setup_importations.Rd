@@ -20,7 +20,8 @@ setup_importations(
   get_travel = TRUE,
   n_top_dests = Inf,
   travel_dispersion = 3,
-  param_list = list(p_report_source = c(0.05, 0.25), shift_incid_days = -10, delta = 1)
+  param_list = list(p_report_source = c(0.05, 0.25), shift_incid_days = -10, delta = 1),
+  check_errors = TRUE
 )
 }
 \arguments{
