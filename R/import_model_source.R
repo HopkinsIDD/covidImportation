@@ -360,8 +360,7 @@ calc_nb_import_pars <- function(importation_sim, cores=4){
 #'
 #' @param dest character string, name of destination to simulate importations for
 #' @param dest_type character string, options: "airport", "city", "state", "country"
-#' @param dest_0 optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
-#' @param dest_0_type optional character string, must specify if specifying a `dest_0` option; default=NULL
+#' @param dest_country optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
 #' @param dest_aggr_level character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
 #' @param project_name character string
 #' @param version character string
@@ -904,7 +903,7 @@ setup_importations <- function(dest="UT",
 
     ## Travel data
     ##  - Get daily for merging purposes
-    travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=3)
+    travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=travel_dispersion)
 
     ## ~ Population Data
     data(pop_data, package="covidImportation")
@@ -1082,11 +1081,15 @@ run_daily_import_model <- function(input_data,
                                                    travel_restrictions_long=travel_restrictions_long)
 
     # Join sampled travel data back into input data
-    input_data_sim <- input_data %>%
-        dplyr::select(-travelers) %>%
-        dplyr::left_join(travel_data_daily %>%
-                             dplyr::select(source,destination,t,travelers),
-                         by=c("source", "destination", "t"))
+    small_data_daily <- travel_data_daily %>%
+                            dplyr::select(source, destination, t, travelers) %>%
+                            dplyr::filter(destination %in% unique(input_data$destination) &
+                                          source %in% unique(input_data$source) &
+                                          t %in% unique(input_data$t))
+    # TODO: arrange to make sure small_data_daily and input_data are in order
+    input_data_sim <- input_data %>% dplyr::select(-travelers)
+    input_data_sim$travelers = small_data_daily$travelers
+
 
     # Run base model to estimate the number of importations during this simulation
     this.sim <- est_imports_base(input_data = input_data_sim,
@@ -1223,40 +1226,45 @@ run_importations <- function(n_sim=100,
     doParallel::registerDoParallel(cl)
 
     # Run the foreach loop to estimate importations for n simulations
-    foreach(n=seq_len(n_sim), .export=c("make_daily_travel_faster", "apply_travel_restrictions", "est_imports_base", "run_daily_import_model"), .packages=c("dplyr","tidyr")) %dopar% {
+    foreach(n=seq_len(n_sim), 
+            .export=c("make_daily_travel_faster", 
+                      "apply_travel_restrictions", 
+                      "est_imports_base", 
+                      "run_daily_import_model"), 
+            .packages=c("dplyr","tidyr")) %dopar% {
+      if (print_progress){
+          if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
+      }
 
-        if (print_progress){
-            if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
-        }
+      if (!exists("input_data")) {
+        print("Reading input data")
+	      input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
+        travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
+        travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
+	    }
 
-        if (!exists("input_data")) {
-	    input_data <<- readr::read_csv(file.path(output_dir, "input_data.csv"))
-            travel_data_monthly <<- readr::read_csv(file.path(output_dir, "travel_data_monthly.csv"))
-            travel_data_daily <<- readr::read_csv(file.path(output_dir, "travel_data_daily.csv"))
-	}
+      ## ~ Travel restrictions
+      data("travel_restrictions")
 
-        ## ~ Travel restrictions
-        data("travel_restrictions")
+      import_est_run <- run_daily_import_model(
+          input_data,
+          travel_data_monthly,
+          travel_data_daily,
+          travel_dispersion=travel_dispersion,
+          travel_restrictions=travel_restrictions,
+          allow_travel_variance=allow_travel_variance,
+          tr_inf_redux=0,
+          get_detection_time=get_detection_time,
+          param_list=param_list)
 
-        import_est_run <- run_daily_import_model(
-            input_data,
-            travel_data_monthly,
-            travel_data_daily,
-            travel_dispersion=travel_dispersion,
-            travel_restrictions=travel_restrictions,
-            allow_travel_variance=allow_travel_variance,
-            tr_inf_redux=0,
-            get_detection_time=get_detection_time,
-            param_list=param_list)
-
-        if(get_detection_time){
-            data.table::fwrite(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
-            data.table::fwrite(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
-        } else {
-            data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
-        }
-	# Null return value here
-	NULL
+      if(get_detection_time){
+          data.table::fwrite(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
+          data.table::fwrite(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
+      } else {
+          data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
+      }
+    	# Null return value here
+    	NULL
     }
 
     parallel::stopCluster(cl)
