@@ -433,16 +433,30 @@ setup_and_run_importations <- function(dest="UT",
 
     ## DATA
     ## ~ Incidence data
-    incid_data_list <- get_incidence_data(first_date = first_date,
-                                          last_date = last_date,
-                                          update_case_data = update_case_data,
-                                          case_data_dir = case_data_dir,
-                                          check_saved_data = check_saved_data,
-                                          save_data = save_case_data)
-
-    incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
-    jhucsse <- incid_data_list$jhucsse
-
+    # OLD VERSION
+    # incid_data_list <- get_incidence_data(first_date = first_date,
+    #                                       last_date = last_date,
+    #                                       update_case_data = update_case_data,
+    #                                       case_data_dir = case_data_dir,
+    #                                       check_saved_data = check_saved_data,
+    #                                       save_data = save_case_data)
+    # 
+    # incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
+    # incid_data <- incid_data %>% rename(incid_est = cases_incid)
+    # jhucsse <- incid_data_list$jhucsse_case_data
+    # jhucsse_state <- incid_data_list$jhucsse_case_data_state
+    
+    incid_data <- get_incidence_fits(aggr_level = "source",
+                                     first_date = first_date,
+                                     last_date = last_date,
+                                     case_data_dir = case_data_dir,
+                                     save_raw_data = save_case_data,
+                                     us_data_only=FALSE)
+    
+    incid_data <- incid_data %>% dplyr::filter(source != "USA") %>%
+      rename(incid_est = cases_incid)
+    readr::write_csv(incid_data, file.path(case_data_dir, "incidence_fits.csv"))
+    
     ## ~ Travel Data
     ## if travel data exists load it, otherwise download it
     if(get_travel) {
@@ -681,10 +695,10 @@ setup_importations <- function(dest="UT",
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
-                               update_case_data=TRUE,
+                               update_case_data=TRUE, # no longer used
                                case_data_dir = "data/case_data",
                                output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
-                               check_saved_data=TRUE,
+                               check_saved_data=TRUE, # no longer used
                                save_case_data=TRUE,
                                get_travel=TRUE,
                                n_top_dests=Inf,
@@ -699,18 +713,32 @@ setup_importations <- function(dest="UT",
 
     ## DATA
     ## ~ Incidence data
-    incid_data_list <- get_incidence_data(first_date = first_date,
-                                          last_date = last_date,
-                                          update_case_data = update_case_data,
-                                          case_data_dir = case_data_dir,
-                                          check_saved_data = check_saved_data,
-                                          save_data = save_case_data)
+  
+  # OLD VERSION
+    # incid_data_list <- get_incidence_data(first_date = first_date,
+    #                                       last_date = last_date,
+    #                                       update_case_data = update_case_data,
+    #                                       case_data_dir = case_data_dir,
+    #                                       check_saved_data = check_saved_data,
+    #                                       save_data = save_case_data)
+    # 
+    # incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
+    # incid_data <- incid_data %>% rename(incid_est = cases_incid)
+    # jhucsse <- incid_data_list$jhucsse_case_data
+    # jhucsse_state <- incid_data_list$jhucsse_case_data_state
+    
+    incid_data <- get_incidence_fits(aggr_level = "source",
+                                     first_date = first_date,
+                                     last_date = last_date,
+                                     case_data_dir = case_data_dir,
+                                     save_raw_data = save_case_data,
+                                     us_data_only=FALSE)
 
-    incid_data <- incid_data_list$incid_data %>% dplyr::filter(source != "USA")
-    incid_data <- incid_data %>% rename(incid_est = cases_incid)
-    jhucsse <- incid_data_list$jhucsse_case_data
-    jhucsse_state <- incid_data_list$jhucsse_case_data_state
+    incid_data <- incid_data %>% dplyr::filter(source != "USA") %>% 
+      rename(incid_est = cases_incid)
+    readr::write_csv(incid_data, file.path(case_data_dir, "incidence_fits.csv"))
 
+    print("Successfully pulled and cleaned case data.")
 
     ## ~ Travel Data
     ## if travel data exists load it, otherwise download it
@@ -743,7 +771,8 @@ setup_importations <- function(dest="UT",
         dplyr::summarise(travelers = mean(travelers)) %>%
         dplyr::arrange(desc(travelers))
 
-
+    print("Successfully set up travel data.")
+    
 
     # Destinations to keep
     dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
@@ -809,6 +838,9 @@ setup_importations <- function(dest="UT",
         dplyr::mutate(source = as.character(source),
                       destination = as.character(destination))
 
+    print("Successfully set up combined input data.")
+    
+    
     ## Filter to sources with cases -- to speed it up
     source_w_cases <- input_data %>%
         dplyr::filter(!duplicated(paste0(source, t))) %>%

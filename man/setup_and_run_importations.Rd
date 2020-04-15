@@ -28,14 +28,16 @@ setup_and_run_importations(
   print_progress = TRUE,
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
     inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_mean_log =
-    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25), shift_incid_days
-    = -10, delta = 1)
+    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25),
+    shift_incid_days = -10, delta = 1)
 )
 }
 \arguments{
 \item{dest}{character string, name of destination to simulate importations for}
 
 \item{dest_type}{character string, options: "airport", "city", "state", "country"}
+
+\item{dest_country}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
 
 \item{dest_aggr_level}{character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)}
 
@@ -71,10 +73,6 @@ setup_and_run_importations(
   \item \code{shift_incid_days} lag from infection to report
   \item \code{delta} days per time period
 }}
-
-\item{dest_0}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
-
-\item{dest_0_type}{optional character string, must specify if specifying a `dest_0` option; default=NULL}
 
 \item{end_date}{Date, last import date}
 }

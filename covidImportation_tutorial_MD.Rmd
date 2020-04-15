@@ -80,7 +80,8 @@ sim_res <- covidImportation::run_importations(
 
 ```{r, warning=FALSE, message=FALSE}
 
-tidycensus::census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1")
+tidycensus::census_api_key(key="[ENTER KEY HERE]")
+
 
 run_full_distrib_imports(states_of_interest=states_of_interest,
                                      regioncode=regioncode,
