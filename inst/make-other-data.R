@@ -15,7 +15,26 @@ usethis::use_data(underreporting, overwrite = TRUE)
 
 # Travel Restrictions Data ------------------------------------------------
 
-hubei_shutdown <- c("2020-01-24", "2020-05-01")
+
+# TSA travel reductions
+# Source: https://www.tsa.gov/coronavirus/passenger-throughput
+tsa <- readr::read_csv("data/tsa_throughput.csv") %>% 
+  mutate(date = lubridate::as_date(as.Date(date, "%m/%d/%Y")),
+         p_travel = round(tsa_2020 / tsa_2019, 3)) %>%
+  arrange(date)
+ggplot2::ggplot(tsa, aes(date, p_travel)) + geom_line()
+
+
+# Scrape this table from web
+#--- TO DO ------
+
+
+
+
+
+
+
+hubei_shutdown <- lubridate::as_date(c("2020-01-24", "2020-09-01"))
 data("pop_data", package = "covidImportation")
 # this requires the pop_data to have all of the correct source locations
 
@@ -23,52 +42,66 @@ data("pop_data", package = "covidImportation")
 travel_restrictions <- 
   
   # Reduce travel from all Chinese sources to 10%
-  data.frame(loc=unique((pop_data %>% filter(country=="CHN"))$source),
+  tibble(loc=unique((pop_data %>% filter(country=="CHN"))$source),
              min=hubei_shutdown[1], 
              max=hubei_shutdown[2],
              p_travel=.1) %>% filter(loc!="Hubei") %>%
   
   # Reduce travel from Hubei to 0
-  bind_rows(data.frame(loc="Hubei",
+  bind_rows(tibble(loc="Hubei",
                        min=hubei_shutdown[1],
                        max=hubei_shutdown[2],
                        p_travel=0)) %>%
   
-  # Reduce travel from all US sources to 60%
-  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                       min="2020-03-02",
-                       max="2020-03-08",
-                       p_travel=.6)) %>%
-  
-  # Reduce travel from all US sources to 30%
-  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                       min="2020-03-09", 
-                       max="2020-03-16", 
-                       p_travel=.3)) %>%
+  # Reduce travel from all US sources based on TSA numbers
+  bind_rows(  expand_grid(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                        min=tsa$date) %>% 
+              left_join(
+                tibble(min=tsa$date,
+                        max=tsa$date,
+                        p_travel=tsa$p_travel), by="min")) %>%
   
   # Reduce travel from all US sources to 10%
-  bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
-                       min="2020-03-17", 
-                       max="2020-06-16", 
-                       p_travel=.1)) %>%
+  bind_rows(tibble(loc=unique((pop_data %>% filter(country=="USA"))$source),
+                       min=lubridate::as_date(max(tsa$date)+1),
+                       max=lubridate::as_date("2020-09-01"),
+                       p_travel=tsa$p_travel[nrow(tsa)])) %>%
+  
+  # # Reduce travel from all US sources to 60%
+  # bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+  #                      min="2020-03-02",
+  #                      max="2020-03-08",
+  #                      p_travel=.6)) %>%
+  # 
+  # # Reduce travel from all US sources to 30%
+  # bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+  #                      min="2020-03-09", 
+  #                      max="2020-03-16", 
+  #                      p_travel=.3)) %>%
+  # 
+  # # Reduce travel from all US sources to 10%
+  # bind_rows(data.frame(loc=unique((pop_data %>% filter(country=="USA"))$source),
+  #                      min="2020-03-17", 
+  #                      max="2020-06-16", 
+  #                      p_travel=.1)) %>%
   
   # Reduce travel from non-China to US to 30%
   bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                       min="2020-03-02",
-                       max="2020-03-08",
+                       min=lubridate::as_date("2020-03-02"),
+                       max=lubridate::as_date("2020-03-08"),
                        p_travel=.3)) %>%
   
-  # Reduce travel from all US sources to 10%
+  # Reduce travel from all other sources to 10%
   bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                       min="2020-03-09",
-                       max="2020-03-16",
+                       min=lubridate::as_date("2020-03-09"),
+                       max=lubridate::as_date("2020-03-16"),
                        p_travel=.1)) %>%
   
-  # Reduce travel from all US sources to 20%
+  # Reduce travel from all US sources to 4% (matching overall us travel)
   bind_rows(data.frame(loc=unique((pop_data %>% filter(country!="CHN" & country!="USA"))$source),
-                       min="2020-03-17",
-                       max=hubei_shutdown[2],
-                       p_travel=.2))
+                       min=lubridate::as_date("2020-03-17"),
+                       max=lubridate::as_date("2020-09-01"),
+                       p_travel=.04))
 
 usethis::use_data(travel_restrictions, overwrite = TRUE)
 
@@ -107,13 +140,18 @@ usethis::use_data(airport_attribution, overwrite = TRUE)
 ## Generate combined JHU CSSE data for packages (so users dont have to create the full data)
 update_jhucsse_package_data <- function(){
   
-  # pull the data from github
-  pull_JHUCSSE_github_data(case_data_dir = "data/case_data")
-  # read and merge data
-  jhucsse_case_data <- read_JHUCSSE_cases(last_time=Sys.Date(), 
-                                          append_wiki=TRUE, 
-                                          case_data_dir = "data/case_data", 
-                                          print_file_path=FALSE) 
+  # # pull the data from github
+  # pull_JHUCSSE_github_data(case_data_dir = "data/case_data", repull_all=TRUE)
+  # # read and merge data
+  # jhucsse_case_data <- read_JHUCSSE_cases(last_date=Sys.Date(), 
+  #                                         append_wiki=TRUE, 
+  #                                         case_data_dir = "data/case_data", 
+  #                                         print_file_path=FALSE) 
+  # New method
+  jhucsse_case_data <- update_JHUCSSE_github_data(case_data_dir = "data/case_data",
+                                         last_date=Sys.time(),
+                                         check_saved_data=FALSE,
+                                         save_data=TRUE)
   
   #save(jhucsse_case_data, file="data/jhucsse_case_data.rda")
   usethis::use_data(jhucsse_case_data, overwrite = TRUE)

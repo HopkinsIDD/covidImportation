@@ -6,15 +6,16 @@
 ##' Eventually, we would like automate this.
 ##'
 ##' @param case_data_dir directory where daily reported case data files are stored by the function.
-##'
+##' @param repull_all whether to repull all data to make sure it's up to date and catch error fixes
 ##' @return NA (saves a CSV of the current data to the data directory)
 ##'
-##' @import httr lubridate dplyr
+##' @import httr dplyr
+##' @importFrom lubridate mdy month day year
 ##' @importFrom readr read_csv write_csv
 ##'
 ##' @export
 ##'
-pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
+pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data", repull_all=FALSE){
 
     # Create directory to hold all the data
     dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
@@ -42,7 +43,9 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
     files_in_dir_dates <- files_in_dir_dates[-tmp]
 
     # select list to download
-    data_files <- data_files[!(dates_tocheck_ %in% files_in_dir_dates)]
+    if (!repull_all){
+        data_files <- data_files[!(dates_tocheck_ %in% files_in_dir_dates)]
+    }
     dates_tocheck_ <- dates_tocheck_[!(dates_tocheck_ %in% files_in_dir_dates)]
 
     for (i in seq_len(length(data_files))){
@@ -72,7 +75,8 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data"){
 ##'
 ##' @return a data frame with the basic data.
 ##'
-##' @import dplyr lubridate
+##' @import dplyr 
+##' @importFrom lubridate mdy parse_date_time ymd_hms
 ##' @importFrom readr read_csv write_csv
 ##'
 ##' @export
@@ -155,12 +159,15 @@ read_JHUCSSE_cases <- function(last_date=Sys.Date(),
 ##' @param check_saved_data whether to check for existing saved case data
 ##' @param save_data whether to save the cleaned and combined data
 ##'
-##' @import dplyr httr lubridate
+##' @import dplyr httr 
+##' @importFrom lubridate mdy month day year parse_date_time ymd_hms
 ##' @importFrom readr read_csv write_csv
 ##' @importFrom data.table rbindlist
 ##'
 ##' @return NA (saves a CSV of the current data to the data directory)
 ##'
+##' @export
+##' 
 update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
                                        last_date=Sys.time(),
                                        check_saved_data=FALSE,
@@ -186,16 +193,17 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
                             lubridate::year(dates_reformat_), sep="-")
 
 
-    # First check the data that comes with the package
-    data('jhucsse_case_data', package = 'covidImportation')
-    update_dates <- sort(unique(as.Date(jhucsse_case_data$Update)))
-    tmp <- which.max(update_dates)
-    update_dates <- update_dates[-tmp]
-    update_dates <- paste(lubridate::month(update_dates),
-                            lubridate::day(update_dates),
-                            lubridate::year(update_dates), sep="-")
-
     if (check_saved_data){
+        
+        # First check the data that comes with the package
+        data('jhucsse_case_data', package = 'covidImportation')
+        update_dates <- sort(unique(as.Date(jhucsse_case_data$Update)))
+        tmp <- which.max(update_dates)
+        update_dates <- update_dates[-tmp]
+        update_dates <- paste(lubridate::month(update_dates),
+                              lubridate::day(update_dates),
+                              lubridate::year(update_dates), sep="-")
+        
         # Check which we have already
         #dir.create(file.path("data"), recursive = TRUE, showWarnings = FALSE)
         files_in_dir <- list.files(case_data_dir, "JHUCSSE Total Cases")
@@ -219,8 +227,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         }
 
     } else {
-        files_in_dir_dates <- comb_data_in_dir_dates <- NULL
-
+        files_in_dir_dates <- comb_data_in_dir_dates <- update_dates <- NULL
     }
 
     # select list to download (minus the latest one as multiple updates to the data are made daily)
@@ -239,7 +246,6 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         # Read in the file
         url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_)
         case_data <- readr::read_csv(url(url_))
-
 
         # Fix the different file column names
         colnames_ <- colnames(case_data)
@@ -421,14 +427,15 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # tidyr::separate out states
     jhucsse_case_data <- suppressWarnings(
         jhucsse_case_data %>%
-            tidyr::separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
+           tidyr::separate(Province_State, sep = ', ', c('city', 'state'), convert = TRUE, remove=FALSE) %>%
            dplyr::mutate(city = ifelse(is.na(state), NA, city))
         )
 
     # Get states where not already there
-    jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(state_tmp = state.abb[match(Province_State, state.name)]) %>%
+    jhucsse_case_data <- jhucsse_case_data %>% 
+       dplyr::mutate(state_tmp = state.abb[match(Province_State, state.name)]) %>%
        dplyr::mutate(state = ifelse(!is.na(state_tmp) & is.na(state), state_tmp, state)) %>%
-        dplyr::select(-state_tmp) %>%
+       dplyr::select(-state_tmp) %>%
        dplyr::mutate(state = ifelse(state=="D.C.", "DC", state))
 
     # # Australian states .............
@@ -438,8 +445,7 @@ get_incidence_data <- function(first_date = ISOdate(2019,12,1),
     # Fix China ..............
     #unique(grep("China", incid_data$Country_Region, value = TRUE, ignore.case = TRUE))
     jhucsse_case_data <- jhucsse_case_data %>%
-       dplyr::mutate(Country_Region = ifelse(Province_State %in% c("Inner Mongolia"),
-                                       "China", Country_Region)) %>%
+       dplyr::mutate(Country_Region = ifelse(Province_State %in% c("Inner Mongolia"), "China", Country_Region)) %>%
        dplyr::mutate(Country_Region = ifelse(Country_Region %in% c("Mainland China", "Hong Kong", "Macau", "Taiwan", "Nei Mongol"),
                                        "China", Country_Region))
 
@@ -989,7 +995,7 @@ make_meanD <- function(input_data,
 ##'  -- Set to .01 for none (evenly mixed across days)
 ##'
 ##' @import dplyr
-##' @importFrom lubridate days_in_month
+##' @importFrom lubridate days_in_month ydm
 ##'
 ##' @return a data frame with randomly distributed travel into days
 ##'
@@ -1150,3 +1156,379 @@ find_recent_file <- function(name_start, path, exclude=NULL){
     return(most_recent_file)
 }
 
+
+
+
+
+
+
+
+
+
+##'
+##' Pull JHU CSSE GitHub data
+##'
+##' Pulls the JHUCSSE total case count data up to current date from GitHub.
+##' This version checks what is already saved, and downloads those that are not.
+##'
+##' @param case_data_dir directory where daily reported case data files are stored by the function.
+##' @param last_date last date for which to include case data
+##' @param save_data whether to save raw data locally
+##' @param us_data_only whether to only pull US data
+##' @param append_wiki TRUE/FALSE whether to append the data from wikipedia for early china
+##'
+##' @import dplyr httr
+##' @importFrom lubridate mdy
+##' @importFrom readr read_csv write_csv
+##' @importFrom data.table rbindlist
+##'
+##' @return NA (saves a CSV of the current data to the data directory)
+##'
+##' @export
+##' 
+get_JHUCSSE_data <- function(case_data_dir = "data/case_data",
+                             last_date=Sys.time(),
+                             save_data=FALSE,
+                             us_data_only=TRUE,
+                             append_wiki=TRUE){
+    
+    # Create directory to hold all the data
+    if (save_data){
+        dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+        print(paste0("Combined data is saved in ", case_data_dir, "."))
+    }
+    
+    # First get a list of files so we can get the latest one
+    req <- httr::GET("https://api.github.com/repos/CSSEGISandData/COVID-19/git/trees/master?recursive=1")
+    httr::stop_for_status(req)
+    
+    filelist <- unlist(lapply(httr::content(req)$tree, "[", "path"), use.names = F)
+    file_name_us_ <- grep("csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv", filelist, value=TRUE)
+    file_name_global_ <- grep("csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", filelist, value=TRUE)
+    
+    # read data from github
+    us_url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_us_)
+    time_series_dat <- readr::read_csv(url(us_url_))
+    
+    case_data <- time_series_dat %>% tibble::as_tibble() %>%
+        tidyr::pivot_longer(cols=-(UID:Combined_Key), names_to="Update", values_to="Confirmed") 
+    case_data <- case_data %>% 
+        dplyr::mutate(Update = as.Date(lubridate::mdy(Update)),
+                      FIPS = ifelse(stringr::str_length(FIPS)==2, paste0(FIPS, "000"),
+                                    stringr::str_pad(FIPS, 5, pad = "0")))
+    case_data <- case_data %>% 
+        dplyr::arrange(UID, Update) %>%
+        dplyr::group_by(UID) %>%
+        dplyr::mutate(incidI = diff(c(0,Confirmed))) %>% dplyr::ungroup()
+    
+    # Fix the different file column names
+    colnames_ <- colnames(case_data)
+    colnames_[grepl("Province", colnames_)] <- "Province_State"
+    colnames_[grepl("Country", colnames_)] <- "Country_Region"
+    colnames_[grepl("Update", colnames_)] <- "Update"
+    colnames_[grepl("Lat", colnames_)] <- "Latitude"
+    colnames_[grepl("Long", colnames_)] <- "Longitude"
+    colnames(case_data) <- colnames_
+    
+    if (!us_data_only){
+        
+        # read data from github
+        global_url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_global_)
+        time_series_dat <- readr::read_csv(url(global_url_))
+        
+        # Fix the different file column names
+        colnames_ <- colnames(time_series_dat)
+        colnames_[grepl("Province", colnames_)] <- "Province_State"
+        colnames_[grepl("Country", colnames_)] <- "Country_Region"
+        colnames_[grepl("Update", colnames_)] <- "Update"
+        colnames_[grepl("Lat", colnames_)] <- "Latitude"
+        colnames_[grepl("Long", colnames_)] <- "Longitude"
+        colnames(time_series_dat) <- colnames_
+        
+        case_data_global <- time_series_dat %>% tibble::as_tibble() %>%
+            dplyr::mutate(iso3 = globaltoolboxlite::get_iso(Country_Region)) %>%
+            dplyr::mutate(iso2 = globaltoolboxlite::get_iso2_from_ISO3(iso3),
+                          UID = ifelse(!is.na(Province_State), paste0(iso3, "-", Province_State), iso3)) %>%
+            dplyr::select(UID, Province_State:Longitude,iso2,iso3, tidyselect::everything()) %>%
+            tidyr::pivot_longer(cols=-(UID:iso3), names_to="Update", values_to="Confirmed") %>% 
+            dplyr::mutate(Update = as.Date(lubridate::mdy(Update)))
+        
+        if (append_wiki) {
+            data("wikipedia_cases", package="covidImportation")
+            wikipedia_cases <- wikipedia_cases %>% 
+                dplyr::mutate(Country_Region = ifelse(Country_Region=="Mainland China", "China", Country_Region),
+                              Update = as.Date(Update),
+                              iso2 = "CN", iso3 = "CHN",
+                              Latitude = 30.9756, Longitude = 112.2707) %>%
+                dplyr::mutate(UID = ifelse(!is.na(Province_State), paste0(iso3, "-", Province_State), iso3)) %>%
+                dplyr::filter(!is.na(Confirmed))
+            
+            case_data_global <- dplyr::bind_rows(case_data_global, wikipedia_cases)
+        }
+        
+        case_data_global <- case_data_global %>% 
+            dplyr::arrange(Country_Region, Province_State, Update) %>%
+            dplyr::group_by(Country_Region, Province_State) %>%
+            dplyr::mutate(incidI = diff(c(0,Confirmed))) %>% dplyr::ungroup()
+        
+        # Join them
+        case_data <- case_data %>% 
+            tibble::as_tibble() %>%
+            dplyr::mutate(UID = as.character(UID)) %>%
+            dplyr::full_join(case_data_global %>% 
+                          tibble::as_tibble() %>% 
+                              dplyr::mutate(UID = as.character(UID)), 
+                      by=c("UID", "Province_State", "Country_Region", "iso2", "iso3", 
+                           "Latitude", "Longitude", "Update", "Confirmed", "incidI"))
+    }
+    
+    ##Now drop any after the date given
+    case_data <- case_data %>% 
+        dplyr::filter(as.Date(Update) <= as.Date(last_date)) %>% 
+        dplyr::distinct()
+    
+    # Get US States ................
+    # tidyr::separate out states
+    case_data <- suppressWarnings(
+        case_data %>%
+            dplyr::mutate(state_abb = state.abb[match(Province_State, state.name)]) %>%
+            dplyr::mutate(state_abb = ifelse(Province_State=="District of Columbia", "DC",
+                                             ifelse(is.na(state_abb) & Country_Region=="US", iso2, state_abb)))
+    )
+    
+    # Define a single source location variable
+    # - USA: States used for source
+    # - China: Provinces used for source
+    # - Others: Country used for source
+    case_data <- case_data %>% 
+        dplyr::mutate(source = ifelse(Country_Region=="US" & !is.na(state_abb), state_abb,
+                                      ifelse(iso3=="CHN" & !is.na(Province_State), Province_State, iso3))) %>%
+        dplyr::filter(Update < (as.Date(Sys.time())-1))
+    
+    
+    # Save if desired
+    if (save_data){
+        if (us_data_only){
+            readr::write_csv(case_data, file.path(case_data_dir,"jhucsse_us_case_data_crude.csv"))
+        } else {
+            readr::write_csv(case_data, file.path(case_data_dir,"jhucsse_case_data_crude.csv"))
+        }
+    }
+    
+    return(case_data)
+}
+
+
+
+
+
+
+#' Clean crude data from JHUCSSE and aggregated it to state or county level
+#'
+#' @param aggr_level "UID", "source", level at which to calculate the cumulative and incident cases. with UID, unassigned locations are dropped
+#' @param last_date
+#' @param case_data_dir directory where case data is being saved
+#' @param save_raw_data whether to save raw data locally
+#' @param us_data_only whether to only pull US data
+#' 
+#' @return
+#'
+#' @examples
+#'
+#' @import globaltoolboxlite dplyr tidyr
+#' @importFrom globaltoolboxlite get_country_name_ISO3 get_iso
+#'
+#' @export
+#'
+get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
+                               last_date = Sys.time(),
+                               case_data_dir = "data/case_data",
+                               save_raw_data=TRUE,
+                               us_data_only=FALSE){
+    
+    ## Get case count data (from JHU CSSE's github)
+    jhucsse_case_data_raw <- suppressMessages(suppressWarnings(get_JHUCSSE_data(case_data_dir = case_data_dir,
+                                                                                last_date=last_date,
+                                                                                save_data=save_raw_data,
+                                                                                us_data_only=us_data_only,
+                                                                                append_wiki=TRUE)))
+    
+    if (aggr_level=="UID"){
+        
+        # get rid of "Unassigned" and  "Out of" 
+        jhucsse_case_data <- jhucsse_case_data_raw %>% 
+            dplyr::filter(!grepl("out of", Admin2, ignore.case = TRUE) &
+                              !grepl("unassigned", Admin2, ignore.case = TRUE))
+        jhucsse_case_data <- jhucsse_case_data %>% 
+            dplyr::filter(!grepl("princess", Province_State, ignore.case = TRUE))
+        
+        # Get incident cases by UID (US counties, Chinese provinces, Countries otherwise)
+        jhucsse_case_data <- jhucsse_case_data %>% 
+            dplyr::arrange(Country_Region, source, UID, Update) 
+        
+        # Fix counts that go negative
+        jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(incid_conf = incidI,
+                                                                 Confirmed_new = Confirmed)
+        #counter <- 0
+        while(sum(jhucsse_case_data$incid_conf<0)>0){
+            
+            # first try to just remove the row
+            jhucsse_case_data <- jhucsse_case_data %>% 
+                dplyr::arrange(Country_Region, source, UID, Update) 
+            jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(jhucsse_case_data$incid_conf >= 0)
+            jhucsse_case_data <- jhucsse_case_data %>%
+                dplyr::group_by(UID, Country_Region) %>%
+                dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
+            
+            
+            #counter <- counter + 1
+            #print(counter)
+            
+            negs_ind <- which(jhucsse_case_data$incid_conf < 0)
+            if (length(negs_ind)>0){
+                jhucsse_case_data <- jhucsse_case_data %>% 
+                    dplyr::arrange(Country_Region, source, UID, Update) 
+                jhucsse_case_data$Confirmed_new[negs_ind - 1] <- jhucsse_case_data$Confirmed_new[negs_ind - 1] + jhucsse_case_data$incid_conf[negs_ind]
+                jhucsse_case_data <- jhucsse_case_data %>%
+                    dplyr::group_by(UID, Country_Region) %>%
+                    dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
+            }
+        }
+        
+    } else if (aggr_level=="source"){
+        
+        # Get cum incidence for states/provinces, countries
+        jhucsse_case_data <- jhucsse_case_data_raw %>%
+            dplyr::arrange(Country_Region, iso3, iso2, source, UID, Update) %>%
+            dplyr::group_by(Country_Region,iso3, iso2, source, Update) %>%
+            dplyr::summarise(Confirmed = sum(Confirmed)) %>%
+            dplyr::ungroup() %>%
+            dplyr::arrange(Country_Region, iso3, iso2, source, Update) %>%
+            dplyr::group_by(Country_Region, iso3, iso2, source) %>%
+            dplyr::mutate(incidI = diff(c(0,Confirmed))) %>%
+            dplyr::ungroup()
+        
+        # Fix counts that go negative
+        jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(incid_conf = incidI,
+                                                                 Confirmed_new = Confirmed)
+        #counter <- 0
+        while(sum(jhucsse_case_data$incid_conf<0)>0){
+            
+            # first try to just remove the row
+            jhucsse_case_data <- jhucsse_case_data %>% 
+                dplyr::arrange(Country_Region, iso3, iso2, source, Update) 
+            jhucsse_case_data <- jhucsse_case_data %>% dplyr::filter(jhucsse_case_data$incid_conf >= 0)
+            jhucsse_case_data <- jhucsse_case_data %>%
+                dplyr::group_by(Country_Region, iso3, iso2, source) %>%
+                dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
+            
+            
+            #counter <- counter + 1
+            #print(counter)
+            
+            negs_ind <- which(jhucsse_case_data$incid_conf < 0)
+            if (length(negs_ind)>0){
+                jhucsse_case_data <- jhucsse_case_data %>% 
+                    dplyr::arrange(Country_Region, iso3, iso2, source, Update) 
+                jhucsse_case_data$Confirmed_new[negs_ind - 1] <- jhucsse_case_data$Confirmed_new[negs_ind - 1] + jhucsse_case_data$incid_conf[negs_ind]
+                jhucsse_case_data <- jhucsse_case_data %>%
+                    dplyr::group_by(Country_Region, iso3, iso2) %>%
+                    dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
+            }
+            
+        }
+    }
+    
+    jhucsse_case_data <- jhucsse_case_data %>% 
+        dplyr::mutate(Confirmed = Confirmed_new, incidI = incid_conf) %>%
+        dplyr::select(-Confirmed_new, -incid_conf)
+    
+    return(jhucsse_case_data)
+}
+
+
+
+
+
+#' Get incidence data from JHUCSSE
+#'
+#' @param aggr_level "UID", "source", level at which to calculate the cumulative and incident cases. with UID, unassigned locations are dropped; "source" refers to US state, Chinese province, and national otherwise.
+#' @param first_date
+#' @param last_date
+#' @param case_data_dir directory where case data is being saved
+#' @param check_saved_data whether to check locally saved github data
+#' @param save_raw_data whether to save raw data locally
+#' @param us_data_only whether to only pull US data
+#'
+#' @return
+#'
+#' @examples
+#'
+#' @import globaltoolboxlite dplyr tidyr
+#' @importFrom globaltoolboxlite get_country_name_ISO3 get_iso
+#'
+#' @export
+#'
+get_incidence_fits <- function(aggr_level = "UID", #"source",
+                               first_date = ISOdate(2019,12,1), 
+                               last_date = Sys.time(),
+                               case_data_dir = "data/case_data",
+                               save_raw_data=TRUE,
+                               us_data_only=FALSE){
+    
+    ## Get case count data (from JHU CSSE's github)
+    case_data <- get_clean_JHUCSSE_data(aggr_level = aggr_level, 
+                                 last_date = last_date,
+                                 case_data_dir = case_data_dir,
+                                 save_raw_data=save_raw_data,
+                                 us_data_only=us_data_only)
+    
+    if (aggr_level=="UID"){
+        case_data <- case_data %>% dplyr::select(-source) %>% mutate(source=UID)
+    }
+    
+    
+    ## GET INCIDENCE FITS ..........................
+    ## Estimate incidence using spline fits.
+    incid_data <- est_daily_incidence_corrected(case_data %>% 
+                                                    dplyr::mutate(Province_State=source),
+                                                first_date, last_date, tol=100, na_to_zeros=FALSE) %>%
+        dplyr::mutate(Incidence=round(Incidence, 2))
+    
+    ## Incidence Data
+    incid_data <- incid_data %>% dplyr::rename(source=Province_State, cases_incid=Incidence) %>%
+        dplyr::mutate(source = as.character(source),
+                      t = as.Date(Date)) %>% tibble::as_tibble()
+    
+    # Add country_name back in
+    incid_data <- dplyr::left_join(incid_data,
+                            case_data %>% dplyr::select(source, country_name=Country_Region, country=iso3) %>%
+                                dplyr::mutate(prov_country = paste0(source,"-", country_name)) %>%
+                                dplyr::filter(!duplicated(prov_country)) %>% dplyr::select(-prov_country),
+                            by=c("source"="source"))
+    # Add confirmed cases back in
+    incid_data <- dplyr::left_join(incid_data,
+                            case_data  %>% dplyr::select(Update, source, country_name=Country_Region, country=iso3, incid_conf=incidI) %>% 
+                                dplyr::mutate(t = as.Date(Update)) %>%
+                                dplyr::group_by(t, source, country) %>%
+                                dplyr::summarise(incid_conf = sum(incid_conf, na.rm=TRUE)) %>%
+                                dplyr::arrange(country, source, t) %>%
+                                dplyr::group_by(source, country) %>%
+                                dplyr::mutate(cum_incid = cumsum(incid_conf)) %>% dplyr::ungroup(),
+                            by=c("source"="source", "t"="t", "country"))
+    incid_data <- incid_data %>% dplyr::mutate(incid_conf=ifelse(is.na(incid_conf), 0, incid_conf))
+    
+    
+    # Drop NA source
+    #View(incid_data %>% dplyr::filter(is.na(source)))
+    incid_data <- incid_data %>% dplyr::filter(!is.na(source))
+    
+    
+    # Get cumulative estimated incidence
+    incid_data <- incid_data %>%
+        dplyr::arrange(country, source, t) %>%
+        dplyr::group_by(source, country) %>%
+        dplyr::mutate(cum_est_incid = cumsum(cases_incid)) %>% dplyr::ungroup()
+    
+    return(incid_data)
+}

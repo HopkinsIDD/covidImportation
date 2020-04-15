@@ -46,7 +46,8 @@ fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
 ##'
 ##' @return a data frame with roughly estimated incidence in it
 ##'
-##' @import purrr dplyr 
+##' @import dplyr 
+##' @importFrom purrr map map2
 ##' 
 ##' @export
 ##' 
@@ -65,24 +66,14 @@ est_daily_incidence <- function (cum_data,
   ##by fitting a monitonically increasing spline and then
   ##taking the difference (a little less sensitive to
   ##perturbations in reporting than taking raw difference).
-  ##Making sure only to infer over trhe suport
-  tmp_dt_seq <- seq(first_date, last_date, "days")
-  incidence_data<- analyze %>% nest(-Province_State) %>%
+  ##Making sure only to infer over the suport
+  tmp_dt_seq <- as.Date(seq(first_date, last_date, "days"))
+  incidence_data <- analyze %>% 
+    tidyr::nest(data=-Province_State) %>%
     dplyr::mutate(cs = purrr::map(data, ~fit_ispline(dates=.$Update, obs=.$Confirmed))) %>%
-    dplyr::mutate(Incidence = purrr::map2(cs,data, ~data.frame(Date=tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)],
-                                               Incidence= diff(c(0, pmax(0,.x(tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)]))))))) %>%
+    dplyr::mutate(Incidence = purrr::map2(cs, data, ~data.frame(Date=tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)],
+                                                                Incidence= diff(c(0, pmax(0,.x(tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)]))))))) %>%
     tidyr::unnest(Incidence) %>% dplyr::select(-data) %>% dplyr::select(-cs)
-
-  return(incidence_data)
-
-  #####OLD VERSION
-  # tmp_dt_seq <- seq(first_date, last_date, "days")
-  # incidence_data<- analyze %>% nest(-Province_State) %>%
-  #   mutate(cs=map(data, ~splinefun(x=.$Update, y=.$Confirmed,
-  #                                  method="hyman"))) %>%
-  #   mutate(Incidence=map2(cs,data, ~data.frame(Date=tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)],
-  #                                              Incidence= diff(c(0, pmax(0,.x(tmp_dt_seq[tmp_dt_seq>=min(.y$Update) & tmp_dt_seq<=max(.y$Update)]))))))) %>%
-  #   unnest(Incidence) %>% dplyr::select(-data) %>% dplyr::select(-cs)
 
   return(incidence_data)
 
