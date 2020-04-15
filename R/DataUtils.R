@@ -168,7 +168,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
 
     # Create directory to hold all the data
     if (check_saved_data | save_data){
-        dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+        dir.create(case_data_dir, showWarnings = FALSE, recursive = TRUE)
         print(paste0("Combined data is saved in ", case_data_dir, "."))
     }
 
@@ -239,6 +239,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         # Read in the file
         url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_)
         case_data <- readr::read_csv(url(url_))
+        case_data <- case_data %>% dplyr::mutate(FIPS = as.character(FIPS))
 
 
         # Fix the different file column names
