@@ -11,11 +11,8 @@ setup_importations(
   dest_aggr_level = c("airport"),
   first_date = ISOdate(2019, 12, 1),
   last_date = Sys.time(),
-  update_case_data = TRUE,
-  case_data_dir = "data/case_data",
   output_dir = file.path("output", paste0(paste(dest, collapse = "+"), "_",
     as.Date(Sys.Date()))),
-  check_saved_data = TRUE,
   save_case_data = TRUE,
   get_travel = TRUE,
   n_top_dests = Inf,
@@ -29,7 +26,19 @@ setup_importations(
 
 \item{dest_type}{character string, options: "airport", "city", "state", "country"}
 
+\item{dest_country}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
+
 \item{dest_aggr_level}{character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)}
+
+\item{first_date}{Date, first import date}
+
+\item{last_date}{Date, last import date}
+
+\item{output_dir}{where output files are saved}
+
+\item{save_case_data}{Whether to save the JHUCSSE raw data}
+
+\item{get_travel}{whether to load or pull travel data}
 
 \item{n_top_dests}{Number of destinations to include, ranked by volume; default (Inf) is all.}
 
@@ -42,27 +51,7 @@ setup_importations(
   \item \code{delta} days per time period
 }}
 
-\item{dest_0}{optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL}
-
-\item{dest_0_type}{optional character string, must specify if specifying a `dest_0` option; default=NULL}
-
-\item{project_name}{character string}
-
-\item{version}{character string}
-
-\item{batch}{character string}
-
-\item{end_date}{Date, last import date}
-
-\item{n_sim}{numeric, number of simulations}
-
-\item{cores}{numeric, number of cores to run in parallel}
-
-\item{get_detection_time}{logical}
-
-\item{allow_travel_variance}{logical}
-
-\item{print_progress}{logical}
+\item{check_errors}{logical}
 }
 \value{
 

@@ -24,9 +24,10 @@
 ##'
 ##' @return A data.frame of clustered airports, dates, and nmber of importations
 ##' 
-##' @import purrr sf dplyr
+##' @import sf dplyr
 ##' @importFrom tidycensus get_acs
 ##' @importFrom readr write_csv
+##' @importFrom purrr map map2 reduce
 ##' 
 ##' 
 ##' @export
@@ -178,7 +179,8 @@ get_airports_to_consider <- function(mean_travel_file,
 ##' @importFrom raster intersect crs projection 
 ##' @importFrom ggvoronoi voronoi_polygon
 ##' @importFrom rgeos gBuffer
-##' @import dplyr purrr tibble ggplot2
+##' @importFrom purrr map flatten map_dfr
+##' @import dplyr tibble ggplot2
 ##'
 ##' @export
 ##'
@@ -403,7 +405,8 @@ do_airport_attribution <- function(airports_to_consider,
 ##'
 ##' @return A data.frame of clustered airports, dates, and nmber of importations
 ##' 
-##' @import dplyr purrr
+##' @import dplyr
+##' @importFrom purrr flatten map_dfr
 ##' 
 ##' @export
 ##'

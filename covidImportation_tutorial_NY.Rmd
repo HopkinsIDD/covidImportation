@@ -12,14 +12,16 @@ library(covidImportation)
 states_of_interest=c("NY","NJ","CT")
 regioncode="NYC"
 
+
+output_dir <- file.path("model_output", "importation",regioncode)
+
 ```
 
-    
+
     
 ## Setup the data for the importation model.
     
 ```{r, warning=FALSE, message=FALSE}
-
 
 setup_res <- covidImportation::setup_importations(dest=states_of_interest,
                                dest_type=c("state"), #,"city","airport", "country"),
@@ -27,10 +29,7 @@ setup_res <- covidImportation::setup_importations(dest=states_of_interest,
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
-                               update_case_data=TRUE,
-                               case_data_dir = "data/case_data",
-                               output_dir = file.path("model_output", "importation",regioncode),
-                               check_saved_data=TRUE,
+                               output_dir = output_dir,
                                save_case_data=TRUE,
                                get_travel=TRUE,
                                n_top_dests=Inf, 
@@ -47,13 +46,48 @@ setup_res <- covidImportation::setup_importations(dest=states_of_interest,
 
 ```
 
+## Pull CSSE Data
+
+```{r}
+jhucsse <- covidImportation::get_clean_JHUCSSE_data(aggr_level = "UID", #"source",
+                               last_date = Sys.time(),
+                               case_data_dir = "data/case_data",
+                               save_raw_data=TRUE,
+                               us_data_only=FALSE)
+
+
+plot_rep_cases(case_data = jhucsse,
+               state = "NY", 
+               county_name = c("New York","Nassau"), 
+               aggr_locs = FALSE, 
+               date_limits = c("2020-01-15", "2020-03-15"),
+               ncol_facet=2)
+
+plot_rep_cases(case_data = jhucsse,
+               state = "NY", 
+               county_name = c("New York","Nassau"), 
+               aggr_locs = FALSE, 
+               date_limits = c("2020-03-01", as.character(Sys.Date())),
+               ncol_facet=2)
+
+plot_rep_cases(case_data = jhucsse,
+               state = "NY", 
+               county_name = NULL,
+               aggr_locs = TRUE, 
+               date_limits = c("2020-01-15", as.character(Sys.Date())),
+               ncol_facet=2)
+
+```
+
+
+
 
 ## Run the Simulations
 
 ```{r, warning=FALSE, message=FALSE}
 
 sim_res <- covidImportation::run_importations(
-                             n_sim=12,
+                             n_sim=20,
                              cores=4,
                              get_detection_time=FALSE,
                              travel_dispersion=3,
@@ -66,10 +100,10 @@ sim_res <- covidImportation::run_importations(
                                              inf_period_nohosp_sd=5,
                                              inf_period_hosp_mean_log=1.23,
                                              inf_period_hosp_sd_log=0.79,
-                                             p_report_source=c(0.05, 0.25)))
+                                             p_report_source=c(0.05, 0.25)),
+                               drop_zeros=TRUE)
 
 ```
-    
     
 
 
@@ -77,16 +111,16 @@ sim_res <- covidImportation::run_importations(
 
 ```{r, warning=FALSE, message=FALSE}
 
-tidycensus::census_api_key(key="[ENTER API KEY HERE]")
+tidycensus::census_api_key(key="[ENTER KEY HERE]")
 
 run_full_distrib_imports(states_of_interest=states_of_interest,
                                      regioncode=regioncode,
-                                     yr=2010,
+                                     yr=2018,
                                      mean_travel_file = file.path("model_output", "importation", regioncode, "travel_mean.csv"),
                                      travelers_threshold=10000,
                                      airport_cluster_threshold=80,
-                                     shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2010_", regioncode, ".shp")),
-                                     model_output_dir = file.path("model_output", "importation", regioncode),
+                                     shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2018_", regioncode, ".shp")),
+                                     model_output_dir = output_dir,
                                      local_dir="data/",
                                      plot=FALSE,
                                      cores=4,
@@ -96,8 +130,51 @@ run_full_distrib_imports(states_of_interest=states_of_interest,
 
 
 
+## RESULTS
+
+```{r}
+
+local_dir = "data/"
+yr = 2018
+
+county_pop <- read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+
+
+# Destination by time
+import_results_desttime <- readr::read_csv(file.path("results",project_name, sprintf("import_results_desttime_v%s.csv", version)))
+import_results_desttime$t <- lubridate::as_date(import_results_desttime$t)
+t_values <- sort(unique(import_results_desttime$t))
+import_results_desttime <- import_results_desttime %>% 
+    mutate(t = factor(as.character(t))) %>% 
+    mutate(t_num = as.integer(t))
 
 
 
+
+
+
+```
+
+
+
+## Plots
+
+```{r}
+
+imports_mean <- get_mean_imports(yr = 2010,
+                                 output_dir = output_dir,
+                                 local_dir="data/NYC/") %>% rename(t=date)
+
+
+# Barchart plot of importations stacked by source
+plot_imports_stackeddest(data=imports_mean %>% rename(loc = name, amount=import_mean),
+                         t_limits=lubridate::as_date(c("2020-01-01","2020-04-20")),
+                         axes_text_size = c(9,9),
+                         leg_text_size = 8, 
+                         leg_title_size = 10,
+                         time_int = 5)
+
+
+```
 
 

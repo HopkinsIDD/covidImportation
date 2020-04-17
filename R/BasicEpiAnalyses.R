@@ -216,67 +216,6 @@ est_daily_incidence_corrected <- function(cum_data, first_date, last_date, tol=1
 
 
 ##'
-##' Function to plot the estimated and reported case counts
-##'
-##' @param conf_cases Confirmed case data from JHU CSSE
-##' @param incid_ests Estimated incidence
-##' @param locations  Locations to plot, can be a vector
-##' @param ncol_facet number of columns in the facet plotting
-##'
-##' @return a corrected version of the inferred incidence data corrected for reporting changes in Hubei.
-##'
-##' @importFrom tibble as_tibble
-##' @import dplyr ggplot2
-##' 
-##' @export
-##' 
-plot_incidence_ests_report <- function(conf_cases=jhucsse, incid_ests=incidence_data,
-                                       locations="All", ncol_facet=2){
-
-  if (locations=="All"){
-    incid_ests <- incid_ests %>% dplyr::mutate(Incidence = ceiling(Incidence))
-  } else {
-    incid_ests <- incid_ests %>% dplyr::mutate(Incidence = ceiling(Incidence)) %>% dplyr::filter(Province_State %in% locations)
-    conf_cases <- conf_cases %>% dplyr::filter(Province_State %in% locations)
-  }
-  incid_ests$Date <- as.Date(incid_ests$Date, "%m/%d/%Y", tz = "UTC")
-
-  # Make conf_cases daily
-  # Get daily calculated incidence (from reporting)
-  conf_cases_daily <- conf_cases %>% dplyr::filter(!is.na(Confirmed)) %>%
-    dplyr::mutate(Date = as.Date(Update)) %>% dplyr::group_by(Province_State, Date) %>% dplyr::filter(Update == max(Update, na.rm=TRUE)) %>% dplyr::ungroup()
-  conf_cases_daily <- conf_cases_daily %>% dplyr::group_by(Province_State) %>% dplyr::arrange(Date) %>% dplyr::mutate(Incidence = diff(c(0, Confirmed))) %>% dplyr::ungroup()
-
-  # Merge in reported incidence
-  incid_data_ <- dplyr::left_join(incid_ests, conf_cases_daily %>% dplyr::rename(Incid_rep = Incidence), by=c("Province_State", "Date")) %>% tibble::as_tibble()
-
-  if (locations=="All"){
-    incid_data_ <- incid_data_ %>% dplyr::group_by(Date) %>% dplyr::summarize(Incidence=sum(Incidence, na.rm = TRUE), Incid_rep=sum(Incid_rep, na.rm = TRUE))
-  }
-
-  # Plot
-  p <- ggplot(incid_data_, aes(x=Date)) +
-    geom_bar(stat = "identity", aes(y=Incidence, fill="Estimated Incidence", group=1)) +
-    geom_point(aes(x=Date, y=Incid_rep, color="Confirmed Cases")) +
-    coord_cartesian(xlim=c(as.Date("2020-01-15"), max(as.Date(incid_data_$Date))),
-                    ylim=c(0,max(incid_data_$Incidence*1.25))) +
-    theme_classic() +
-    scale_fill_manual(values="maroon", name=NULL, label="Estimated Incidence") +
-    scale_color_manual(values="navyblue", name=NULL, label="Confirmed Cases") +
-    theme(legend.position = c(0.125, .92),
-          legend.spacing.y = unit(0, 'cm'),
-          legend.key.size = unit(6, "pt"),
-          legend.text=element_text(size=6))
-
-  if (length(locations)>1){
-    p <- p + facet_wrap(vars(Province_State), ncol=ncol_facet)
-  }
-  return(p)
-}
-
-
-
-##'
 ##' Get cumulative case counts by Province_state
 ##'
 ##' @param df JHUCSSE cleaned data
@@ -303,3 +242,71 @@ get_global_cum <- function(df = jhucsse, case_limit=100){
 
   return(conf_cases_global_cum)
 }
+
+
+
+
+
+#' Get mean importations across geoids
+#'
+#' @param yr year of population data
+#' @param output_dir where output files are saved
+#' @param local_dir directory of the population data
+#' @param n_sim number of simulations to include
+#'
+#' @return
+#' 
+#' @importFrom readr read_csv
+#' @importFrom data.table fread
+#' @importFrom tibble as_tibble
+#' @importFrom tidyr replace_na
+#' @importFrom stringr str_pad
+#' @import dplyr
+#'
+#' @export
+#'
+get_mean_imports <- function(yr = 2018,
+                             output_dir = file.path("model_output", "importation"),
+                             local_dir="data/",
+                             n_sim=100){
+  # get possible geoids
+  county_data <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+  
+  
+  ## Get filenames 
+  import_files <- list.files(output_dir, "importation_*.*.csv$", full.names = TRUE)
+  if (length(import_files)<n_sim){
+    n_sim <- length(import_files)
+  }
+  
+  # Run the for loop to estimate importations for n simulations
+  imports_sim <- data.table::fread(import_files[1]) %>% tibble::as_tibble()
+  imports_all <- expand.grid(place = county_data$GEOID, 
+                             date = seq(min(as.Date(imports_sim$date))-5, as.Date(max(imports_sim$date))+5, by="days"), 
+                             amount = 0, 
+                             amountsq = 0)  %>% tibble::as_tibble() %>%
+    dplyr::mutate(id = as.character(paste(place, date, sep = "-")))
+  
+  for(n in seq_len(n_sim)){
+    imports_sim <- data.table::fread(import_files[n]) %>% 
+      dplyr::mutate(place = stringr::str_pad(place, 5, pad = "0")) %>%
+      dplyr::mutate(id = as.character(paste(place, date, sep = "-")))
+    
+    match_id <- match(imports_sim$id, imports_all$id)
+    imports_all$amount[match_id] <- imports_all$amount[match_id] + imports_sim$amount  
+    imports_all$amountsq[match_id] <- imports_all$amountsq[match_id] + (imports_sim$amount^2)
+  }
+  
+  imports_all <- imports_all %>% tibble::as_tibble() %>% 
+    dplyr::mutate(import_mean = round(amount / n_sim, 1),
+                  importsq_mean = round(amountsq / n_sim, 1)) %>%
+    dplyr::mutate(import_var = importsq_mean - (import_mean^2)) %>%
+    tidyr::replace_na(list(import_mean=0, import_var=0)) %>% 
+    dplyr::select(-importsq_mean, -amount, -amountsq)
+  
+  #Add county info
+  imports_all <- suppressWarnings(imports_all %>% dplyr::left_join(county_data %>% dplyr::select(GEOID, state=id, name=NAME.x), by=c("place"="GEOID")))
+  
+  return(imports_all)
+}
+

@@ -15,7 +15,8 @@ run_importations(
     as.Date(Sys.Date()))),
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
     inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_mean_log =
-    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25))
+    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25)),
+  drop_zeros = FALSE
 )
 }
 \arguments{
