@@ -224,7 +224,7 @@ plot_imports_stackeddest <- function(data=imports_mean %>% rename(amount = impor
               legend.key.size=unit(8, "pt"),
               legend.key = element_blank(),
               legend.background = element_blank(), legend.box.background = element_blank(),
-              plot.title = element_text(size=leg.title.size, face="bold", hjust = 0.025),
+              plot.title = element_text(size=leg_title_size, face="bold", hjust = 0.025),
               plot.margin = unit(c(0.5,.25,0.25,0.25), "cm")) +
         guides(fill=guide_legend(title = element_blank(), ncol=n_columns))
     return(p)

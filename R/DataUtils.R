@@ -1321,6 +1321,162 @@ get_JHUCSSE_data <- function(case_data_dir = "data/case_data",
 
 
 
+##'
+##' Pull JHU CSSE GitHub data
+##'
+##' Pulls the JHUCSSE total case count data up to current date from GitHub.
+##' This version checks what is already saved, and downloads those that are not.
+##'
+##' @param case_data_dir directory where daily reported case data files are stored by the function.
+##' @param last_date last date for which to include case data
+##' @param save_data whether to save raw data locally
+##' @param us_data_only whether to only pull US data
+##' @param append_wiki TRUE/FALSE whether to append the data from wikipedia for early china
+##'
+##' @import dplyr httr
+##' @importFrom lubridate mdy
+##' @importFrom readr read_csv write_csv
+##' @importFrom data.table rbindlist
+##'
+##' @return NA (saves a CSV of the current data to the data directory)
+##'
+##' @export
+##' 
+get_JHUCSSE_deaths <- function(case_data_dir = "data/case_data",
+                             last_date=Sys.time(),
+                             save_data=FALSE,
+                             us_data_only=TRUE,
+                             append_wiki=TRUE){
+    
+    # Create directory to hold all the data
+    if (save_data){
+        dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+        print(paste0("Combined data is saved in ", case_data_dir, "."))
+    }
+    
+    # First get a list of files so we can get the latest one
+    req <- httr::GET("https://api.github.com/repos/CSSEGISandData/COVID-19/git/trees/master?recursive=1")
+    httr::stop_for_status(req)
+    
+    filelist <- unlist(lapply(httr::content(req)$tree, "[", "path"), use.names = F)
+    file_name_us_ <- grep("csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv", filelist, value=TRUE)
+    file_name_global_ <- grep("csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", filelist, value=TRUE)
+    
+    # read data from github
+    us_url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_us_)
+    time_series_dat <- readr::read_csv(url(us_url_))
+    
+    death_data <- time_series_dat %>% tibble::as_tibble() %>%
+        tidyr::pivot_longer(cols=-(UID:Population), names_to="Update", values_to="Deaths") 
+    death_data <- death_data %>% 
+        dplyr::mutate(Update = as.Date(lubridate::mdy(Update)),
+                      FIPS = ifelse(stringr::str_length(FIPS)==2, paste0(FIPS, "000"),
+                                    stringr::str_pad(FIPS, 5, pad = "0")))
+    death_data <- death_data %>% 
+        dplyr::arrange(UID, Update) %>%
+        dplyr::group_by(UID) %>%
+        dplyr::mutate(incidDeath = diff(c(0,Deaths))) %>% dplyr::ungroup()
+    
+    # Fix the different file column names
+    colnames_ <- colnames(death_data)
+    colnames_[grepl("Province", colnames_)] <- "Province_State"
+    colnames_[grepl("Country", colnames_)] <- "Country_Region"
+    colnames_[grepl("Update", colnames_)] <- "Update"
+    colnames_[grepl("Lat", colnames_)] <- "Latitude"
+    colnames_[grepl("Long", colnames_)] <- "Longitude"
+    colnames(death_data) <- colnames_
+    
+    if (!us_data_only){
+        
+        # read data from github
+        global_url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_global_)
+        time_series_dat <- readr::read_csv(url(global_url_))
+        
+        # Fix the different file column names
+        colnames_ <- colnames(time_series_dat)
+        colnames_[grepl("Province", colnames_)] <- "Province_State"
+        colnames_[grepl("Country", colnames_)] <- "Country_Region"
+        colnames_[grepl("Update", colnames_)] <- "Update"
+        colnames_[grepl("Lat", colnames_)] <- "Latitude"
+        colnames_[grepl("Long", colnames_)] <- "Longitude"
+        colnames(time_series_dat) <- colnames_
+        
+        death_data_global <- time_series_dat %>% tibble::as_tibble() %>%
+            dplyr::mutate(iso3 = globaltoolboxlite::get_iso(Country_Region)) %>%
+            dplyr::mutate(iso2 = globaltoolboxlite::get_iso2_from_ISO3(iso3),
+                          UID = ifelse(!is.na(Province_State), paste0(iso3, "-", Province_State), iso3)) %>%
+            dplyr::select(UID, Province_State:Longitude,iso2,iso3, tidyselect::everything()) %>%
+            tidyr::pivot_longer(cols=-(UID:iso3), names_to="Update", values_to="Deaths") %>% 
+            dplyr::mutate(Update = as.Date(lubridate::mdy(Update)))
+        
+        if (append_wiki) {
+            data("wikipedia_cases", package="covidImportation")
+            wikipedia_cases <- wikipedia_cases %>% 
+                dplyr::mutate(Country_Region = ifelse(Country_Region=="Mainland China", "China", Country_Region),
+                              Update = as.Date(Update),
+                              iso2 = "CN", iso3 = "CHN",
+                              Latitude = 30.9756, Longitude = 112.2707) %>%
+                dplyr::mutate(UID = ifelse(!is.na(Province_State), paste0(iso3, "-", Province_State), iso3)) %>%
+                dplyr::filter(!is.na(Deaths))
+            
+            death_data_global <- dplyr::bind_rows(death_data_global, wikipedia_cases %>% dplyr::select(-Suspected, -Confirmed))
+        }
+        
+        death_data_global <- death_data_global %>% 
+            dplyr::arrange(Country_Region, Province_State, Update) %>%
+            dplyr::group_by(Country_Region, Province_State) %>%
+            dplyr::mutate(incidDeath = diff(c(0,Deaths))) %>% dplyr::ungroup()
+        
+        # Join them
+        death_data <- death_data %>% 
+            tibble::as_tibble() %>%
+            dplyr::mutate(UID = as.character(UID)) %>%
+            dplyr::full_join(death_data_global %>% 
+                                 tibble::as_tibble() %>% 
+                                 dplyr::mutate(UID = as.character(UID)), 
+                             by=c("UID", "Province_State", "Country_Region", "iso2", "iso3", 
+                                  "Latitude", "Longitude", "Update", "Deaths", "incidDeath"))
+    }
+    
+    ##Now drop any after the date given
+    death_data <- death_data %>% 
+        dplyr::filter(as.Date(Update) <= as.Date(last_date)) %>% 
+        dplyr::distinct()
+    
+    # Get US States ................
+    # tidyr::separate out states
+    death_data <- suppressWarnings(
+        death_data %>%
+            dplyr::mutate(state_abb = state.abb[match(Province_State, state.name)]) %>%
+            dplyr::mutate(state_abb = ifelse(Province_State=="District of Columbia", "DC",
+                                             ifelse(is.na(state_abb) & Country_Region=="US", iso2, state_abb)))
+    )
+    
+    # Define a single source location variable
+    # - USA: States used for source
+    # - China: Provinces used for source
+    # - Others: Country used for source
+    death_data <- death_data %>% 
+        dplyr::mutate(source = ifelse(Country_Region=="US" & !is.na(state_abb), state_abb,
+                                      ifelse(iso3=="CHN" & !is.na(Province_State), Province_State, iso3))) %>%
+        dplyr::filter(Update < (as.Date(Sys.time())-1))
+    
+    
+    # Save if desired
+    if (save_data){
+        if (us_data_only){
+            readr::write_csv(death_data, file.path(case_data_dir,"jhucsse_us_death_data_crude.csv"))
+        } else {
+            readr::write_csv(death_data, file.path(case_data_dir,"jhucsse_death_data_crude.csv"))
+        }
+    }
+    
+    return(death_data)
+}
+
+
+
+
 
 
 #' Clean crude data from JHUCSSE and aggregated it to state or county level
@@ -1444,6 +1600,134 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
         dplyr::select(-Confirmed_new, -incid_conf)
     
     return(jhucsse_case_data)
+}
+
+
+
+
+
+
+#' Clean crude data from JHUCSSE and aggregated it to state or county level
+#'
+#' @param aggr_level "UID", "source", level at which to calculate the cumulative and incident cases. with UID, unassigned locations are dropped
+#' @param last_date
+#' @param case_data_dir directory where case data is being saved
+#' @param save_raw_data whether to save raw data locally
+#' @param us_data_only whether to only pull US data
+#' 
+#' @return
+#'
+#' @examples
+#'
+#' @import globaltoolboxlite dplyr tidyr
+#' @importFrom globaltoolboxlite get_country_name_ISO3 get_iso
+#'
+#' @export
+#'
+get_clean_JHUCSSE_deaths <- function(aggr_level = "UID", #"source",
+                                   last_date = Sys.time(),
+                                   case_data_dir = "data/case_data",
+                                   save_raw_data=TRUE,
+                                   us_data_only=FALSE){
+    
+    ## Get case count data (from JHU CSSE's github)
+    jhucsse_death_data_raw <- suppressMessages(suppressWarnings(get_JHUCSSE_deaths(case_data_dir = case_data_dir,
+                                                                                last_date=last_date,
+                                                                                save_data=save_raw_data,
+                                                                                us_data_only=us_data_only,
+                                                                                append_wiki=TRUE)))
+    
+    if (aggr_level=="UID"){
+        
+        # get rid of "Unassigned" and  "Out of" 
+        jhucsse_death_data <- jhucsse_death_data_raw %>% 
+            dplyr::filter(!grepl("out of", Admin2, ignore.case = TRUE) &
+                              !grepl("unassigned", Admin2, ignore.case = TRUE))
+        jhucsse_death_data <- jhucsse_death_data %>% 
+            dplyr::filter(!grepl("princess", Province_State, ignore.case = TRUE))
+        
+        # Get incident deaths by UID (US counties, Chinese provinces, Countries otherwise)
+        jhucsse_death_data <- jhucsse_death_data %>% 
+            dplyr::arrange(Country_Region, source, UID, Update) 
+        
+        # Fix counts that go negative
+        jhucsse_death_data <- jhucsse_death_data %>% dplyr::mutate(incid_death = incidDeath,
+                                                                 Deaths_new = Deaths)
+        #counter <- 0
+        while(sum(jhucsse_death_data$incid_death<0)>0){
+            
+            # first try to just remove the row
+            jhucsse_death_data <- jhucsse_death_data %>% 
+                dplyr::arrange(Country_Region, source, UID, Update) 
+            jhucsse_death_data <- jhucsse_death_data %>% dplyr::filter(jhucsse_death_data$incid_death >= 0)
+            jhucsse_death_data <- jhucsse_death_data %>%
+                dplyr::group_by(UID, Country_Region) %>%
+                dplyr::mutate(incid_death = diff(c(0,Deaths_new))) %>% dplyr::ungroup()
+            
+            
+            #counter <- counter + 1
+            #print(counter)
+            
+            negs_ind <- which(jhucsse_death_data$incid_death < 0)
+            if (length(negs_ind)>0){
+                jhucsse_death_data <- jhucsse_death_data %>% 
+                    dplyr::arrange(Country_Region, source, UID, Update) 
+                jhucsse_death_data$Deaths_new[negs_ind - 1] <- jhucsse_death_data$Deaths_new[negs_ind - 1] + jhucsse_death_data$incid_death[negs_ind]
+                jhucsse_death_data <- jhucsse_death_data %>%
+                    dplyr::group_by(UID, Country_Region) %>%
+                    dplyr::mutate(incid_death = diff(c(0,Deaths_new))) %>% dplyr::ungroup()
+            }
+        }
+        
+    } else if (aggr_level=="source"){
+        
+        # Get cum incidence for states/provinces, countries
+        jhucsse_death_data <- jhucsse_death_data_raw %>%
+            dplyr::arrange(Country_Region, iso3, iso2, source, UID, Update) %>%
+            dplyr::group_by(Country_Region,iso3, iso2, source, Update) %>%
+            dplyr::summarise(Deaths = sum(Deaths)) %>%
+            dplyr::ungroup() %>%
+            dplyr::arrange(Country_Region, iso3, iso2, source, Update) %>%
+            dplyr::group_by(Country_Region, iso3, iso2, source) %>%
+            dplyr::mutate(incidDeath = diff(c(0,Deaths))) %>%
+            dplyr::ungroup()
+        
+        # Fix counts that go negative
+        jhucsse_death_data <- jhucsse_death_data %>% dplyr::mutate(incid_death = incidDeath,
+                                                                 Deaths_new = Deaths)
+        #counter <- 0
+        while(sum(jhucsse_death_data$incid_death<0)>0){
+            
+            # first try to just remove the row
+            jhucsse_death_data <- jhucsse_death_data %>% 
+                dplyr::arrange(Country_Region, iso3, iso2, source, Update) 
+            jhucsse_death_data <- jhucsse_death_data %>% dplyr::filter(jhucsse_death_data$incid_death >= 0)
+            jhucsse_death_data <- jhucsse_death_data %>%
+                dplyr::group_by(Country_Region, iso3, iso2, source) %>%
+                dplyr::mutate(incid_death = diff(c(0,Deaths_new))) %>% dplyr::ungroup()
+            
+            
+            #counter <- counter + 1
+            #print(counter)
+            
+            negs_ind <- which(jhucsse_death_data$incid_death < 0)
+            if (length(negs_ind)>0){
+                jhucsse_death_data <- jhucsse_death_data %>% 
+                    dplyr::arrange(Country_Region, iso3, iso2, source, Update) 
+                jhucsse_death_data$Deaths_new[negs_ind - 1] <- jhucsse_death_data$Deaths_new[negs_ind - 1] + jhucsse_death_data$incid_death[negs_ind]
+                jhucsse_death_data <- jhucsse_death_data %>%
+                    dplyr::group_by(Country_Region, iso3, iso2) %>%
+                    dplyr::mutate(incid_death = diff(c(0,Deaths_new))) %>% dplyr::ungroup()
+            }
+            
+        }
+    }
+    
+    jhucsse_death_data <- jhucsse_death_data %>% 
+        dplyr::mutate(Deaths = Deaths_new, incidDeath = incid_death) %>%
+        dplyr::select(-Deaths_new, -incid_death)
+    
+    return(jhucsse_death_data)
 }
 
 
