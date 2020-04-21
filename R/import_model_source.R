@@ -767,9 +767,11 @@ setup_importations <- function(dest="UT",
     
 
     # Destinations to keep
-    dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
-    travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
-
+    if (!is.infinite(n_top_dests)){
+      dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
+      travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
+    }
+    
     ## Travel data
     ##  - Get daily for merging purposes
     travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=travel_dispersion)
