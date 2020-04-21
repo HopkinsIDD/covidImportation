@@ -282,7 +282,7 @@ get_mean_imports <- function(yr = 2018,
   # Run the for loop to estimate importations for n simulations
   imports_sim <- data.table::fread(import_files[1]) %>% tibble::as_tibble()
   imports_all <- expand.grid(place = county_data$GEOID, 
-                             date = seq(min(as.Date(imports_sim$date))-5, as.Date(max(imports_sim$date))+5, by="days"), 
+                             date = seq(min(as.Date(imports_sim$date))-30, as.Date(max(imports_sim$date))+30, by="days"), 
                              amount = 0, 
                              amountsq = 0)  %>% tibble::as_tibble() %>%
     dplyr::mutate(id = as.character(paste(place, date, sep = "-")))
