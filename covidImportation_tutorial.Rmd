@@ -12,25 +12,28 @@ library(covidImportation)
 states_of_interest=c("CA","NV","WA","OR","AZ")
 regioncode="west-coast-AZ-NV"
 
+census_key <- Sys.getenv("CENSUS_API_KEY")
+if(census_key != "")
+{
+  tidycensus::census_api_key(key = census_key)
+}
+output_dir <- file.path("model_output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())))
 ```
 
     
     
 ## Setup the data for the importation model.
     
-```{r}
+```{r setup_importations}
 
-
-setup_res <- covidImportation::setup_importations(dest=states_of_interest,
+dest <- states_of_interest
+setup_res <- covidImportation::setup_importations(dest=dest,
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
-                               update_case_data=TRUE,
-                               case_data_dir = "data/case_data",
-                               output_dir = file.path("model_output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
-                               check_saved_data=TRUE,
+                               output_dir = output_dir,
                                save_case_data=TRUE,
                                get_travel=TRUE,
                                n_top_dests=Inf, 
@@ -50,7 +53,7 @@ setup_res <- covidImportation::setup_importations(dest=states_of_interest,
 
 ## Run the Simulations
 
-```{r}
+```{r run_importations}
 
 sim_res <- covidImportation::run_importations(
                              n_sim=10,
@@ -59,7 +62,7 @@ sim_res <- covidImportation::run_importations(
                              travel_dispersion=3,
                              allow_travel_variance=FALSE,
                              print_progress=TRUE,
-                             output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
+                             output_dir = output_dir,
                              param_list=list(incub_mean_log=log(5.89),
                                              incub_sd_log=log(1.74),
                                              inf_period_nohosp_mean=15,
@@ -75,13 +78,13 @@ sim_res <- covidImportation::run_importations(
 
 ## Distribute the Simulated Importations into Airports to Counties
 
-```{r}
+```{r run_full_distrib_imports}
 
 
 run_full_distrib_imports(states_of_interest=states_of_interest,
                                      regioncode=regioncode,
                                      yr=2010,
-                                     mean_travel_file = file.path("model_output", "importation", "travel_mean.csv"),
+                                     mean_travel_file = file.path(output_dir, "travel_mean.csv"),
                                      travelers_threshold=10000,
                                      airport_cluster_threshold=80,
                                      shapefile_path = file.path("data", regioncode, "shp", paste0("counties_2010_", regioncode, ".shp")),

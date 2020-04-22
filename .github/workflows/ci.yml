@@ -23,6 +23,7 @@ jobs:
         run: install.packages(".", type="source", repos=NULL)
         shell: Rscript {0}
       - name: Run tutorial markdown
+        env: CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: rmarkdown::render("covidImportation_tutorial.Rmd")
         shell: Rscript {0}
 
