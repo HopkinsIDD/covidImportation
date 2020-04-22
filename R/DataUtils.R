@@ -259,6 +259,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
 
         case_data <- case_data %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
                                                                 c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
+        case_data <- case_data %>% dplyr::mutate(FIPS = as.character(FIPS))
         rc[[i]] <- case_data
     }
     rc <- data.table::rbindlist(rc, fill = TRUE)
