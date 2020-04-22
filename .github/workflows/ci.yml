@@ -13,9 +13,9 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-18.04
-    # container:
-    #   image: docker://hopkinsidd/covidscenariopipeline:latest
-    #   options: --user root
+    container:
+      image: docker://hopkinsidd/covidscenariopipeline:latest
+      options: --user root
     steps:
       - name: Checkout
         uses: actions/checkout@v2
