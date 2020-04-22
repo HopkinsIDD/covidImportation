@@ -22,19 +22,13 @@ jobs:
       - name: Install covidImportation
         run: install.packages(".", type="source", repos=NULL)
         shell: Rscript {0}
-      - name: Run tutorial markdown
+      - name: Run markdown tutorial
         env: 
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
         run: rmarkdown::render("covidImportation_tutorial.Rmd")
         shell: Rscript {0}
-
-      # - name: Run integration tests
-      #   env: 
-      #     CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
-      #   run: |
-      #     Rscript local_install.R
-      #     cd test
-      #     /home/app/python_venv/bin/pytest run_tests.py
-      #   shell: bash
-
-
+      - name: Run markdown tutorial MD
+        env: 
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+        run: rmarkdown::render("covidImportation_tutorial_MD.Rmd")
+        shell: Rscript {0}
