@@ -17,6 +17,9 @@ if(census_key != "")
 {
   tidycensus::census_api_key(key = census_key)
 }
+
+dest <- states_of_interest
+
 output_dir <- file.path("model_output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date())))
 ```
 
@@ -26,7 +29,6 @@ output_dir <- file.path("model_output", paste0(paste(dest, collapse="+"),"_", as
     
 ```{r setup_importations}
 
-dest <- states_of_interest
 setup_res <- covidImportation::setup_importations(dest=dest,
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
