@@ -10,7 +10,7 @@
 ##'  to the given region code.
 ##'  
 ##' Assumes census_api_key is already called by the calling client with 
-##'  `census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", install=TRUE)``
+##'  `census_api_key(key="[KEY]", install=TRUE)``
 ##'      and
 ##'  `options(tigris_use_cache = TRUE)`  
 ##' 
@@ -37,9 +37,6 @@ get_county_pops <- function(states_of_interest,
                             yr=2010, 
                             local_dir="data/", 
                             write_county_shapefiles=TRUE) {
-    
-    #census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", overwrite =TRUE, install = TRUE)
-    #options(tigris_use_cache = TRUE)
     county_pops <- purrr::map(states_of_interest,
                               ~tidycensus::get_acs(geography = "county",
                                                    variables = "B01003_001", ## total population data
