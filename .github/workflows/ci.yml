@@ -39,3 +39,7 @@ jobs:
           knitr::opts_chunk$set(error = FALSE)
           rmarkdown::render("covidImportation_tutorial_MD.Rmd")
         shell: Rscript {0}
+
+      - name: Run testthat
+        run: devtools::test()
+        shell: Rscript {0}

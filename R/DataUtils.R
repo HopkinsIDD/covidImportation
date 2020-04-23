@@ -34,19 +34,21 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data", repull_al
                             lubridate::day(dates_reformat_),
                             lubridate::year(dates_reformat_), sep="-")
 
-    # Check which we have already
-    #dir.create(file.path("data"), recursive = TRUE, showWarnings = FALSE)
-    files_in_dir <- list.files(case_data_dir, "JHUCSSE Total Cases")
-    files_in_dir_dates <- gsub("JHUCSSE Total Cases ", "", files_in_dir)
-    files_in_dir_dates <- gsub(".csv", "", files_in_dir_dates)
-    tmp <- which.max(lubridate::mdy(files_in_dir_dates))
-    files_in_dir_dates <- files_in_dir_dates[-tmp]
-
+    file_prefix = "JHUCSSE Total Cases "
+    
     # select list to download
     if (!repull_all){
+        # Check which we have already
+        files_in_dir <- list.files(case_data_dir, file_prefix)
+        files_in_dir_dates <- gsub(file_prefix, "", files_in_dir)
+        files_in_dir_dates <- gsub(".csv", "", files_in_dir_dates)
+        tmp <- which.max(lubridate::mdy(files_in_dir_dates))
+        files_in_dir_dates <- files_in_dir_dates[-tmp]
+        
+        # Remove ones we already have
         data_files <- data_files[!(dates_tocheck_ %in% files_in_dir_dates)]
+        dates_tocheck_ <- dates_tocheck_[!(dates_tocheck_ %in% files_in_dir_dates)]
     }
-    dates_tocheck_ <- dates_tocheck_[!(dates_tocheck_ %in% files_in_dir_dates)]
 
     for (i in seq_len(length(data_files))){
         file_name_ <- data_files[i]   # file to pull
@@ -57,7 +59,7 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data", repull_al
         case_data <- readr::read_csv(url(url_))
 
         # Save it
-        readr::write_csv(case_data, file.path(case_data_dir, paste0("JHUCSSE Total Cases ", date_,".csv")))
+        readr::write_csv(case_data, file.path(case_data_dir, paste0(file_prefix, date_,".csv")))
     }
 }
 
@@ -1195,7 +1197,7 @@ get_JHUCSSE_data <- function(case_data_dir = "data/case_data",
     
     # Create directory to hold all the data
     if (save_data){
-        dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+        dir.create(case_data_dir, showWarnings = FALSE, recursive = TRUE)
         print(paste0("Combined data is saved in ", case_data_dir, "."))
     }
     
@@ -1503,6 +1505,10 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
                                save_raw_data=TRUE,
                                us_data_only=FALSE){
     
+    if (!(aggr_level %in% c("UID", "source"))) {
+        stop(paste0("Invalid aggr_level ('", aggr_level,"'). Must be 'UID' or 'source'"))
+    }
+    
     ## Get case count data (from JHU CSSE's github)
     jhucsse_case_data_raw <- suppressMessages(suppressWarnings(get_JHUCSSE_data(case_data_dir = case_data_dir,
                                                                                 last_date=last_date,
@@ -1526,7 +1532,6 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
         # Fix counts that go negative
         jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(incid_conf = incidI,
                                                                  Confirmed_new = Confirmed)
-        #counter <- 0
         while(sum(jhucsse_case_data$incid_conf<0)>0){
             
             # first try to just remove the row
@@ -1536,10 +1541,6 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
             jhucsse_case_data <- jhucsse_case_data %>%
                 dplyr::group_by(UID, Country_Region) %>%
                 dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
-            
-            
-            #counter <- counter + 1
-            #print(counter)
             
             negs_ind <- which(jhucsse_case_data$incid_conf < 0)
             if (length(negs_ind)>0){
@@ -1568,7 +1569,6 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
         # Fix counts that go negative
         jhucsse_case_data <- jhucsse_case_data %>% dplyr::mutate(incid_conf = incidI,
                                                                  Confirmed_new = Confirmed)
-        #counter <- 0
         while(sum(jhucsse_case_data$incid_conf<0)>0){
             
             # first try to just remove the row
@@ -1578,10 +1578,6 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
             jhucsse_case_data <- jhucsse_case_data %>%
                 dplyr::group_by(Country_Region, iso3, iso2, source) %>%
                 dplyr::mutate(incid_conf = diff(c(0,Confirmed_new))) %>% dplyr::ungroup()
-            
-            
-            #counter <- counter + 1
-            #print(counter)
             
             negs_ind <- which(jhucsse_case_data$incid_conf < 0)
             if (length(negs_ind)>0){
@@ -1596,9 +1592,9 @@ get_clean_JHUCSSE_data <- function(aggr_level = "UID", #"source",
         }
     }
     
-    jhucsse_case_data <- jhucsse_case_data %>% 
-        dplyr::mutate(Confirmed = Confirmed_new, incidI = incid_conf) %>%
-        dplyr::select(-Confirmed_new, -incid_conf)
+    jhucsse_case_data <- jhucsse_case_data %>%
+        dplyr::select(-Confirmed, -incidI) %>%
+        rename(Confirmed = Confirmed_new, incidI = incid_conf)
     
     return(jhucsse_case_data)
 }
