@@ -900,7 +900,7 @@ make_input_data <- function(incid_data,
     all_vars <- c(other_vars, arr_vars)
     all_vars <- all_vars[all_vars %in% colnames(travel_data)]
 
-    travel_data <- travel_data %>% dplyr::mutate(source = as.character(source)) %>%
+    travel_data <- travel_data %>% dplyr::mutate(source = as.character(source), dep_country = as.character(dep_country)) %>%
         dplyr::select(all_vars)
 
     # combine them all
@@ -913,7 +913,6 @@ make_input_data <- function(incid_data,
 
     # filter data by time and location
     input_data <- input_data %>%
-        #dplyr::filter(t > as.Date("2019-12-31")) %>%
         dplyr::filter(t >= as.Date(start_date)) %>%
        dplyr::mutate(cases_incid=ifelse(is.na(cases_incid), 0, cases_incid),
                epiweek = lubridate::epiweek(t))

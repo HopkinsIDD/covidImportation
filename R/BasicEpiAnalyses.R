@@ -130,7 +130,6 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
                                            dplyr::mutate(Confirmed=Confirmed-confirmed_14),
                                          first_date,
                                          last_date)
-  #print(late_incidence)
 
   ##Create data for everything and drop in what we have here
   rc_incidence <- est_daily_incidence(cum_data,
@@ -142,7 +141,6 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
   rc_incidence$Incidence[rc_incidence$Date=="2020-02-14"] <- inferred_13_smth
   rc_incidence$Incidence[rc_incidence$Date>"2020-02-14"] <- late_incidence$Incidence
   ## Keep the incidence that we want to return
-  #rc_incidence <- incidence_data
 
 
   while (abs(diff_inferred)>tol) {
@@ -152,9 +150,9 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
       rc_incidence$Incidence[seq_len(length(to_add))]+ to_add
 
     ## create a new cumsum data
-    tmp_cum_data <- data_frame(Update = rc_incidence$Date,
+    tmp_cum_data <- tibble(Update = rc_incidence$Date,
                                Confirmed = cumsum(rc_incidence$Incidence),
-                               Province_State = as.factor("Hubei"))
+                               Province_State = as.character("Hubei"))
     rc_incidence <- est_daily_incidence(tmp_cum_data,
                                         first_date,
                                         last_date)
@@ -167,7 +165,6 @@ correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=10
 
     diff_inferred <- inferred_13_cum_data - inferred_13_smth +  inferred_14_cum_data - inferred_13_smth
 
-    #print(diff_inferred)
   }
 
   return(rc_incidence)

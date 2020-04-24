@@ -264,7 +264,7 @@ do_airport_attribution <- function(airports_to_consider,
             dplyr::select(iata_code, coor_lat, coor_lon)
         
     } else {
-      clustered_airports <- data_frame(iata_code = NA)[0,]
+      clustered_airports <- tibble(iata_code = NA)[0,]
     }
     
     ## remerge clustered airports with other airports
