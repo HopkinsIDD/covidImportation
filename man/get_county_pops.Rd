@@ -20,6 +20,8 @@ get_county_pops(
 \item{yr}{Year of county population data}
 
 \item{local_dir}{local data directory}
+
+\item{write_county_shapefiles}{logical}
 }
 \value{
 A data.frame of clustered airports, dates, and nmber of importations
