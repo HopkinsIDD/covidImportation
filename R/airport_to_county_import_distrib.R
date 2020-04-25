@@ -595,14 +595,11 @@ setup_airport_attribution <- function(
                            airport_cluster_threshold,
                            regioncode,
                            yr=yr,
-			                     shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
+			               shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
                            local_dir=local_dir,
                            plot=plot,
                            cores=cores,
                            print_attr_error=print_attr_error)
-    
-    # This is saved to paste0(local_dir,"/airport_attribution_", yr, ".csv")
-    print(paste0("Shapefile saved to: ", shapefile_path))
 }
 
 
