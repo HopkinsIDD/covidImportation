@@ -1,0 +1,45 @@
+name: rmd-tests
+
+on:
+  push:
+    branches:
+      - master
+      - development
+  pull_request:
+    branches:
+      - master
+      - development
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-18.04
+    container:
+      image: docker://hopkinsidd/covidscenariopipeline:latest
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install covidImportation
+        run: install.packages(".", type="source", repos=NULL)
+        shell: Rscript {0}
+
+      - name: Run markdown tutorial
+        env: 
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+        run: |
+          knitr::opts_chunk$set(error = FALSE)
+          rmarkdown::render("covidImportation_tutorial.Rmd")
+        shell: Rscript {0}
+        
+      - name: Run markdown tutorial MD
+        env: 
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+        run: |
+          knitr::opts_chunk$set(error = FALSE)
+          rmarkdown::render("covidImportation_tutorial_MD.Rmd")
+        shell: Rscript {0}
+
+      - name: Run testthat
+        run: devtools::test()
+        shell: Rscript {0}
