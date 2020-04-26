@@ -356,8 +356,8 @@ do_airport_attribution <- function(airports_to_consider,
     }
     
     # Save it
-    dir.create(file.path(local_dir, regioncode), recursive=TRUE, showWarnings = FALSE)
-    path <- paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
+    dir.create(file.path(local_dir), recursive=TRUE, showWarnings = FALSE)
+    path <- paste0(local_dir, "/airport_attribution_", yr, ".csv")
     print(paste("Saving airport attribution to path", path))
     data.table::fwrite(airport_attribution, file=path, row.names=FALSE)
     
