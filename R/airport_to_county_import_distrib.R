@@ -642,7 +642,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                      n_sim=10){
     
     if (!is.null(shapefile_path)){
-      print("Manual shapefile path is depricated. Shapefile will be pulled, built, and saved automatically.")  
+      print("Manual shapefile path is deprecated. Shapefile will be pulled, built, and saved automatically.")  
     }
     # sort the states
     states_of_interest <- sort(states_of_interest)
@@ -673,6 +673,26 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
       mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
     airport_attribution <- readr::read_csv(paste0(local_dir, "/airport_attribution_", yr, ".csv")) %>%
       mutate(county = as.character(stringr::str_pad(county, width = 5, pad=0)))
+
+    # Check that the csv's actually have the states of interest
+    if(!(all(states_of_interest %in% county_pops_df$id))) {
+      setup_airport_attribution(
+        states_of_interest = states_of_interest,
+        regioncode = regioncode,
+        yr = yr,
+        local_dir = local_dir,
+        write_county_shapefiles = TRUE,
+        mean_travel_file = mean_travel_file,
+        travelers_threshold = travelers_threshold,
+        airport_cluster_threshold = airport_cluster_threshold,
+        plot=FALSE,
+        print_attr_error=FALSE
+      )
+      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv")) %>%
+        mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
+      airport_attribution <- readr::read_csv(paste0(local_dir, "/airport_attribution_", yr, ".csv")) %>%
+        mutate(county = as.character(stringr::str_pad(county, width = 5, pad=0)))
+    }
     
     print("Airport attribution: Success")
 
