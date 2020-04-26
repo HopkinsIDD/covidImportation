@@ -573,7 +573,6 @@ setup_airport_attribution <- function(
     
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
-    # county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
     county_pops_df <- get_county_pops(
         states_of_interest, 
         regioncode, 
@@ -640,6 +639,8 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                      plot=FALSE,
                                      cores=5,
                                      n_sim=10){
+  
+    # TODO Allow caller to specify airport_attribution and county_pops csv file paths
     
     if (!is.null(shapefile_path)){
       print("Manual shapefile path is deprecated. Shapefile will be pulled, built, and saved automatically.")  
@@ -648,11 +649,21 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     states_of_interest <- sort(states_of_interest)
     
     
-    
-    if(!(
+    # Check if county_pops and airport_attribution must be recreated
+    setup_airport = TRUE
+    if(
       file.exists(paste0(local_dir, "/county_pops_", yr, ".csv")) & 
       file.exists(paste0(local_dir, "/airport_attribution_", yr, ".csv"))
-    )){
+    ){
+      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+      
+      if(all(states_of_interest %in% county_pops_df$id)) {
+        setup_airport = FALSE
+      }
+    }
+    
+    # Recreate county_pops and airport_attribution if necessary
+    if(setup_airport) {
       print("Generating new airport attributions")
       
       setup_airport_attribution(
@@ -667,32 +678,13 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
         plot=FALSE,
         print_attr_error=FALSE
       )
+      
+      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
     }
     
-    county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv")) %>%
-      mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
+    county_pops_df <- county_pops_df %>% mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
     airport_attribution <- readr::read_csv(paste0(local_dir, "/airport_attribution_", yr, ".csv")) %>%
       mutate(county = as.character(stringr::str_pad(county, width = 5, pad=0)))
-
-    # Check that the csv's actually have the states of interest
-    if(!(all(states_of_interest %in% county_pops_df$id))) {
-      setup_airport_attribution(
-        states_of_interest = states_of_interest,
-        regioncode = regioncode,
-        yr = yr,
-        local_dir = local_dir,
-        write_county_shapefiles = TRUE,
-        mean_travel_file = mean_travel_file,
-        travelers_threshold = travelers_threshold,
-        airport_cluster_threshold = airport_cluster_threshold,
-        plot=FALSE,
-        print_attr_error=FALSE
-      )
-      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv")) %>%
-        mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
-      airport_attribution <- readr::read_csv(paste0(local_dir, "/airport_attribution_", yr, ".csv")) %>%
-        mutate(county = as.character(stringr::str_pad(county, width = 5, pad=0)))
-    }
     
     print("Airport attribution: Success")
 
