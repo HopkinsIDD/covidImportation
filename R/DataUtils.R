@@ -63,7 +63,41 @@ pull_JHUCSSE_github_data <- function(case_data_dir = "data/case_data", repull_al
     }
 }
 
+fix_column_names_and_update <- function(rc) {
+    # Fix the different file column names
+    colnames_ <- colnames(rc)
+    colnames_[grepl("Province", colnames_)] <- "Province_State"
+    colnames_[grepl("Country", colnames_)] <- "Country_Region"
+    colnames_[grepl("Demised", colnames_)] <- "Deaths"
+    colnames_[grepl("Update", colnames_)] <- "Update"
+    colnames_[grepl("Lat", colnames_)] <- "Latitude"
+    colnames_[grepl("Long", colnames_)] <- "Longitude"
+    
+    colnames(rc) <- colnames_
+    
+    rc <- rc %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
+                                                                   c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
+    return(rc)
+}
 
+fix_locations <- function(rc) {
+    # Fix Chinese provinces and autonomous regions
+    rc <- rc %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
+        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
+        dplyr::mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
+
+    # Fix bad locations
+    rc <- rc %>% dplyr::filter(!(Province_State %in% c("US"))) %>%
+        dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
+        dplyr::mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
+    
+    return(rc)
+}
 
 
 ##'
@@ -102,19 +136,8 @@ read_JHUCSSE_cases <- function(last_date=Sys.Date(),
         if(print_file_path) print(file_list[f])
         tmp <- readr::read_csv(file_list[f])
 
-        # Fix the different file column names
-        colnames_ <- colnames(tmp)
-        colnames_[grepl("Province", colnames_)] <- "Province_State"
-        colnames_[grepl("Country", colnames_)] <- "Country_Region"
-        colnames_[grepl("Demised", colnames_)] <- "Deaths"
-        colnames_[grepl("Update", colnames_)] <- "Update"
-        colnames_[grepl("Lat", colnames_)] <- "Latitude"
-        colnames_[grepl("Long", colnames_)] <- "Longitude"
-
-        colnames(tmp) <- colnames_
-
-        tmp <- tmp %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
-                                 c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
+        tmp <- fix_column_names_and_update(tmp)
+        
         rc[[f]] <- tmp
     }
     rc <- data.table::rbindlist(rc, fill = TRUE)
@@ -123,21 +146,8 @@ read_JHUCSSE_cases <- function(last_date=Sys.Date(),
     rc <- rc %>% as.data.frame() %>% dplyr::mutate(Update = lubridate::ymd_hms(Update)) %>%
         dplyr::filter(as.Date(Update) <= as.Date(last_date))
 
-    # Fix Chinese provinces and
-    rc <- rc %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
-        dplyr::mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
-
-    # Fix bad locations
-    rc <- rc %>% dplyr::filter(!(Province_State %in% c("US"))) %>%
-        dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
-
+    # Fix Chinese provinces, auonomous regions, and bad locations
+    rc <- fix_locations(rc)
 
     if (append_wiki) {
         data("wikipedia_cases", package="covidImportation")
@@ -177,7 +187,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
 
     # Create directory to hold all the data
     if (check_saved_data | save_data){
-        dir.create(case_data_dir, showWarnings = FALSE, recursive = FALSE)
+        dir.create(case_data_dir, showWarnings = FALSE, recursive = TRUE)
         print(paste0("Combined data is saved in ", case_data_dir, "."))
     }
 
@@ -194,6 +204,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
                             lubridate::day(dates_reformat_),
                             lubridate::year(dates_reformat_), sep="-")
 
+    file_prefix = "JHUCSSE Total Cases "
 
     if (check_saved_data){
         
@@ -207,9 +218,8 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
                               lubridate::year(update_dates), sep="-")
         
         # Check which we have already
-        #dir.create(file.path("data"), recursive = TRUE, showWarnings = FALSE)
-        files_in_dir <- list.files(case_data_dir, "JHUCSSE Total Cases")
-        files_in_dir_dates <- gsub("JHUCSSE Total Cases ", "", files_in_dir)
+        files_in_dir <- list.files(case_data_dir, file_prefix)
+        files_in_dir_dates <- gsub(file_prefix, "", files_in_dir)
         files_in_dir_dates <- gsub(".csv", "", files_in_dir_dates)
         tmp <- which.max(lubridate::mdy(files_in_dir_dates))
         files_in_dir_dates <- files_in_dir_dates[-tmp]
@@ -249,18 +259,8 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_)
         case_data <- readr::read_csv(url(url_))
 
-        # Fix the different file column names
-        colnames_ <- colnames(case_data)
-        colnames_[grepl("Province", colnames_)] <- "Province_State"
-        colnames_[grepl("Country", colnames_)] <- "Country_Region"
-        colnames_[grepl("Demised", colnames_)] <- "Deaths"
-        colnames_[grepl("Update", colnames_)] <- "Update"
-        colnames_[grepl("Lat", colnames_)] <- "Latitude"
-        colnames_[grepl("Long", colnames_)] <- "Longitude"
-        colnames(case_data) <- colnames_
-
-        case_data <- case_data %>% dplyr::mutate(Update=lubridate::parse_date_time(Update,
-                                                                c("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%m/%d/%y %I:%M %p","%m/%d/%y %H:%M", "%Y-%m-%d %H:%M:%S")))
+        case_data <- fix_column_names_and_update(case_data)
+        
         case_data <- case_data %>% dplyr::mutate(FIPS = as.character(FIPS))
         rc[[i]] <- case_data
     }
@@ -270,21 +270,8 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
     rc <- rc %>% as.data.frame() %>% mutate(Update = lubridate::ymd_hms(Update)) %>%
         dplyr::filter(as.Date(Update) <= as.Date(last_date))
 
-    # Fix Chinese provinces and autonomous regions
-    rc <- rc %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Country_Region=="China", "Mainland China")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Macau", "Macau")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Hong Kong", "Hong Kong")) %>%
-        dplyr::mutate(Country_Region=replace(Country_Region, Province_State=="Taiwan", "Taiwan")) %>%
-        dplyr::mutate(Province_State=ifelse(is.na(Province_State),Country_Region, Province_State))
-
-    # Fix bad locations
-    rc <- rc %>% dplyr::filter(!(Province_State %in% c("US"))) %>%
-        dplyr::mutate(Province_State = ifelse(grepl("Chicago", Province_State), "Chicago, IL", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(grepl("Ningxia", Province_State), "Ningxia", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(Province_State=="Inner Mongolia", "Nei Mongol", Province_State)) %>%
-        dplyr::mutate(Province_State = ifelse(Province_State=="Hong Kong", "HKG", Province_State))
-
+    # Fix Chinese provinces, autonomous regions, and bad locations
+    rc <- fix_location(rc)
 
     # merge with data from the package
     rc <- dplyr::bind_rows(jhucsse_case_data, rc) %>% dplyr::distinct()
