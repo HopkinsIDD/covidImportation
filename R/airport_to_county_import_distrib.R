@@ -263,9 +263,8 @@ do_airport_attribution <- function(airports_to_consider,
             dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
             dplyr::ungroup() %>% 
             dplyr::select(iata_code, coor_lat, coor_lon)
-        
     } else {
-      clustered_airports <- data_frame(iata_code = NA)[0,]
+      clustered_airports <- tibble(iata_code = NA)[0,]
     }
     
     ## remerge clustered airports with other airports
@@ -285,37 +284,49 @@ do_airport_attribution <- function(airports_to_consider,
         plot(loc_map)
     }
     
-    # Voronoi tesselation by airports
-    voronoi_tess <- ggvoronoi::voronoi_polygon(airports_to_consider_cl, x = "coor_lon", y = "coor_lat",
-                                               outline = adm0_loc)
+    if (nrow(airports_to_consider_cl)>1){
     
-    ## change projections of voronoi tesselation to match county shapefiles
-    crs_shp <- raster::crs(adm1_loc)
-    reg_loc <- maptools::unionSpatialPolygons(voronoi_tess, voronoi_tess@data$iata_code)
-    reg_loc <- rgeos::gBuffer(reg_loc, byid=TRUE, width=0)
-    raster::projection(reg_loc) <- crs_shp
+        # Voronoi tesselation by airports
+        voronoi_tess <- ggvoronoi::voronoi_polygon(airports_to_consider_cl, 
+                                                   x = "coor_lon", y = "coor_lat",
+                                                   outline = adm0_loc)
+        
+        ## change projections of voronoi tesselation to match county shapefiles
+        crs_shp <- raster::crs(adm1_loc)
+        reg_loc <- maptools::unionSpatialPolygons(voronoi_tess, voronoi_tess@data$iata_code)
+        raster::projection(reg_loc) <- crs_shp
+        reg_loc <- sp::spTransform( reg_loc, crs_shp) 
+        reg_loc <- rgeos::gBuffer(reg_loc, byid=TRUE, width=0)
+        
+        cl <- parallel::makeCluster(cores)
+        doParallel::registerDoParallel(cl)
     
-    cl <- parallel::makeCluster(cores)
-    doParallel::registerDoParallel(cl)
-
-    print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
-    airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
-        foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
-            airport_attribution <- NULL
-            if (!is.na(iata)) {
-                inter <- tryCatch({
-                    raster::intersect(reg_loc[iata], adm1_loc[co])
-                }, error = function(err) { NULL })
-                if (!is.null(inter)) {
-                    if (length(inter@polygons)>0) {
-                        percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
-                        airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
+        print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
+        airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
+            foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
+                airport_attribution <- NULL
+                if (!is.na(iata)) {
+                    inter <- tryCatch({
+                        raster::intersect(reg_loc[iata], adm1_loc[co])
+                    }, error = function(err) { NULL })
+                    if (!is.null(inter)) {
+                        if (length(inter@polygons)>0) {
+                            percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
+                            airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
+                        }
                     }
                 }
-            }
-            airport_attribution
+                airport_attribution
+        }
+        parallel::stopCluster(cl)
+        
+    } else {
+      # If only 1 airport/airport cluster
+      airport_attribution <- tibble(county= levels(loc_map@data$GEOID),
+                                    aiport_iata = airports_to_consider_cl$iata_code,
+                                    attribution = 1)
     }
-    parallel::stopCluster(cl)
+    
 
     ## for loop over voronoi_tess@data$iata_code introduced duplicates (1 part of a county per adjacenet airport)
     lhs <- nrow(distinct(airport_attribution, county, airport_iata))
@@ -584,7 +595,7 @@ setup_airport_attribution <- function(
     
     ## Query the census API to get the county populations for the states of interest, assigned
     ##   to the given region code.
-    airports_to_consider <- get_airports_to_consider(mean_travel_file=mean_travel_file, 
+    airports_to_consider <- covidImportation:::get_airports_to_consider(mean_travel_file=mean_travel_file, 
                                                      states_of_interest, 
                                                      travelers_threshold)
     print("Airports to include: Success")
@@ -666,7 +677,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     if(setup_airport) {
       print("Generating new airport attributions")
       
-      setup_airport_attribution(
+      suppressWarnings(setup_airport_attribution(
         states_of_interest = states_of_interest,
         regioncode = regioncode,
         yr = yr,
@@ -677,7 +688,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
         airport_cluster_threshold = airport_cluster_threshold,
         plot=FALSE,
         print_attr_error=FALSE
-      )
+      ))
       
       county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
     }
