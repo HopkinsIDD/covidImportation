@@ -661,26 +661,22 @@ setup_and_run_importations <- function(dest="UT",
 #'
 #' @param dest character string, name of destination to simulate importations for
 #' @param dest_type character string, options: "airport", "city", "state", "country"
-#' @param dest_0 optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
-#' @param dest_0_type optional character string, must specify if specifying a `dest_0` option; default=NULL
+#' @param dest_country optional character string, specify a higher level destination (i.e. dest_0="USA"), default NULL
 #' @param dest_aggr_level character string, level to which travel will be aggregated for destination. Includes "airport", "city", "state", "country", "metro" (only available for CA currently)
-#' @param project_name character string
-#' @param version character string
-#' @param batch character string
-#' @param end_date Date, last import date
-#' @param n_sim numeric, number of simulations
-#' @param cores numeric, number of cores to run in parallel
+#' @param first_date Date, first import date
+#' @param last_date Date, last import date
+#' @param output_dir where output files are saved
+#' @param save_case_data Whether to save the JHUCSSE raw data
+#' @param get_travel whether to load or pull travel data
 #' @param n_top_dests Number of destinations to include, ranked by volume; default (Inf) is all.
-#' @param get_detection_time logical
 #' @param travel_dispersion numeric
-#' @param allow_travel_variance logical
-#' @param print_progress logical
 #' @param param_list list, with the following elements
 #' \itemize{
 #'   \item \code{p_report_source} numeric vector of length 2, currently the probability of reporting by source with the first indicating Hubei reporting and second indicating everywhere else (UPDATE WITH THESE https://cmmid.github.io/topics/covid19/severity/global_cfr_estimates.html)
 #'   \item \code{shift_incid_days} lag from infection to report
 #'   \item \code{delta} days per time period
 #' }
+#' @param check_errors logical
 #'
 #' @return
 #'
@@ -688,17 +684,13 @@ setup_and_run_importations <- function(dest="UT",
 #'
 #' @export
 #'
-## a few minutes now
 setup_importations <- function(dest="UT",
                                dest_type=c("state"), #,"city","airport", "country"),
                                dest_country="USA",
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
-                               update_case_data=TRUE, # no longer used
-                               case_data_dir = "data/case_data",
                                output_dir = file.path("output", paste0(paste(dest, collapse="+"),"_", as.Date(Sys.Date()))),
-                               check_saved_data=TRUE, # no longer used
                                save_case_data=TRUE,
                                get_travel=TRUE,
                                n_top_dests=Inf,
@@ -730,13 +722,13 @@ setup_importations <- function(dest="UT",
     incid_data <- get_incidence_fits(aggr_level = "source",
                                      first_date = first_date,
                                      last_date = last_date,
-                                     case_data_dir = case_data_dir,
+                                     case_data_dir = output_dir,
                                      save_raw_data = save_case_data,
                                      us_data_only=FALSE)
 
     incid_data <- incid_data %>% dplyr::filter(source != "USA") %>% 
       rename(incid_est = cases_incid)
-    readr::write_csv(incid_data, file.path(case_data_dir, "incidence_fits.csv"))
+    readr::write_csv(incid_data, file.path(output_dir, "incidence_fits.csv"))
 
     print("Successfully pulled and cleaned case data.")
 
@@ -775,9 +767,11 @@ setup_importations <- function(dest="UT",
     
 
     # Destinations to keep
-    dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
-    travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
-
+    if (!is.infinite(n_top_dests)){
+      dests_keep <- travel_mean$destination[seq_len(min(c(nrow(travel_mean), n_top_dests)))]
+      travel_data_monthly <- travel_data_monthly %>% dplyr::filter(destination %in% dests_keep)
+    }
+    
     ## Travel data
     ##  - Get daily for merging purposes
     travel_data_daily <- covidImportation:::make_daily_travel(travel_data_monthly, travel_dispersion=travel_dispersion)
@@ -1074,6 +1068,8 @@ run_daily_import_model <- function(input_data,
 #'   \item \code{shift_incid_days} lag from infection to report
 #'   \item \code{delta} days per time period
 #' }
+#' @param drop_zeros Whether to drop zeros from results to speed up and reduce file sizes
+#' @param file_nums File numbers to input if the simualation got interrupted
 #'
 #' @return
 #'
@@ -1095,7 +1091,9 @@ run_importations <- function(n_sim=100,
                                              inf_period_nohosp_sd=5,
                                              inf_period_hosp_mean_log=1.23,
                                              inf_period_hosp_sd_log=0.79,
-                                             p_report_source=c(0.05, 0.25))){
+                                             p_report_source=c(0.05, 0.25)),
+                             drop_zeros = FALSE,
+                             file_nums = NA){
 
     t.start <- proc.time() # start timer to measure this
 
@@ -1103,9 +1101,13 @@ run_importations <- function(n_sim=100,
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
-
+    
+    # setup file numbers
+    if (is.na(file_nums)){
+      file_nums <- seq_len(n_sim)
+    }  
     # Run the foreach loop to estimate importations for n simulations
-    foreach(n=seq_len(n_sim), 
+    foreach(n=file_nums, 
             .export=c("make_daily_travel_faster", 
                       "apply_travel_restrictions", 
                       "est_imports_base", 
@@ -1136,6 +1138,10 @@ run_importations <- function(n_sim=100,
           tr_inf_redux=0,
           get_detection_time=get_detection_time,
           param_list=param_list)
+      
+      if(drop_zeros){
+        import_est_run <- import_est_run %>% dplyr::filter(this.sim>0)
+      }
 
       n_str = stringr::str_pad(as.character(n), width=9, pad="0")
       if(get_detection_time){
@@ -1144,6 +1150,8 @@ run_importations <- function(n_sim=100,
       } else {
           data.table::fwrite(import_est_run, file.path(output_dir, paste0(n_str,".imps.csv")))
       }
+      #clear the garbage
+      gc()
     	# Null return value here
     	NULL
     }

@@ -14,7 +14,6 @@ library(covidImportation)
 states_of_interest=c("MD", "VA", "DE", "PA", "NJ")
 regioncode="east-coast"
 
-
 ```
 
     
@@ -30,10 +29,7 @@ setup_res <- covidImportation::setup_importations(dest=states_of_interest,
                                dest_aggr_level=c("airport"), #, "city", "state", "country", "metro"),
                                first_date = ISOdate(2019,12,1),
                                last_date = Sys.time(),
-                               update_case_data=TRUE,
-                               case_data_dir = "data/case_data",
                                output_dir = file.path("model_output", "importation",regioncode),
-                               check_saved_data=TRUE,
                                save_case_data=TRUE,
                                get_travel=TRUE,
                                n_top_dests=Inf, 
@@ -80,8 +76,12 @@ sim_res <- covidImportation::run_importations(
 
 ```{r, warning=FALSE, message=FALSE}
 
-tidycensus::census_api_key(key="[ENTER KEY HERE]")
-
+census_key <- "[ENTER KEY HERE]"
+if(census_key == "[ENTER KEY HERE]")
+{
+  census_key <- Sys.getenv("CENSUS_API_KEY")
+}
+tidycensus::census_api_key(key = census_key)
 
 run_full_distrib_imports(states_of_interest=states_of_interest,
                                      regioncode=regioncode,

@@ -15,7 +15,9 @@ run_importations(
     as.Date(Sys.Date()))),
   param_list = list(incub_mean_log = log(5.89), incub_sd_log = log(1.74),
     inf_period_nohosp_mean = 15, inf_period_nohosp_sd = 5, inf_period_hosp_mean_log =
-    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25))
+    1.23, inf_period_hosp_sd_log = 0.79, p_report_source = c(0.05, 0.25)),
+  drop_zeros = FALSE,
+  file_nums = NA
 )
 }
 \arguments{
@@ -43,6 +45,10 @@ run_importations(
   \item \code{shift_incid_days} lag from infection to report
   \item \code{delta} days per time period
 }}
+
+\item{drop_zeros}{Whether to drop zeros from results to speed up and reduce file sizes}
+
+\item{file_nums}{File numbers to input if the simualation got interrupted}
 
 \item{dest}{character string, name of destination to simulate importations for}
 

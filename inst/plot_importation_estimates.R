@@ -22,7 +22,7 @@ if(!require('gridExtra')) install.packages('gridExtra'); library(gridExtra)
 # LOAD SUMMARIZED SIMULATION RESULTS ---------------------------------------------------------------
 
 # Destination by time
-import_results_desttime <- read_csv(file.path("results",project_name, sprintf("import_results_desttime_v%s.csv", version)))
+import_results_desttime <- readr::read_csv(file.path("results",project_name, sprintf("import_results_desttime_v%s.csv", version)))
 import_results_desttime$t <- lubridate::as_date(import_results_desttime$t)
 t_values <- sort(unique(import_results_desttime$t))
 import_results_desttime <- import_results_desttime %>% 
@@ -30,7 +30,7 @@ import_results_desttime <- import_results_desttime %>%
     mutate(t_num = as.integer(t))
 
 # Source by time, single destination
-import_results_sourcetime <- read_csv(file.path("results",project_name, sprintf("import_results_sourcetime_v%s.csv", version)))
+import_results_sourcetime <- readr::read_csv(file.path("results",project_name, sprintf("import_results_sourcetime_v%s.csv", version)))
 import_results_sourcetime$t <- lubridate::as_date(import_results_sourcetime$t)
 t_values <- sort(unique(import_results_sourcetime$t))
 import_results_sourcetime <- import_results_sourcetime %>% 
@@ -38,7 +38,7 @@ import_results_sourcetime <- import_results_sourcetime %>%
     mutate(t_num = as.integer(t))
 
 # Destination by time, Cumulative
-import_results_desttime_cum <- read_csv(file.path("results",project_name, sprintf("import_results_desttime_cumulative_v%s.csv", version)))
+import_results_desttime_cum <- readr::read_csv(file.path("results",project_name, sprintf("import_results_desttime_cumulative_v%s.csv", version)))
 import_results_desttime_cum$t <- lubridate::as_date(import_results_desttime_cum$t)
 t_values <- sort(unique(import_results_desttime_cum$t))
 import_results_desttime_cum <- import_results_desttime_cum %>% 
@@ -47,7 +47,7 @@ import_results_desttime_cum <- import_results_desttime_cum %>%
 
 
 # Overall Destination by time
-import_results_desttime_overall <- read_csv(file.path("results",project_name, sprintf("import_results_desttime_overall_v%s.csv", version)))
+import_results_desttime_overall <- readr::read_csv(file.path("results",project_name, sprintf("import_results_desttime_overall_v%s.csv", version)))
 import_results_desttime_overall$t <- lubridate::as_date(import_results_desttime_overall$t)
 t_values <- sort(unique(import_results_desttime_overall$t))
 import_results_desttime_overall <- import_results_desttime_overall %>% 
@@ -55,7 +55,7 @@ import_results_desttime_overall <- import_results_desttime_overall %>%
     mutate(t_num = as.integer(t))
 
 # Overall Destination by time, Cumulative
-import_results_desttime_overall_cum <- read_csv(file.path("results",project_name, sprintf("import_results_desttime_overall_cumulative_v%s.csv", version)))
+import_results_desttime_overall_cum <- readr::read_csv(file.path("results",project_name, sprintf("import_results_desttime_overall_cumulative_v%s.csv", version)))
 import_results_desttime_overall_cum$t <- lubridate::as_date(import_results_desttime_overall_cum$t)
 t_values <- sort(unique(import_results_desttime_overall_cum$t))
 import_results_desttime_overall_cum <- import_results_desttime_overall_cum %>% 
@@ -509,11 +509,11 @@ plot_cum_imports <- function(data=import_results_desttime_cum, region_ = "All", 
 # # PLOT ESTIMATED VS REPORTED ----------------------------------------------
 # 
 # # Reported from CDC
-# shen_cases <- read_csv("data/shenzhen_data/shenzhen_case_counts.csv")
+# shen_cases <- readr::read_csv("data/shenzhen_data/shenzhen_case_counts.csv")
 # shen_cases <- shen_cases %>% mutate(cum_cases = cumsum(count))
 # 
 # # From Linelists
-# ll_data <- read_csv("data/linelist_current.csv")
+# ll_data <- readr::read_csv("data/linelist_current.csv")
 # shen_rows <- apply(ll_data, 1, FUN=function(x) sum(grepl("shenzhen", x, ignore.case = TRUE)))>0
 # ll_data_shenzhen <- ll_data[shen_rows, ]
 # shen_data_aggr <- ll_data_shenzhen %>% count(date_confirmation)
