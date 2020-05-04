@@ -12,6 +12,7 @@
 ##'
 ##' @importFrom nnls nnls
 ##' @importFrom splines2 iSpline
+##' 
 ##' @export
 ##' 
 fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
@@ -28,7 +29,7 @@ fit_ispline <- function (dates, obs, df=round(length(obs)/3)) {
   rc <- function(dates) {
     if(length(dates)==0) {return(NULL)}
     hnew <- predict(h, as.numeric(dates))
-    return(hnew%*%coefs)
+    return(hnew %*% coefs)
   }
 
   return(rc)

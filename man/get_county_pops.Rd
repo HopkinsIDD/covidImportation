@@ -34,7 +34,7 @@ Query the census API to get the county populations for the states of interest, a
  to the given region code.
  
 Assumes census_api_key is already called by the calling client with 
- `census_api_key(key="c235e1b5620232fab506af060c5f8580604d89c1", install=TRUE)``
+ `census_api_key(key="[KEY]", install=TRUE)``
      and
  `options(tigris_use_cache = TRUE)`
 }
