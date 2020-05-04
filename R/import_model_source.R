@@ -1068,6 +1068,8 @@ run_daily_import_model <- function(input_data,
 #'   \item \code{shift_incid_days} lag from infection to report
 #'   \item \code{delta} days per time period
 #' }
+#' @param drop_zeros Whether to drop zeros from results to speed up and reduce file sizes
+#' @param file_nums File numbers to input if the simualation got interrupted
 #'
 #' @return
 #'
@@ -1090,7 +1092,8 @@ run_importations <- function(n_sim=100,
                                              inf_period_hosp_mean_log=1.23,
                                              inf_period_hosp_sd_log=0.79,
                                              p_report_source=c(0.05, 0.25)),
-                             drop_zeros = FALSE){
+                             drop_zeros = FALSE,
+                             file_nums = NA){
 
     t.start <- proc.time() # start timer to measure this
 
@@ -1098,9 +1101,13 @@ run_importations <- function(n_sim=100,
     print(paste0("Making a cluster of ", cores," for parallelization."))
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
-
+    
+    # setup file numbers
+    if (is.na(file_nums)){
+      file_nums <- seq_len(n_sim)
+    }  
     # Run the foreach loop to estimate importations for n simulations
-    foreach(n=seq_len(n_sim), 
+    foreach(n=file_nums, 
             .export=c("make_daily_travel_faster", 
                       "apply_travel_restrictions", 
                       "est_imports_base", 
@@ -1141,6 +1148,8 @@ run_importations <- function(n_sim=100,
       } else {
           data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
       }
+      #clear the garbage
+      gc()
     	# Null return value here
     	NULL
     }

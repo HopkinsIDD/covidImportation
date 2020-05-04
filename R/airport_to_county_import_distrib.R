@@ -21,6 +21,7 @@
 ##' @param regioncode Region/project name
 ##' @param yr Year of county population data
 ##' @param local_dir local data directory
+##' @param write_county_shapefiles logical
 ##'
 ##' @return A data.frame of clustered airports, dates, and nmber of importations
 ##' 
@@ -187,7 +188,7 @@ do_airport_attribution <- function(airports_to_consider,
                                    regioncode, 
                                    yr=2010, 
                                    local_dir="data/",
-				   cores=4,
+				                           cores=4,
                                    plot=FALSE,
                                    print_attr_error=FALSE) {
     
@@ -262,7 +263,6 @@ do_airport_attribution <- function(airports_to_consider,
             dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
             dplyr::ungroup() %>% 
             dplyr::select(iata_code, coor_lat, coor_lon)
-        
     } else {
       clustered_airports <- tibble(iata_code = NA)[0,]
     }
@@ -284,37 +284,49 @@ do_airport_attribution <- function(airports_to_consider,
         plot(loc_map)
     }
     
-    # Voronoi tesselation by airports
-    voronoi_tess <- ggvoronoi::voronoi_polygon(airports_to_consider_cl, x = "coor_lon", y = "coor_lat",
-                                               outline = adm0_loc)
+    if (nrow(airports_to_consider_cl)>1){
     
-    ## change projections of voronoi tesselation to match county shapefiles
-    crs_shp <- raster::crs(adm1_loc)
-    reg_loc <- maptools::unionSpatialPolygons(voronoi_tess, voronoi_tess@data$iata_code)
-    reg_loc <- rgeos::gBuffer(reg_loc, byid=TRUE, width=0)
-    raster::projection(reg_loc) <- crs_shp
+        # Voronoi tesselation by airports
+        voronoi_tess <- ggvoronoi::voronoi_polygon(airports_to_consider_cl, 
+                                                   x = "coor_lon", y = "coor_lat",
+                                                   outline = adm0_loc)
+        
+        ## change projections of voronoi tesselation to match county shapefiles
+        crs_shp <- raster::crs(adm1_loc)
+        reg_loc <- maptools::unionSpatialPolygons(voronoi_tess, voronoi_tess@data$iata_code)
+        raster::projection(reg_loc) <- crs_shp
+        reg_loc <- sp::spTransform( reg_loc, crs_shp) 
+        reg_loc <- rgeos::gBuffer(reg_loc, byid=TRUE, width=0)
+        
+        cl <- parallel::makeCluster(cores)
+        doParallel::registerDoParallel(cl)
     
-    cl <- parallel::makeCluster(cores)
-    doParallel::registerDoParallel(cl)
-
-    print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
-    airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
-        foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
-            airport_attribution <- NULL
-            if (!is.na(iata)) {
-                inter <- tryCatch({
-                    raster::intersect(reg_loc[iata], adm1_loc[co])
-                }, error = function(err) { NULL })
-                if (!is.null(inter)) {
-                    if (length(inter@polygons)>0) {
-                        percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
-                        airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
+        print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
+        airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
+            foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
+                airport_attribution <- NULL
+                if (!is.na(iata)) {
+                    inter <- tryCatch({
+                        raster::intersect(reg_loc[iata], adm1_loc[co])
+                    }, error = function(err) { NULL })
+                    if (!is.null(inter)) {
+                        if (length(inter@polygons)>0) {
+                            percent_to_iata <- raster::area(inter) / raster::area(adm1_loc[co])
+                            airport_attribution <- dplyr::tibble(county = co, airport_iata = iata, attribution = percent_to_iata)
+                        }
                     }
                 }
-            }
-            airport_attribution
+                airport_attribution
+        }
+        parallel::stopCluster(cl)
+        
+    } else {
+      # If only 1 airport/airport cluster
+      airport_attribution <- tibble(county= levels(loc_map@data$GEOID),
+                                    aiport_iata = airports_to_consider_cl$iata_code,
+                                    attribution = 1)
     }
-    parallel::stopCluster(cl)
+    
 
     ## for loop over voronoi_tess@data$iata_code introduced duplicates (1 part of a county per adjacenet airport)
     lhs <- nrow(distinct(airport_attribution, county, airport_iata))
@@ -355,8 +367,8 @@ do_airport_attribution <- function(airports_to_consider,
     }
     
     # Save it
-    dir.create(file.path(local_dir, regioncode), recursive=TRUE, showWarnings = FALSE)
-    path <- paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
+    dir.create(file.path(local_dir), recursive=TRUE, showWarnings = FALSE)
+    path <- paste0(local_dir, "/airport_attribution_", yr, ".csv")
     print(paste("Saving airport attribution to path", path))
     data.table::fwrite(airport_attribution, file=path, row.names=FALSE)
     
@@ -473,11 +485,13 @@ distrib_county_imports <- function(import_sims_clusters,
                                    yr=2010){
     
     if (is.null(county_pops_df)){
-        county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+        county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv")) %>%
+          mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
     }
     
     # merge county pop
-    airport_attribution <- dplyr::left_join(airport_attribution, county_pops_df %>% dplyr::select(GEOID, population=estimate), by=c("county"="GEOID"))
+    airport_attribution <- dplyr::left_join(airport_attribution, 
+                                            county_pops_df %>% dplyr::select(GEOID, population=estimate), by=c("county"="GEOID"))
     airport_attribution <- airport_attribution %>% as.data.frame() %>%
         dplyr::mutate(pop_adj = as.numeric(population) * as.numeric(attribution)) %>%
         dplyr::group_by(airport_iata) %>% dplyr::mutate(attribution = pop_adj/sum(pop_adj, na.rm = TRUE)) %>% ungroup() %>% 
@@ -526,7 +540,28 @@ distrib_county_imports <- function(import_sims_clusters,
 
 
 
-
+##' 
+##' Cluster Airports in close proximity
+##'  
+##' 
+##' @title setup_airport_attribution 
+##' 
+##' @param states_of_interest States for which to get county populations
+##' @param regioncode Region/project name
+##' @param yr Year of county population data
+##' @param local_dir local data directory
+##' @param write_county_shapefiles logical
+##' @param mean_travel_file Filename of monthly mean travelers into each airport in the region
+##' @param airports_to_consider data.frame of airports specific to the region of interest
+##' @param airport_cluster_threshold distance (km) in which airports should be considered clustered.
+##' @param plot logical, whether to plot tesselation maps
+##' @param print_attr_error logical
+##' @param cores number of cores to run in parallel
+##' 
+##' @return A data.frame of airports and counties with attributions
+##'
+##' @export
+##'
 setup_airport_attribution <- function(
   states_of_interest,
   regioncode,
@@ -536,12 +571,11 @@ setup_airport_attribution <- function(
   mean_travel_file = file.path('data','travel_mean.csv'),
   travelers_threshold =10000,
   airport_cluster_threshold = 80,
-  shapefile_path = NULL,  
   plot=FALSE,
   print_attr_error=FALSE,
   cores=4
 ){
-    print("HERE")
+
     ## -- Set up the attribution/distribution for all the simulations -- 
     
     # sort the states
@@ -550,7 +584,6 @@ setup_airport_attribution <- function(
     
     ## get populations for each county in each state of interest, 
     ##   and save the population to a csv, and return a data.frame
-    # county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
     county_pops_df <- get_county_pops(
         states_of_interest, 
         regioncode, 
@@ -562,7 +595,7 @@ setup_airport_attribution <- function(
     
     ## Query the census API to get the county populations for the states of interest, assigned
     ##   to the given region code.
-    airports_to_consider <- get_airports_to_consider(mean_travel_file=mean_travel_file, 
+    airports_to_consider <- covidImportation:::get_airports_to_consider(mean_travel_file=mean_travel_file, 
                                                      states_of_interest, 
                                                      travelers_threshold)
     print("Airports to include: Success")
@@ -572,13 +605,11 @@ setup_airport_attribution <- function(
                            airport_cluster_threshold,
                            regioncode,
                            yr=yr,
-			   shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
+			               shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
                            local_dir=local_dir,
                            plot=plot,
                            cores=cores,
                            print_attr_error=print_attr_error)
-    # This is saved to paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv")
-    print(paste0("Shapefile saved to: ", paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp")))
 }
 
 
@@ -619,21 +650,34 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                      plot=FALSE,
                                      cores=5,
                                      n_sim=10){
+  
+    # TODO Allow caller to specify airport_attribution and county_pops csv file paths
     
     if (!is.null(shapefile_path)){
-      print("Manual shapefile path is depricated. Shapefile will be pulled, built, and saved automatically.")  
+      print("Manual shapefile path is deprecated. Shapefile will be pulled, built, and saved automatically.")  
     }
     # sort the states
     states_of_interest <- sort(states_of_interest)
     
     
-    print("Airport attribution: Success")
-    
-    if(!(
+    # Check if county_pops and airport_attribution must be recreated
+    setup_airport = TRUE
+    if(
       file.exists(paste0(local_dir, "/county_pops_", yr, ".csv")) & 
-      file.exists(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
-    )){
-      setup_airport_attribution(
+      file.exists(paste0(local_dir, "/airport_attribution_", yr, ".csv"))
+    ){
+      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
+      
+      if(all(states_of_interest %in% county_pops_df$id)) {
+        setup_airport = FALSE
+      }
+    }
+    
+    # Recreate county_pops and airport_attribution if necessary
+    if(setup_airport) {
+      print("Generating new airport attributions")
+      
+      suppressWarnings(setup_airport_attribution(
         states_of_interest = states_of_interest,
         regioncode = regioncode,
         yr = yr,
@@ -642,14 +686,19 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
         mean_travel_file = mean_travel_file,
         travelers_threshold = travelers_threshold,
         airport_cluster_threshold = airport_cluster_threshold,
-        shapefile_path = shapefile_path,
         plot=FALSE,
         print_attr_error=FALSE
-      )
+      ))
+      
+      county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
     }
-    county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
-    airport_attribution <- readr::read_csv(paste0(local_dir, "/", regioncode, "/airport_attribution_", yr, ".csv"))
     
+    county_pops_df <- county_pops_df %>% mutate(GEOID = as.character(stringr::str_pad(GEOID, width = 5, pad=0)))
+    airport_attribution <- readr::read_csv(paste0(local_dir, "/airport_attribution_", yr, ".csv")) %>%
+      mutate(county = as.character(stringr::str_pad(county, width = 5, pad=0)))
+    
+    print("Airport attribution: Success")
+
     
     ## --- Run through the full set of simulations and make new versions distributed out to counties instead of airports ---
     
@@ -696,10 +745,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                   
                   ## Save the new importation file
                   readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))
-                  
-                  #print("success")
                 }
-                
             }
     parallel::stopCluster(cl)
     
