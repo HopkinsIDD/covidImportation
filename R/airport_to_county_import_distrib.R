@@ -620,7 +620,7 @@ setup_airport_attribution <- function(
 ##' each other e.g. ORD/MDY, DCA/IAD, SFO/OAK
 ##'
 ##' 
-##' @title run_distrib_imports 
+##' @title run_full_distrib_imports 
 ##'
 ##' @param states_of_interest single simulation result from importation model
 ##' @param regioncode Region/project name
