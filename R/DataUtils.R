@@ -258,6 +258,7 @@ update_JHUCSSE_github_data <- function(case_data_dir = "data/case_data",
         # Read in the file
         url_ <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/",file_name_)
         case_data <- readr::read_csv(url(url_))
+        case_data <- case_data %>% dplyr::mutate(FIPS = as.character(FIPS))
 
         case_data <- fix_column_names_and_update(case_data)
         

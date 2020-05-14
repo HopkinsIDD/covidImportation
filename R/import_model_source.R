@@ -1113,6 +1113,7 @@ run_importations <- function(n_sim=100,
                       "est_imports_base", 
                       "run_daily_import_model"), 
             .packages=c("dplyr","tidyr")) %dopar% {
+
       if (print_progress){
           if (n %% 10 == 0) print(paste('sim', n, 'of', n_sim, sep = ' '))
       }
@@ -1142,11 +1143,12 @@ run_importations <- function(n_sim=100,
         import_est_run <- import_est_run %>% dplyr::filter(this.sim>0)
       }
 
+      n_str = stringr::str_pad(as.character(n), width=9, pad="0")
       if(get_detection_time){
-          data.table::fwrite(import_est_run$importation_sim, file.path(output_dir, paste0("imports_sim",n,".csv")))
-          data.table::fwrite(import_est_run$importation_detect, file.path(output_dir, paste0("importsdetect_sim",n,".csv")))
+          data.table::fwrite(import_est_run$importation_sim, file.path(output_dir, paste0(n_str,".imps.csv")))
+          data.table::fwrite(import_est_run$importation_detect, file.path(output_dir, paste0(n_str,".impd.csv")))
       } else {
-          data.table::fwrite(import_est_run, file.path(output_dir, paste0("imports_sim",n,".csv")))
+          data.table::fwrite(import_est_run, file.path(output_dir, paste0(n_str,".imps.csv")))
       }
       #clear the garbage
       gc()
