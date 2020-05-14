@@ -620,7 +620,7 @@ setup_airport_attribution <- function(
 ##' each other e.g. ORD/MDY, DCA/IAD, SFO/OAK
 ##'
 ##' 
-##' @title run_distrib_imports 
+##' @title run_full_distrib_imports 
 ##'
 ##' @param states_of_interest single simulation result from importation model
 ##' @param regioncode Region/project name
@@ -703,7 +703,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
     ## --- Run through the full set of simulations and make new versions distributed out to counties instead of airports ---
     
     ## Get filenames 
-    import_files <- list.files(model_output_dir, "imports_sim*.*.csv$")
+    import_files <- list.files(model_output_dir, "*.imps.csv$")
     if (length(import_files)!=n_sim){
         print(paste0("Number of simulations changed to ",length(import_files)," to match the number of importation simulations."))
         n_sim <- length(import_files)
@@ -722,31 +722,32 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
             .packages=c("dplyr","tidyr","readr")) %dopar% {
                 
                 
-                ## Sum importation counts to airport attribution clusters
-                ##  - these still need to be distributed out to the counties
-                import_sims_clusters <- imports_airport_clustering(
-                    imports_sim = readr::read_csv(file.path(model_output_dir, paste0("imports_sim",n,".csv"))), 
-                    airport_attribution=airport_attribution, 
-                    model_output_dir = model_output_dir
-                )
-                
-                if (sum(import_sims_clusters$imports)==0){
-                  NULL    # - if no importations, skip to next
-                } else {
-                
-                  ## Distribute the importations out to counties based on the tesselation and population
-                  county_imports <- distrib_county_imports(import_sims_clusters,
-                                                           airport_attribution=airport_attribution,
-                                                           local_dir=local_dir, 
-                                                           regioncode=regioncode,
-                                                           county_pops_df=county_pops_df,
-                                                           yr=yr)
-                  county_imports <- county_imports %>% dplyr::rename(place=GEOID, date=t, amount=imports)
-                  
-                  ## Save the new importation file
-                  readr::write_csv(county_imports, file.path(model_output_dir, paste0("importation_", n, ".csv")))
-                }
-            }
+        ## Sum importation counts to airport attribution clusters
+        ##  - these still need to be distributed out to the counties
+        n_str <- stringr::str_pad(as.character(n), width=9, pad="0")
+        import_sims_clusters <- imports_airport_clustering(
+            imports_sim = readr::read_csv(file.path(model_output_dir, paste0(n_str,".imps.csv"))), 
+            airport_attribution=airport_attribution, 
+            model_output_dir = model_output_dir
+        )
+        
+        if (sum(import_sims_clusters$imports)==0){
+          NULL    # - if no importations, skip to next
+        } else {
+        
+          ## Distribute the importations out to counties based on the tesselation and population
+          county_imports <- distrib_county_imports(import_sims_clusters,
+                                                   airport_attribution=airport_attribution,
+                                                   local_dir=local_dir, 
+                                                   regioncode=regioncode,
+                                                   county_pops_df=county_pops_df,
+                                                   yr=yr)
+          county_imports <- county_imports %>% dplyr::rename(place=GEOID, date=t, amount=imports)
+          
+          ## Save the new importation file
+          readr::write_csv(county_imports, file.path(model_output_dir, paste0(n_str, ".impa.csv")))
+        }
+    }
     parallel::stopCluster(cl)
     
     print("Successfully distributed importations from airports to counties for all simulations.")
