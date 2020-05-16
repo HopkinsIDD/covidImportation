@@ -100,6 +100,9 @@ est_daily_incidence <- function (cum_data,
 ##' 
 correct_for_Hubei_reporting <- function (cum_data, first_date, last_date, tol=100) {
 
+  if(last_date < as.Date("2020-02-14")) {
+    stop("last_date must be after 2020-02-14")
+  }
   ## Reduce to just Hubei
   cum_data <- cum_data %>% dplyr::filter(Province_State=="Hubei")
 

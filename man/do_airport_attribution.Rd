@@ -7,13 +7,12 @@
 do_airport_attribution(
   airports_to_consider,
   airport_cluster_threshold = 80,
-  shapefile_path = paste0("data/shp/", "counties_2010_", regioncode, ".shp"),
+  shapefile_path = paste0(local_dir, "/shp/", "counties_", yr, "_", regioncode, ".shp"),
   regioncode,
   yr = 2010,
   local_dir = "data/",
   cores = 4,
-  plot = FALSE,
-  print_attr_error = FALSE
+  plot = FALSE
 )
 }
 \arguments{

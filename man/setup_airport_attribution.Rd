@@ -14,7 +14,6 @@ setup_airport_attribution(
   travelers_threshold = 10000,
   airport_cluster_threshold = 80,
   plot = FALSE,
-  print_attr_error = FALSE,
   cores = 4
 )
 }
@@ -34,8 +33,6 @@ setup_airport_attribution(
 \item{airport_cluster_threshold}{distance (km) in which airports should be considered clustered.}
 
 \item{plot}{logical, whether to plot tesselation maps}
-
-\item{print_attr_error}{logical}
 
 \item{cores}{number of cores to run in parallel}
 
