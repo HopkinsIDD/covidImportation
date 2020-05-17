@@ -306,8 +306,6 @@ do_airport_attribution <- function(airports_to_consider,
         airport_attribution <- foreach (co = unique(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
             foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
                 airport_attribution <- NULL
-                print("iata")
-                print(iata)
                 if (!is.na(iata)) {
                     inter <- tryCatch({
                         raster::intersect(reg_loc[iata], adm1_loc[co])
@@ -359,7 +357,7 @@ do_airport_attribution <- function(airports_to_consider,
                 dplyr::arrange(county)
         }
         
-        counties_with_errors_v2 <- airport_attribution %>%
+        counties_with_errors_v2 <- airport_attribution %>% 
             dplyr::group_by(county) %>%
             dplyr::summarise(check = sum(attribution)) %>%
             dplyr::filter(round(check,2) != 1)
@@ -374,13 +372,13 @@ do_airport_attribution <- function(airports_to_consider,
     path <- paste0(local_dir, "/airport_attribution_", yr, ".csv")
     print(paste("Saving airport attribution to path", path))
     data.table::fwrite(airport_attribution, file=path, row.names=FALSE)
-
+    
     if (plot) {
-        airport_map <- ggplot2::ggplot() +
+        airport_map <- ggplot2::ggplot() + 
             ggplot2::geom_point(data = airports_to_consider_cl, aes(coor_lon, coor_lat)) +
-            ggplot2::geom_polygon(data = ggplot2::fortify(reg_loc),
+            ggplot2::geom_polygon(data = ggplot2::fortify(reg_loc), 
                                   ggplot2::aes(long, lat, group = group),
-                                  alpha = .4, size = .5,  colour = 'red') +
+                                  alpha = .4, size = .5,  colour = 'red') + 
             ggplot2::theme(legend.position = "none")
         print(airport_map)
     }
