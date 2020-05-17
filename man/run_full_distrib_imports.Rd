@@ -2,7 +2,7 @@
 % Please edit documentation in R/airport_to_county_import_distrib.R
 \name{run_full_distrib_imports}
 \alias{run_full_distrib_imports}
-\title{run_distrib_imports}
+\title{run_full_distrib_imports}
 \usage{
 run_full_distrib_imports(
   states_of_interest = c("CA", "NV", "WA", "OR", "AZ"),
@@ -13,7 +13,7 @@ run_full_distrib_imports(
   mean_travel_file = file.path("data", "travel_mean.csv"),
   shapefile_path = NULL,
   model_output_dir = file.path("model_output", "importation"),
-  local_dir = "data/",
+  local_dir = "data",
   plot = FALSE,
   cores = 5,
   n_sim = 10

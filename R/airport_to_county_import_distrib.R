@@ -184,95 +184,96 @@ get_airports_to_consider <- function(mean_travel_file,
 ##'
 do_airport_attribution <- function(airports_to_consider, 
                                    airport_cluster_threshold=80, 
-                                   shapefile_path = paste0('data/shp/','counties_2010_', regioncode, '.shp'), 
+                                   shapefile_path = paste0(local_dir,'/shp/','counties_',yr,'_', regioncode, '.shp'), 
                                    regioncode, 
                                    yr=2010, 
                                    local_dir="data/",
 				                           cores=4,
-                                   plot=FALSE,
-                                   print_attr_error=FALSE) {
+                                   plot=FALSE) {
     
-    ## airport edgelist to start dataframe
-    airnet <- igraph::make_full_graph(nrow(airports_to_consider), directed = FALSE, loops = FALSE) %>%
-        igraph::set_vertex_attr("name", value = airports_to_consider$iata_code)
-    
-    airedgelist <- data.frame(igraph::as_edgelist(airnet, names = TRUE), stringsAsFactors = FALSE) %>%
-        dplyr::tbl_df() %>%
-        dplyr::rename(iata1 = X1, iata2 = X2) %>%
-        dplyr::left_join(airports_to_consider %>% dplyr::select(iata_code, coor_lat, coor_lon), by = c("iata1" = "iata_code")) %>%
-        dplyr::rename(lat1 = coor_lat, lon1 = coor_lon) %>%
-        dplyr::left_join(airports_to_consider %>% dplyr::select(iata_code, coor_lat, coor_lon), by = c("iata2" = "iata_code")) %>%
-        dplyr::rename(lat2 = coor_lat, lon2 = coor_lon) 
-    
-    lonlat1 <- airedgelist %>% dplyr::select(lon1, lat1) %>% as.matrix
-    lonlat2 <- airedgelist %>% dplyr::select(lon2, lat2) %>% as.matrix
-    dist_km <- geosphere::distHaversine(lonlat1, lonlat2) / 1000
-    
-    airdf <- airedgelist %>% dplyr::mutate(dist_km = dist_km)
-    clusters <- airdf %>% dplyr::filter(dist_km <= airport_cluster_threshold)
-    
-    ## aggregate clusters -- first pass
-    clusters_ls <- list()  
-    clusters_ls <- lapply(unique(clusters$iata1), function(airport){
-        proposed_cluster <- clusters %>% dplyr::filter(iata1 == airport)
-        proposed_cluster2 <- clusters %>% dplyr::filter(iata1 %in% proposed_cluster$iata2)
-        proposed_cluster3 <- clusters %>% dplyr::filter(iata1 %in% proposed_cluster2$iata2)
-        cluster <- sort(unique(c(airport, proposed_cluster$iata2, proposed_cluster2$iata2, proposed_cluster3$iata2)))
-        return(cluster)
-    })
-    
-    ## aggregate clusters -- second pass, and clean up
-    ## 1) in case the clusters are expansive and are more than 2x removed from each other,
-    ##    combine clusters with any overlapping airports;
-    ## 2) then remove clusters that are subsets of others
-    
-    rm_ix <- c()
-    joint_ls <- lapply(seq_len(length(clusters_ls)), function(i) {
-        ix <- c()
-        subi <- i:length(clusters_ls)
-        for (j in subi[-1]) {
-            ix <- c(ix, ifelse(any(clusters_ls[[i]] %in% clusters_ls[[j]]), j, 0))
-        }
-        ix <- ix[ix != 0]
-        
-        cluster <- sort(unique(c(clusters_ls[[i]], 
-                                 unlist(purrr::flatten(purrr::map(ix, function(k) { return(clusters_ls[[k]]) }))))))
-        
-        rm_ix <- c(rm_ix, ix)
-        return(list(cluster, rm_ix))
-    })
-    
-    ## identify indexes of clusters that are subsets of others
-    clusters_ls_cl <- lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[1]] })
-    remove_indexes <- sort(unique(unlist(lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[2]] }))))
-    
-    ## remove clusters that are subsets of others
-    if (length(remove_indexes)>0){
-      clusters_ls_cl <- rlist::list.remove(clusters_ls_cl, range = remove_indexes)
-    }  
-    
-    # Get centroid of airport coordinate clusters
-    cluster_ids <- purrr::map_dfr(seq_len(length(clusters_ls_cl)), function(i) {
-        data.frame(iata_code = clusters_ls_cl[[i]], c_id = i, stringsAsFactors = FALSE)
-    })
-    if(nrow(cluster_ids) > 0){
-        clustered_airports <- airports_to_consider %>%
-            dplyr::right_join(cluster_ids, by = c("iata_code")) %>%
-            dplyr::select(iata_code, c_id, coor_lat, coor_lon) %>%
-            dplyr::group_by(c_id) %>%
-            dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
-            dplyr::ungroup() %>% 
-            dplyr::select(iata_code, coor_lat, coor_lon)
-    } else {
-      clustered_airports <- tibble(iata_code = NA)[0,]
+    airports_to_consider_cl <- dplyr::select(airports_to_consider, iata_code, coor_lat, coor_lon)
+
+    if(nrow(airports_to_consider_cl) > 1){
+      ## airport edgelist to start dataframe
+      airnet <- igraph::make_full_graph(nrow(airports_to_consider), directed = FALSE, loops = FALSE) %>%
+          igraph::set_vertex_attr("name", value = airports_to_consider$iata_code)
+      
+      airedgelist <- data.frame(igraph::as_edgelist(airnet, names = TRUE), stringsAsFactors = FALSE) %>%
+          dplyr::tbl_df() %>%
+          dplyr::rename(iata1 = X1, iata2 = X2) %>%
+          dplyr::left_join(airports_to_consider %>% dplyr::select(iata_code, coor_lat, coor_lon), by = c("iata1" = "iata_code")) %>%
+          dplyr::rename(lat1 = coor_lat, lon1 = coor_lon) %>%
+          dplyr::left_join(airports_to_consider %>% dplyr::select(iata_code, coor_lat, coor_lon), by = c("iata2" = "iata_code")) %>%
+          dplyr::rename(lat2 = coor_lat, lon2 = coor_lon) 
+      
+      lonlat1 <- airedgelist %>% dplyr::select(lon1, lat1) %>% as.matrix
+      lonlat2 <- airedgelist %>% dplyr::select(lon2, lat2) %>% as.matrix
+      dist_km <- geosphere::distHaversine(lonlat1, lonlat2) / 1000
+      
+      airdf <- airedgelist %>% dplyr::mutate(dist_km = dist_km)
+      clusters <- airdf %>% dplyr::filter(dist_km <= airport_cluster_threshold)
+      
+      ## aggregate clusters -- first pass
+      clusters_ls <- list()  
+      clusters_ls <- lapply(unique(clusters$iata1), function(airport){
+          proposed_cluster <- clusters %>% dplyr::filter(iata1 == airport)
+          proposed_cluster2 <- clusters %>% dplyr::filter(iata1 %in% proposed_cluster$iata2)
+          proposed_cluster3 <- clusters %>% dplyr::filter(iata1 %in% proposed_cluster2$iata2)
+          cluster <- sort(unique(c(airport, proposed_cluster$iata2, proposed_cluster2$iata2, proposed_cluster3$iata2)))
+          return(cluster)
+      })
+      
+      ## aggregate clusters -- second pass, and clean up
+      ## 1) in case the clusters are expansive and are more than 2x removed from each other,
+      ##    combine clusters with any overlapping airports;
+      ## 2) then remove clusters that are subsets of others
+      
+      rm_ix <- c()
+      joint_ls <- lapply(seq_len(length(clusters_ls)), function(i) {
+          ix <- c()
+          subi <- i:length(clusters_ls)
+          for (j in subi[-1]) {
+              ix <- c(ix, ifelse(any(clusters_ls[[i]] %in% clusters_ls[[j]]), j, 0))
+          }
+          ix <- ix[ix != 0]
+          
+          cluster <- sort(unique(c(clusters_ls[[i]], 
+                                   unlist(purrr::flatten(purrr::map(ix, function(k) { return(clusters_ls[[k]]) }))))))
+          
+          rm_ix <- c(rm_ix, ix)
+          return(list(cluster, rm_ix))
+      })
+      
+      ## identify indexes of clusters that are subsets of others
+      clusters_ls_cl <- lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[1]] })
+      remove_indexes <- sort(unique(unlist(lapply(seq_len(length(joint_ls)), function(i) { joint_ls[[i]][[2]] }))))
+      
+      ## remove clusters that are subsets of others
+      if (length(remove_indexes)>0){
+        clusters_ls_cl <- rlist::list.remove(clusters_ls_cl, range = remove_indexes)
+      }  
+      
+      # Get centroid of airport coordinate clusters
+      cluster_ids <- purrr::map_dfr(seq_len(length(clusters_ls_cl)), function(i) {
+          data.frame(iata_code = clusters_ls_cl[[i]], c_id = i, stringsAsFactors = FALSE)
+      })
+      if(nrow(cluster_ids) > 0){
+          clustered_airports <- airports_to_consider %>%
+              dplyr::right_join(cluster_ids, by = c("iata_code")) %>%
+              dplyr::select(iata_code, c_id, coor_lat, coor_lon) %>%
+              dplyr::group_by(c_id) %>%
+              dplyr::summarise(iata_code = paste(iata_code, collapse = "_"), coor_lat = mean(coor_lat), coor_lon = mean(coor_lon)) %>%
+              dplyr::ungroup() %>% 
+              dplyr::select(iata_code, coor_lat, coor_lon)
+      } else {
+        clustered_airports <- tibble(iata_code = NA)[0,]
+      }
+      
+      ## remerge clustered airports with other airports
+      airports_to_consider_cl <- airports_to_consider_cl %>%
+        dplyr::filter(!(iata_code %in% cluster_ids$iata_code)) %>%
+        dplyr::bind_rows(clustered_airports)
     }
-    
-    ## remerge clustered airports with other airports
-    airports_to_consider_cl <- airports_to_consider %>%
-      dplyr::filter(!(iata_code %in% cluster_ids$iata_code)) %>%
-      dplyr::select(iata_code, coor_lat, coor_lon) %>%
-      dplyr::bind_rows(clustered_airports)
-    
     
     # ~ Get Shapefile 
     # shape file at adm1 and adm0 level
@@ -301,8 +302,8 @@ do_airport_attribution <- function(airports_to_consider,
         cl <- parallel::makeCluster(cores)
         doParallel::registerDoParallel(cl)
     
-        print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
-        airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
+        print(paste("Number of pairs is:", length(unique(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
+        airport_attribution <- foreach (co = unique(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
             foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
                 airport_attribution <- NULL
                 if (!is.na(iata)) {
@@ -317,13 +318,13 @@ do_airport_attribution <- function(airports_to_consider,
                     }
                 }
                 airport_attribution
-        }
+            }
         parallel::stopCluster(cl)
         
     } else {
       # If only 1 airport/airport cluster
-      airport_attribution <- tibble(county= levels(loc_map@data$GEOID),
-                                    aiport_iata = airports_to_consider_cl$iata_code,
+      airport_attribution <- tibble(county=unique(loc_map@data$GEOID),
+                                    airport_iata = airports_to_consider_cl$iata_code,
                                     attribution = 1)
     }
     
@@ -555,7 +556,6 @@ distrib_county_imports <- function(import_sims_clusters,
 ##' @param airports_to_consider data.frame of airports specific to the region of interest
 ##' @param airport_cluster_threshold distance (km) in which airports should be considered clustered.
 ##' @param plot logical, whether to plot tesselation maps
-##' @param print_attr_error logical
 ##' @param cores number of cores to run in parallel
 ##' 
 ##' @return A data.frame of airports and counties with attributions
@@ -572,7 +572,6 @@ setup_airport_attribution <- function(
   travelers_threshold =10000,
   airport_cluster_threshold = 80,
   plot=FALSE,
-  print_attr_error=FALSE,
   cores=4
 ){
 
@@ -605,11 +604,10 @@ setup_airport_attribution <- function(
                            airport_cluster_threshold,
                            regioncode,
                            yr=yr,
-			               shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
+			                     shapefile_path=paste0(local_dir, "/shp/counties_", yr, "_", regioncode, ".shp"),
                            local_dir=local_dir,
                            plot=plot,
-                           cores=cores,
-                           print_attr_error=print_attr_error)
+                           cores=cores)
 }
 
 
@@ -646,7 +644,7 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
                                      mean_travel_file = file.path("data", "travel_mean.csv"),
                                      shapefile_path = NULL, ## This is no longer needed but left to not break it.
                                      model_output_dir = file.path("model_output", "importation"),
-                                     local_dir="data/",
+                                     local_dir="data",
                                      plot=FALSE,
                                      cores=5,
                                      n_sim=10){
@@ -687,7 +685,6 @@ run_full_distrib_imports <- function(states_of_interest=c("CA","NV","WA","OR","A
         travelers_threshold = travelers_threshold,
         airport_cluster_threshold = airport_cluster_threshold,
         plot=FALSE,
-        print_attr_error=FALSE
       ))
       
       county_pops_df <- readr::read_csv(paste0(local_dir, "/county_pops_", yr, ".csv"))
