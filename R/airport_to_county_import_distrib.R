@@ -267,7 +267,7 @@ do_airport_attribution <- function(airports_to_consider,
             dplyr::select(iata_code, coor_lat, coor_lon)
         
     } else {
-      clustered_airports <- data_frame(iata_code = NA)[0,]
+      clustered_airports <- data_frame(iata_code = as.character(NA))[0,]
     }
     
     ## remerge clustered airports with other airports
@@ -300,8 +300,8 @@ do_airport_attribution <- function(airports_to_consider,
     cl <- parallel::makeCluster(cores)
     doParallel::registerDoParallel(cl)
 
-    print(paste("Number of pairs is:", length(levels(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
-    airport_attribution <- foreach (co = levels(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
+    print(paste("Number of pairs is:", length(unique(loc_map@data$GEOID)) * length(voronoi_tess@data$iata_code)))
+    airport_attribution <- foreach (co = unique(loc_map@data$GEOID),.combine = dplyr::bind_rows) %:%
         foreach (iata = voronoi_tess@data$iata_code, .combine = dplyr::bind_rows) %dopar% {
             airport_attribution <- NULL
             if (!is.na(iata)) {
@@ -544,7 +544,6 @@ setup_airport_attribution <- function(
   print_attr_error=FALSE,
   cores=4
 ){
-    print("HERE")
     ## -- Set up the attribution/distribution for all the simulations -- 
     
     # sort the states
