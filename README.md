@@ -16,7 +16,7 @@ devtools::install_github("HopkinsIDD/covidImportation")
 
 Stable frozen version:
 ```{r}
-devtools::install_github("HopkinsIDD/covidImportation", ref="v1.5")
+devtools::install_github("HopkinsIDD/covidImportation", ref="v1.6.1")
 ```
 
 
