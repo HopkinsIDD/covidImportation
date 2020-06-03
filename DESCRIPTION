@@ -42,7 +42,8 @@ Imports:
     readr,
     tibble,
     ggplot2,
-    parallel
+    parallel,
+    tidyverse
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
