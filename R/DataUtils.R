@@ -1308,6 +1308,7 @@ get_JHUCSSE_data <- function(case_data_dir = "data/case_data",
     
     # Save if desired
     if (save_data){
+        suppressWarnings(dir.create(case_data_dir, recursive=TRUE))
         if (us_data_only){
             readr::write_csv(case_data, file.path(case_data_dir,"jhucsse_us_case_data_crude.csv"))
         } else {
